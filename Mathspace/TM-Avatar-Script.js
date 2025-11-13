@@ -67,7 +67,7 @@
   // Applied background replacement
   const appliedBackgroundSelector = 'div[style*="background-image"]';
   const originalBgURL = "https://mathspace-production-static.mathspace.co/permalink/backgrounds/background_placeholder_v2.svg";
-  const customBgURL = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/johnpork.svg";
+  const customBgURL = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/johnpork.png";
 
   const replaceAppliedBackground = () => {
     document.querySelectorAll(appliedBackgroundSelector).forEach(el => {
