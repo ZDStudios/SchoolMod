@@ -39,7 +39,7 @@
     const replaceTextContent = () => {
         const replacements = [
             { from: /Default Avatar/g, to: "John Pork (Limited Edition)" },
-            { from: /REPALCEHERE SIGMA/g, to: "REPLACE" },
+            { from: /Mathspace (Default)/g, to: "John Pork Background" },
             // Add more replacements here
         ];
 
