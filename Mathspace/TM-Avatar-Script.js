@@ -26,7 +26,7 @@
 
   const textReplacements = [
     { from: /Default Avatar/g, to: "John Pork (Limited Edition)" },
-    { from: /Mathspace \(Default\)/g, to: "John Pork Background" }
+    { from: /Mathspace \(Default\)/g, to: "Cosmic Piggy (Limited Edition)" }
   ];
 
   const replaceAvatars = () => {
@@ -60,7 +60,7 @@
   const overrideTitleElement = () => {
     const title = document.querySelector('h3.css-1ng2lf3');
     if (title && title.textContent.includes('Mathspace')) {
-      title.textContent = "John Pork Background";
+      title.textContent = "Cosmic Piggy (Limited Edition)";
     }
   };
 
