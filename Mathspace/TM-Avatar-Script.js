@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Mathspace Customizer
 // @namespace    MythicOverlay.MSCustomizer
-// @version      1.4
+// @version      1.5
 // @description  Replace avatars, background thumbnail, applied background, and UI text on Mathspace
 // @author       Zayn
 // @match        https://*.mathspace.co/*
@@ -39,16 +39,24 @@
   // Text replacement
   const textReplacements = [
     { from: /Default Avatar/g, to: "John Pork (Limited Edition)" },
-    { from: /Mathspace (Default)/g, to: "John Pork Background" }
+    { from: /Mathspace \(Default\)/g, to: "John Pork Background" }
   ];
 
-  const replaceText = () => {
+  const replaceTextNodes = () => {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
     let node;
     while ((node = walker.nextNode())) {
       textReplacements.forEach(({ from, to }) => {
         node.textContent = node.textContent.replace(from, to);
       });
+    }
+  };
+
+  // Direct title override
+  const overrideTitleElement = () => {
+    const title = document.querySelector('h3.css-1ng2lf3');
+    if (title && title.textContent.includes('Mathspace')) {
+      title.textContent = "John Pork Background"
     }
   };
 
@@ -81,7 +89,8 @@
   // Unified runner
   const runAllReplacements = () => {
     replaceAvatars();
-    replaceText();
+    replaceTextNodes();
+    overrideTitleElement();
     replaceBackgroundThumbnail();
     replaceAppliedBackground();
   };
