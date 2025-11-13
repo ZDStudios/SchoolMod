@@ -16,7 +16,7 @@
         "https://mathspace-au-production-avatars.mathspace.co/img/avatars/avatar_placeholder.png"
     ];
 
-    const replacementUrl = "https://img.itch.zone/aW1nLzIwNTc3Njg3LnBuZw==/original/HtmcbE.png";
+    const replacementUrl = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/johnpork.png";
 
     const replaceAllAvatars = () => {
         document.querySelectorAll("img").forEach(img => {
