@@ -38,7 +38,7 @@
 
     const replaceTextContent = () => {
         const replacements = [
-            { from: /Default Avatar/g, to: "John Pork" },
+            { from: /Default Avatar/g, to: "John Pork (Limited Edition)" },
             { from: /REPALCEHERE SIGMA/g, to: "REPLACE" },
             // Add more replacements here
         ];
