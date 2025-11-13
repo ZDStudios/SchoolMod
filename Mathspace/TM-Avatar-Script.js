@@ -1,66 +1,95 @@
 // ==UserScript==
-// @name         Mathspace Avatar & Text Replacer
-// @namespace    http://tampermonkey.net/
-// @version      1.2
-// @description  Replace default avatars and specific text on Mathspace
+// @name         Mathspace Customizer
+// @namespace    MythicOverlay.MSCustomizer
+// @version      1.4
+// @description  Replace avatars, background thumbnail, applied background, and UI text on Mathspace
 // @author       Zayn
-// @match        https://mathspace.co/*
+// @match        https://*.mathspace.co/*
 // @grant        none
 // ==/UserScript==
 
 (function() {
-    'use strict';
+  'use strict';
 
-    const originalUrls = [
-        "https://mathspace-production-avatars.mathspace.co/img/avatars/avatar_placeholder.png",
-        "https://mathspace-au-production-avatars.mathspace.co/img/avatars/avatar_placeholder.png"
-    ];
+  // Avatar replacement
+  const avatarOriginals = [
+    "https://mathspace-production-avatars.mathspace.co/img/avatars/avatar_placeholder.png",
+    "https://mathspace-au-production-avatars.mathspace.co/img/avatars/avatar_placeholder.png"
+  ];
+  const avatarReplacement = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/johnpork.png";
 
-    const replacementUrl = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/johnpork.png";
+  const replaceAvatars = () => {
+    document.querySelectorAll("img").forEach(img => {
+      if (avatarOriginals.includes(img.src)) {
+        img.src = avatarReplacement;
+      }
+    });
 
-    const replaceAllAvatars = () => {
-        document.querySelectorAll("img").forEach(img => {
-            if (originalUrls.includes(img.src)) {
-                img.src = replacementUrl;
-            }
-        });
-
-        document.querySelectorAll("*").forEach(el => {
-            const style = window.getComputedStyle(el);
-            const bgImage = style.getPropertyValue("background-image");
-            originalUrls.forEach(original => {
-                if (bgImage.includes(original)) {
-                    el.style.backgroundImage = `url("${replacementUrl}")`;
-                }
-            });
-        });
-    };
-
-    const replaceTextContent = () => {
-        const replacements = [
-            { from: /Default Avatar/g, to: "John Pork (Limited Edition)" },
-            { from: /Mathspace (Default)/g, to: "John Pork Background" },
-            // Add more replacements here
-        ];
-
-        const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
-        let node;
-        while ((node = walk.nextNode())) {
-            replacements.forEach(({ from, to }) => {
-                node.textContent = node.textContent.replace(from, to);
-            });
+    document.querySelectorAll("*").forEach(el => {
+      const style = window.getComputedStyle(el);
+      const bgImage = style.getPropertyValue("background-image");
+      avatarOriginals.forEach(original => {
+        if (bgImage.includes(original)) {
+          el.style.backgroundImage = `url("${avatarReplacement}")`;
         }
-    };
+      });
+    });
+  };
 
-    const runAllReplacements = () => {
-        replaceAllAvatars();
-        replaceTextContent();
-    };
+  // Text replacement
+  const textReplacements = [
+    { from: /Default Avatar/g, to: "John Pork (Limited Edition)" },
+    { from: /Mathspace (Default)/g, to: "John Pork Background" }
+  ];
 
-    // Initial run
-    runAllReplacements();
+  const replaceText = () => {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+    let node;
+    while ((node = walker.nextNode())) {
+      textReplacements.forEach(({ from, to }) => {
+        node.textContent = node.textContent.replace(from, to);
+      });
+    }
+  };
 
-    // Observe DOM changes for dynamic content
-    const observer = new MutationObserver(runAllReplacements);
-    observer.observe(document.body, { childList: true, subtree: true });
+  // Background thumbnail replacement in selector
+  const defaultThumbnailSrc = "https://mathspace-production-static.mathspace.co/permalink/backgrounds/new/thumbnails/default.png";
+  const customThumbnailSrc = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/johnpork.png";
+
+  const replaceBackgroundThumbnail = () => {
+    const bgImg = document.querySelector(`img[src="${defaultThumbnailSrc}"]`);
+    if (bgImg) {
+      bgImg.src = customThumbnailSrc;
+      bgImg.alt = "John Pork Background";
+    }
+  };
+
+  // Applied background replacement
+  const appliedBackgroundSelector = 'div[style*="background-image"]';
+  const originalBgURL = "https://mathspace-production-static.mathspace.co/permalink/backgrounds/new/gaming_8bit.svg";
+  const customBgURL = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/johnporkbg.svg";
+
+  const replaceAppliedBackground = () => {
+    document.querySelectorAll(appliedBackgroundSelector).forEach(el => {
+      const style = el.getAttribute("style");
+      if (style && style.includes(originalBgURL)) {
+        el.style.backgroundImage = `url("${customBgURL}")`;
+      }
+    });
+  };
+
+  // Unified runner
+  const runAllReplacements = () => {
+    replaceAvatars();
+    replaceText();
+    replaceBackgroundThumbnail();
+    replaceAppliedBackground();
+  };
+
+  // Initial run
+  runAllReplacements();
+
+  // Observe dynamic changes
+  const observer = new MutationObserver(runAllReplacements);
+  observer.observe(document.body, { childList: true, subtree: true });
 })();
