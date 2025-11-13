@@ -54,7 +54,7 @@
 
   // Background thumbnail replacement in selector
   const defaultThumbnailSrc = "https://mathspace-production-static.mathspace.co/permalink/backgrounds/new/thumbnails/default.png";
-  const customThumbnailSrc = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/johnpork.png";
+  const customThumbnailSrc = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/JohnPork-Background.png";
 
   const replaceBackgroundThumbnail = () => {
     const bgImg = document.querySelector(`img[src="${defaultThumbnailSrc}"]`);
