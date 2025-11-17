@@ -46,7 +46,7 @@
                                     "__isShopItemInterface": "AvatarItem",
                                     "systemId": null,
                                     "state": "ACQUIRED",
-                                    "isEquipped": false,
+                                    "isEquipped": true,
                                     "title": "Gift Elf (Limited time)",
                                     "cost": 1,
                                     "publishDate": null
@@ -196,7 +196,7 @@
                                     "__isShopItemInterface": "AvatarItem",
                                     "systemId": "avatar_spacecat",
                                     "state": "ACQUIRED",
-                                    "isEquipped": true,
+                                    "isEquipped": false,
                                     "title": "SciFi - Space Cat",
                                     "cost": 0,
                                     "publishDate": null
