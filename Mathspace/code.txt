@@ -17,8 +17,8 @@
                         "dashboardTheme": "LIGHT"
                     },
                     "avatar": {
-                        "id": "AvatarItem-{\"item_id\": 18, \"user_id\": 8278606}",
-                        "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/spacecat.png"
+                        "id": "AvatarItem-{\"item_id\": 115, \"user_id\": 8278606}",
+                        "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Elf-01__ed3bee35.png"
                     },
                     "userShopView": {
                         "edges": [
