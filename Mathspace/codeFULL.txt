@@ -2,7 +2,7 @@
   "SunflowerUserMenuStudentQuery": {
     "data": {
       "viewer": {
-        "id": "User-FAKE",
+        "id": "Student-8278606",
         "profile": {
           "gamification": {
             "coinsBalance": 999
@@ -16,7 +16,7 @@
       "equipItems": {
         "errors": [],
         "student": {
-          "id": "Student-FAKE",
+          "id": "Student-8278606",
           "gamification": {
             "coinsBalance": 777
           }
