@@ -25,7 +25,7 @@
   const customThumbnailSrc = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/JohnPork-Background.png";
 
   const textReplacements = [
-    { from: /Default Avatar/g, to: "John Pork (Limited Edition)" },
+    { from: /Default Avatar/g, to: "John Pork (Limited time)" },
     { from: /Mathspace \(Default\)/g, to: "Cosmic Piggy (Limited Edition)" }
   ];
 
