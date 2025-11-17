@@ -1,0 +1,32 @@
+{
+  "SunflowerUserMenuStudentQuery": {
+    "data": {
+      "viewer": {
+        "id": "User-FAKE",
+        "profile": {
+          "gamification": {
+            "coinsBalance": 999
+          }
+        }
+      }
+    }
+  },
+  "ShopModalEquipItemsMutation": {
+    "data": {
+      "equipItems": {
+        "errors": [],
+        "student": {
+          "id": "Student-FAKE",
+          "gamification": {
+            "coinsBalance": 777
+          }
+        }
+      }
+    }
+  },
+  "ShopModalQuery": { "data": { "shop": [] } },
+  "StudentNavbarQuery": { "data": { "viewer": { "profile": { "gamification": { "coinsBalance": 45 } } } } },
+  "NavbarPopoverQuery": { "data": { "popover": {} } },
+  "SunflowerStudentDashboardQuery": { "data": { "dashboard": {} } },
+  "ShopModalQue": { "data": { "que": {} } }
+}
