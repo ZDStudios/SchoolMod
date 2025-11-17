@@ -827,7 +827,7 @@
                     "isUnlocked": true
                 },
                 "user": {
-                    "avatar": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/spacecat.png",
+                    "avatar": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Elf-01__ed3bee35.png",
                     "id": "User-8278606"
                 },
                 "leaderboard": {
