@@ -1,1 +1,835 @@
-
+{
+    "data": {
+        "viewer": {
+            "profile": {
+                "__typename": "Student",
+                "background": {
+                    "url": "https://mathspace-production-static.mathspace.co/permalink/backgrounds/background_placeholder_v2.svg",
+                    "type": "GRAPHIC",
+                    "name": "BACKGROUND_DEFAULT",
+                    "isUnlocked": true
+                },
+                "gamification": {
+                    "coinsBalance": 130,
+                    "accessory": {
+                        "id": "AccessoryItem-{\"item_id\": 3, \"user_id\": 8278606}",
+                        "isEquipped": true,
+                        "riveFile": "OCTOPUS"
+                    },
+                    "background": {
+                        "id": "BackgroundItem-{\"item_id\": 71, \"user_id\": 8278606}",
+                        "fullSizeUrl": "https://mathspace-production-static.mathspace.co/permalink/backgrounds/new/default.svg",
+                        "dashboardTheme": "LIGHT"
+                    },
+                    "avatar": {
+                        "id": "AvatarItem-{\"item_id\": 20, \"user_id\": 8278606}",
+                        "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/robot.png"
+                    },
+                    "userShopView": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 17, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/avatar_placeholder.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_default",
+                                    "state": "ACQUIRED",
+                                    "isEquipped": false,
+                                    "title": "Default Avatar",
+                                    "cost": null,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 115, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Elf-01__ed3bee35.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": null,
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Gift Elf (Limited time)",
+                                    "cost": 800,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 116, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Elf-02__3bb3ac77.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": null,
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Candy Cane Elf (Limited time)",
+                                    "cost": 800,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 121, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Xmas-child-01__bd044fc5.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": null,
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Festive kid (Limited time)",
+                                    "cost": 800,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 122, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Xmas-child-02__41840970.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": null,
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Jolly kid (Limited time)",
+                                    "cost": 800,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 117, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Gingerbread-person__0c9c5e20.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": null,
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Gingerbread (Limited time)",
+                                    "cost": 900,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 124, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/XmasTree__b54d7034.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": null,
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Xmas Tree (Limited time)",
+                                    "cost": 900,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 123, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Xmas-Fox__365aff65.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": null,
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Xmas Fox (Limited time)",
+                                    "cost": 900,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 119, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Snowperson-01__d05c05ed.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": null,
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Snowy (Limited time)",
+                                    "cost": 1000,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 118, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Polar-bear__47da357a.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": null,
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Xmas Polar Bear (Limited time)",
+                                    "cost": 1200,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 120, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Winter-Bunny__217886ac.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": null,
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Xmas Bunny (Limited time)",
+                                    "cost": 1200,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 18, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/spacecat.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_spacecat",
+                                    "state": "ACQUIRED",
+                                    "isEquipped": false,
+                                    "title": "SciFi - Space Cat",
+                                    "cost": 0,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 19, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/corgi.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_corgi",
+                                    "state": "ACQUIRED",
+                                    "isEquipped": false,
+                                    "title": "Dog - Corgi",
+                                    "cost": 0,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 20, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/robot.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_robot",
+                                    "state": "ACQUIRED",
+                                    "isEquipped": true,
+                                    "title": "SciFi - Robot",
+                                    "cost": 0,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 21, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/artist.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_artist",
+                                    "state": "ACQUIRED",
+                                    "isEquipped": false,
+                                    "title": "Artist",
+                                    "cost": 120,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 22, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/girl.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_girl",
+                                    "state": "ACQUIRED",
+                                    "isEquipped": false,
+                                    "title": "Girl",
+                                    "cost": 120,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 23, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/f1racer.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_f1racer",
+                                    "state": "AVAILABLE",
+                                    "isEquipped": false,
+                                    "title": "F1 Racer",
+                                    "cost": 120,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 24, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/construction02.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_construction02",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Construction 02",
+                                    "cost": 150,
+                                    "publishDate": "2025-07-27T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 25, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/teacher.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_teacher",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Woman - Glasses",
+                                    "cost": 150,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 26, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/ladyglasses_point.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_ladyglasses_point",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Woman - Pointing",
+                                    "cost": 150,
+                                    "publishDate": "2025-08-17T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 27, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/artist02.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_artist02",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Artist 02",
+                                    "cost": 150,
+                                    "publishDate": "2025-08-17T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 28, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/constructor.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_constructor",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Constructor",
+                                    "cost": 150,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 29, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/softwareengineer.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_softwareengineer",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Software Engineer",
+                                    "cost": 200,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 30, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/computer02.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_computer02",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Software Engineer - Alternate",
+                                    "cost": 200,
+                                    "publishDate": "2025-08-10T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 31, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/pilot.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_pilot",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Raccoon - Pilot",
+                                    "cost": 250,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 32, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/astronaut.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_astronaut",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Astronaut",
+                                    "cost": 300,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 33, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/scientist_green.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_scientist_green",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Scientist - Green",
+                                    "cost": 400,
+                                    "publishDate": "2025-07-13T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 34, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/scientist.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_scientist",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Scientist - Pink",
+                                    "cost": 400,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 35, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/musician_rock.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_musician_rock",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Musician - Rock on!",
+                                    "cost": 500,
+                                    "publishDate": "2025-07-13T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 36, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/doctorbear.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_doctorbear",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Doctor Bear",
+                                    "cost": 500,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 37, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/robot_red.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_robot_red",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "SciFi - Robot - Red",
+                                    "cost": 500,
+                                    "publishDate": "2025-08-10T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 38, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/musician.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_musician",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Musician - Electric Blue",
+                                    "cost": 500,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 39, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/bear_inspector.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_bear_inspector",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Bear - Inspector",
+                                    "cost": 550,
+                                    "publishDate": "2025-08-24T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 40, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/redpanda_woods.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_redpanda_woods",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Red Panda - Woods",
+                                    "cost": 550,
+                                    "publishDate": "2025-07-13T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 41, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/wolf_formal.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_wolf_formal",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Wolf - Formal",
+                                    "cost": 550,
+                                    "publishDate": "2025-08-03T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 42, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/cake.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_cake",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Cake",
+                                    "cost": 600,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 43, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/deer_formal.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_deer_formal",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Deer - Formal",
+                                    "cost": 650,
+                                    "publishDate": "2025-07-13T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 44, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/deer_winter.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_deer_winter",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Deer - Winter",
+                                    "cost": 650,
+                                    "publishDate": "2025-08-31T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 45, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/footballplayer.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_footballplayer",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "American Football - Blue",
+                                    "cost": 650,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 46, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/americanfootballplayer_red.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_americanfootballplayer_red",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "American Football - Red",
+                                    "cost": 650,
+                                    "publishDate": "2025-07-27T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 47, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/dino_grad.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_dino_grad",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Dino - Grad",
+                                    "cost": 700,
+                                    "publishDate": "2025-08-03T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 48, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/tiger.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_tiger",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Tiger",
+                                    "cost": 750,
+                                    "publishDate": "2025-07-13T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 49, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/dino_music.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_dino_music",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Dino - Music",
+                                    "cost": 750,
+                                    "publishDate": "2025-07-13T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 50, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/basketball.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_basketball",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Basketball",
+                                    "cost": 750,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 51, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/dog_shihtzu.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_dog_shihtzu",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Dog - Shih-Tzu",
+                                    "cost": 800,
+                                    "publishDate": "2025-07-13T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 52, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/seal.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_seal",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Seal",
+                                    "cost": 800,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 53, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/cat_party.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_cat_party",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Cat - Party",
+                                    "cost": 800,
+                                    "publishDate": "2025-07-13T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 54, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/bunny.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_bunny",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Bunny",
+                                    "cost": 900,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 55, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/bunny_magic.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_bunny_magic",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Bunny - Magic",
+                                    "cost": 1000,
+                                    "publishDate": "2025-07-13T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 56, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/penguin.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_penguin",
+                                    "state": "ACQUIRED",
+                                    "isEquipped": false,
+                                    "title": "Penguin - Astronaut",
+                                    "cost": 1000,
+                                    "publishDate": null
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 57, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/penguin_winter.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_penguin_winter",
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
+                                    "title": "Penguin - Winter",
+                                    "cost": 1000,
+                                    "publishDate": "2025-08-31T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 58, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/penguin_royal.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_penguin_royal",
+                                    "state": "ACQUIRED",
+                                    "isEquipped": false,
+                                    "title": "Penguin - Royal",
+                                    "cost": 1100,
+                                    "publishDate": "2025-08-24T00:00:00+00:00"
+                                }
+                            },
+                            {
+                                "node": {
+                                    "__typename": "AvatarItem",
+                                    "id": "AvatarItem-{\"item_id\": 59, \"user_id\": 8278606}",
+                                    "type": "AVATAR",
+                                    "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                                    "__isShopItemInterface": "AvatarItem",
+                                    "systemId": "avatar_penguin_tophat",
+                                    "state": "ACQUIRED",
+                                    "isEquipped": false,
+                                    "title": "Penguin - Top Hat",
+                                    "cost": 1200,
+                                    "publishDate": "2025-07-13T00:00:00+00:00"
+                                }
+                            }
+                        ]
+                    },
+                    "id": "Gamification-8278606"
+                },
+                "__isNode": "Student",
+                "id": "Student-8278606"
+            },
+            "id": "User-8278606"
+        }
+    }
+}
