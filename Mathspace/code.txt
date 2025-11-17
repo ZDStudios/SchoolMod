@@ -1,4 +1,5 @@
-"data": {
+{
+    "data": {
         "equipItems": {
             "errors": [],
             "student": {
@@ -10,15 +11,15 @@
                         "isEquipped": true
                     },
                     "id": "Gamification-8278606",
-                    "coinsBalance": 6754,
+                    "coinsBalance": 6741,
                     "background": {
                         "id": "BackgroundItem-{\"item_id\": 71, \"user_id\": 8278606}",
                         "fullSizeUrl": "https://mathspace-production-static.mathspace.co/permalink/backgrounds/new/default.svg",
                         "dashboardTheme": "LIGHT"
                     },
                     "avatar": {
-                        "id": "AvatarItem-{\"item_id\": 115, \"user_id\": 8278606}",
-                        "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Elf-01__ed3bee35.png"
+                        "id": "AvatarItem-{\"item_id\": 20, \"user_id\": 8278606}",
+                        "thumbnailImageUrl": "https://mathspace-production-avatars.mathspace.co/img/avatars/pictures/robot.png"
                     },
                     "userShopView": {
                         "edges": [
@@ -45,10 +46,10 @@
                                     "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Elf-01__ed3bee35.png",
                                     "__isShopItemInterface": "AvatarItem",
                                     "systemId": null,
-                                    "state": "ACQUIRED",
-                                    "isEquipped": true,
+                                    "state": "LOCKED",
+                                    "isEquipped": false,
                                     "title": "Gift Elf (Limited time)",
-                                    "cost": 1,
+                                    "cost": 800,
                                     "publishDate": null
                                 }
                             },
@@ -226,7 +227,7 @@
                                     "__isShopItemInterface": "AvatarItem",
                                     "systemId": "avatar_robot",
                                     "state": "ACQUIRED",
-                                    "isEquipped": false,
+                                    "isEquipped": true,
                                     "title": "SciFi - Robot",
                                     "cost": 0,
                                     "publishDate": null
@@ -827,7 +828,7 @@
                     "isUnlocked": true
                 },
                 "user": {
-                    "avatar": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Elf-01__ed3bee35.png",
+                    "avatar": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/robot.png",
                     "id": "User-8278606"
                 },
                 "leaderboard": {
@@ -839,7 +840,10 @@
                             "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/scientist.png"
                         },
                         {
-                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/spacecat.png"
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/basketball.png"
+                        },
+                        {
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/robot.png"
                         },
                         {
                             "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/wolf_formal.png"
@@ -870,9 +874,6 @@
                         },
                         {
                             "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/bunny.png"
-                        },
-                        {
-                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/basketball.png"
                         },
                         {
                             "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png"
