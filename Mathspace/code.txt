@@ -45,10 +45,10 @@
                                     "thumbnailImageUrl": "https://mathspace-au-production-media.mathspace.co/media/shop_items/avatars/Elf-01__ed3bee35.png",
                                     "__isShopItemInterface": "AvatarItem",
                                     "systemId": null,
-                                    "state": "LOCKED",
+                                    "state": "ACQUIRED",
                                     "isEquipped": false,
                                     "title": "Gift Elf (Limited time)",
-                                    "cost": 800,
+                                    "cost": 1,
                                     "publishDate": null
                                 }
                             },
