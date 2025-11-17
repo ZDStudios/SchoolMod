@@ -1,1 +1,364 @@
-
+{
+    "data": {
+        "viewer": {
+            "points": {
+                "current": 90
+            },
+            "student": {
+                "__typename": "Student",
+                "activitySummary": {
+                    "totalTimeSpent": 170,
+                    "id": "StudentActivitySummary-8278606-1763222400000000-1763372114000000"
+                },
+                "id": "Student-8278606",
+                "leaderboard": {
+                    "currentWeek": [
+                        {
+                            "points": 1027,
+                            "rank": 1,
+                            "name": "Agnel George",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/robot.png",
+                            "studentId": "Student-8278585"
+                        },
+                        {
+                            "points": 686,
+                            "rank": 2,
+                            "name": "harley Rankine",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/scientist.png",
+                            "studentId": "Student-8278580"
+                        },
+                        {
+                            "points": 271,
+                            "rank": 3,
+                            "name": "Cristiano Magistro",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/basketball.png",
+                            "studentId": "Student-8258925"
+                        },
+                        {
+                            "points": 90,
+                            "rank": 4,
+                            "name": "Zayn de Lobel",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/robot.png",
+                            "studentId": "Student-8278606"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Christian Cinquina",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/wolf_formal.png",
+                            "studentId": "Student-8278599"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Lucas Cowton",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_royal.png",
+                            "studentId": "Student-8297881"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Ru Day",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8278591"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "jonah durlik",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/corgi.png",
+                            "studentId": "Student-8350987"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Luca Frate",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8278607"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Miles Hudson",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8304009"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Ashton Hurwitz",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8297776"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Patrick Jones",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/seal.png",
+                            "studentId": "Student-8258926"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Marley Langer",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8350988"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "jamie Lutz",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/bunny.png",
+                            "studentId": "Student-8297792"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Nicholas Marrapodi",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8288035"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "beau marshall",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8278594"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Beau Morgan",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin.png",
+                            "studentId": "Student-8278600"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Oliver Ostle",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8325621"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Vincent Ostoic",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8258927"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Krishna Pandit",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8288020"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Magne Sanders",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/seal.png",
+                            "studentId": "Student-8278701"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 5,
+                            "name": "Zac Will",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/musician.png",
+                            "studentId": "Student-8278584"
+                        }
+                    ],
+                    "previousWeek": [
+                        {
+                            "points": 4218,
+                            "rank": 1,
+                            "name": "jonah durlik",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/corgi.png",
+                            "studentId": "Student-8350987"
+                        },
+                        {
+                            "points": 3834,
+                            "rank": 2,
+                            "name": "Krishna Pandit",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8288020"
+                        },
+                        {
+                            "points": 3713,
+                            "rank": 3,
+                            "name": "jamie Lutz",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/bunny.png",
+                            "studentId": "Student-8297792"
+                        },
+                        {
+                            "points": 3336,
+                            "rank": 4,
+                            "name": "Oliver Ostle",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8325621"
+                        },
+                        {
+                            "points": 3251,
+                            "rank": 5,
+                            "name": "Zac Will",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/musician.png",
+                            "studentId": "Student-8278584"
+                        },
+                        {
+                            "points": 3116,
+                            "rank": 6,
+                            "name": "Luca Frate",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8278607"
+                        },
+                        {
+                            "points": 3058,
+                            "rank": 7,
+                            "name": "Beau Morgan",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin.png",
+                            "studentId": "Student-8278600"
+                        },
+                        {
+                            "points": 2768,
+                            "rank": 8,
+                            "name": "Ru Day",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8278591"
+                        },
+                        {
+                            "points": 2453,
+                            "rank": 9,
+                            "name": "Christian Cinquina",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/wolf_formal.png",
+                            "studentId": "Student-8278599"
+                        },
+                        {
+                            "points": 2404,
+                            "rank": 10,
+                            "name": "Vincent Ostoic",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8258927"
+                        },
+                        {
+                            "points": 2214,
+                            "rank": 11,
+                            "name": "Lucas Cowton",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_royal.png",
+                            "studentId": "Student-8297881"
+                        },
+                        {
+                            "points": 1715,
+                            "rank": 12,
+                            "name": "Miles Hudson",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8304009"
+                        },
+                        {
+                            "points": 1659,
+                            "rank": 13,
+                            "name": "Cristiano Magistro",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/basketball.png",
+                            "studentId": "Student-8258925"
+                        },
+                        {
+                            "points": 1601,
+                            "rank": 14,
+                            "name": "Ashton Hurwitz",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8297776"
+                        },
+                        {
+                            "points": 1570,
+                            "rank": 15,
+                            "name": "beau marshall",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8278594"
+                        },
+                        {
+                            "points": 1444,
+                            "rank": 16,
+                            "name": "Marley Langer",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8350988"
+                        },
+                        {
+                            "points": 1189,
+                            "rank": 17,
+                            "name": "Nicholas Marrapodi",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/penguin_tophat.png",
+                            "studentId": "Student-8288035"
+                        },
+                        {
+                            "points": 1117,
+                            "rank": 18,
+                            "name": "Agnel George",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/robot.png",
+                            "studentId": "Student-8278585"
+                        },
+                        {
+                            "points": 982,
+                            "rank": 19,
+                            "name": "Patrick Jones",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/seal.png",
+                            "studentId": "Student-8258926"
+                        },
+                        {
+                            "points": 769,
+                            "rank": 20,
+                            "name": "Zayn de Lobel",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/robot.png",
+                            "studentId": "Student-8278606"
+                        },
+                        {
+                            "points": 234,
+                            "rank": 21,
+                            "name": "harley Rankine",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/scientist.png",
+                            "studentId": "Student-8278580"
+                        },
+                        {
+                            "points": 0,
+                            "rank": 22,
+                            "name": "Magne Sanders",
+                            "avatarUrl": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/seal.png",
+                            "studentId": "Student-8278701"
+                        }
+                    ]
+                },
+                "classes": {
+                    "edges": [
+                        {
+                            "node": {
+                                "hasEnabledLeaderboard": true,
+                                "id": "Class-413070"
+                            }
+                        }
+                    ]
+                },
+                "leaderboardClass": {
+                    "class": {
+                        "title": "2025 7MA6 S2 Russell",
+                        "displayName": "2025 7MA6 S2 Russell",
+                        "id": "Class-413070"
+                    }
+                },
+                "assignedTasks": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "AssignedTask-8278606-TopicCustomTask-823541",
+                                "type": "CUSTOM_TASK",
+                                "workout": {
+                                    "__typename": "CustomWorkout",
+                                    "id": "TopicCustomWorkout-18725179"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "__isNode": "Student"
+            },
+            "id": "User-8278606"
+        }
+    }
+}
