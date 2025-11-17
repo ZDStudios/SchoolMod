@@ -1,1 +1,24 @@
-
+{
+    "data": {
+        "viewer": {
+            "avatar": "https://mathspace-au-production-avatars.mathspace.co/img/avatars/pictures/robot.png",
+            "profile": {
+                "__typename": "Student",
+                "background": {
+                    "url": "https://mathspace-production-static.mathspace.co/permalink/backgrounds/background_placeholder_v2.svg",
+                    "type": "GRAPHIC",
+                    "name": "BACKGROUND_DEFAULT",
+                    "isUnlocked": true
+                },
+                "gamification": {
+                    "coinsBalance": 130,
+                    "id": "Gamification-8278606",
+                    "hasClaimedStartingCoins": true
+                },
+                "__isNode": "Student",
+                "id": "Student-8278606"
+            },
+            "id": "User-8278606"
+        }
+    }
+}
