@@ -10,7 +10,7 @@
                         "isEquipped": true
                     },
                     "id": "Gamification-8278606",
-                    "coinsBalance": 130,
+                    "coinsBalance": 6754,
                     "background": {
                         "id": "BackgroundItem-{\"item_id\": 71, \"user_id\": 8278606}",
                         "fullSizeUrl": "https://mathspace-production-static.mathspace.co/permalink/backgrounds/new/default.svg",
