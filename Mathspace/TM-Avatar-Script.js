@@ -60,7 +60,7 @@
   const overrideTitleElement = () => {
     const title = document.querySelector('h3.css-1ng2lf3');
     if (title && title.textContent.includes('Mathspace')) {
-      title.textContent = "Cosmic Piggy (Limited Edition)";
+      title.textContent = "Cosmic Piggy (Limited time)";
     }
   };
 
