@@ -26,7 +26,7 @@
 
   const textReplacements = [
     { from: /Default Avatar/g, to: "John Pork (Limited time)" },
-    { from: /Mathspace \(Default\)/g, to: "Cosmic Piggy (Limited Edition)" }
+    { from: /Sandcastle/g, to: "Mr Piggy" }
   ];
 
   const replaceAvatars = () => {
