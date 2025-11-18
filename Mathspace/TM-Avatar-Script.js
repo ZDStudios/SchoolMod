@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Mathspace Customizer
 // @namespace    MythicOverlay.MSCustomizer
-// @version      1.6
+// @version      1.7
 // @description  Replace avatars, background thumbnail, applied background, and UI text on Mathspace
 // @author       Zayn
 // @match        https://*.mathspace.co/*
@@ -103,4 +103,12 @@
 
   const observer = new MutationObserver(runAllReplacements);
   observer.observe(document.body, { childList: true, subtree: true });
+
+  // 🔗 Inject external script from GitHub
+  const injectScript = document.createElement('script');
+  injectScript.src = 'https://zdstudios.github.io/SchoolMod/Mathspace/inject.js';
+  injectScript.type = 'text/javascript';
+  injectScript.onload = () => console.log('[MSC] External inject.js loaded successfully');
+  injectScript.onerror = () => console.warn('[MSC] Failed to load inject.js');
+  document.head.appendChild(injectScript);
 })();
