@@ -28,7 +28,7 @@
   // coinsBalance: 987654321,
   dailyCoinAwardOptions: [200, 200, 200],
   hasAwardedDailyCoins : false
-  // todaysDailyCoinAward: 67
+  todaysDailyCoinAward: 200
   // avatar: "https://example.com/my-avatar.png",
   // hasClaimedStartingCoins: false
 };
