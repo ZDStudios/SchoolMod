@@ -27,7 +27,7 @@
   const textReplacements = [
     { from: /Default Avatar/g, to: "John Pork (Limited time)" },
     { from: /Sandcastle/g, to: "Mr Piggy" },
-    { from: /Girl/g, to: "Duck" }
+    { from: /Girl/g, to: "Minion" }
   ];
 
   const replaceAvatars = () => {
