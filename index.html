@@ -1,1 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SchoolMod — Supercharge Your School Tools</title>
+  <meta name="description" content="SchoolMod is an open-source project that enhances the most popular school platforms with new features and quality-of-life improvements."/>
+  <link rel="icon" href="https://zdstudios.github.io/SchoolMod/Icons/SchoolMod.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 
+  <style>
+    :root {
+      --bg: #080c12;
+      --bg2: #0d1220;
+      --card: #111827;
+      --border: #1e2d45;
+      --accent: #00d4ff;
+      --accent2: #0088cc;
+      --accent-glow: rgba(0, 212, 255, 0.15);
+      --text: #e8f0fe;
+      --muted: #6b7fa3;
+      --green: #00e676;
+      --yellow: #ffd740;
+      --red: #ff5252;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* === GRID BACKGROUND === */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* === NAV === */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2.5rem;
+      background: rgba(8, 12, 18, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .nav-logo img {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--accent); }
+
+    .nav-cta {
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent) !important;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      transition: background 0.2s, color 0.2s !important;
+    }
+
+    .nav-cta:hover {
+      background: var(--accent) !important;
+      color: var(--bg) !important;
+    }
+
+    /* === HERO === */
+    .hero {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 8rem 2rem 4rem;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(0,212,255,0.08);
+      border: 1px solid rgba(0,212,255,0.25);
+      border-radius: 99px;
+      padding: 0.35rem 1rem;
+      font-size: 0.78rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 2rem;
+      animation: fadeDown 0.6s ease both;
+    }
+
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .hero-logo {
+      width: 110px;
+      height: 110px;
+      border-radius: 24px;
+      margin-bottom: 2rem;
+      box-shadow: 0 0 60px rgba(0,212,255,0.25);
+      animation: fadeDown 0.6s 0.1s ease both;
+    }
+
+    .hero h1 {
+      font-size: clamp(3rem, 8vw, 6rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin-bottom: 1.2rem;
+      animation: fadeDown 0.6s 0.2s ease both;
+    }
+
+    .hero h1 span {
+      color: var(--accent);
+      text-shadow: 0 0 40px rgba(0,212,255,0.4);
+    }
+
+    .hero-sub {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 520px;
+      line-height: 1.7;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 300;
+      margin-bottom: 2.5rem;
+      animation: fadeDown 0.6s 0.3s ease both;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeDown 0.6s 0.4s ease both;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.8rem;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-primary:hover {
+      background: #33dcff;
+      box-shadow: 0 0 30px rgba(0,212,255,0.4);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === SCROLL INDICATOR === */
+    .scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      animation: fadeDown 1s 1s ease both;
+    }
+
+    .scroll-line {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+      animation: scrollPulse 2s infinite;
+    }
+
+    @keyframes scrollPulse {
+      0%, 100% { transform: scaleY(1); opacity: 1; }
+      50% { transform: scaleY(0.5); opacity: 0.4; }
+    }
+
+    /* === SECTIONS === */
+    section {
+      position: relative;
+      z-index: 1;
+      padding: 6rem 2rem;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+
+    .section-desc {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.7;
+      max-width: 560px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 300;
+    }
+
+    /* === INTEGRATIONS === */
+    .integrations { background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+    .integrations-header { margin-bottom: 3rem; }
+
+    .integrations-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 1rem;
+    }
+
+    .int-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      cursor: default;
+    }
+
+    .int-card:hover {
+      border-color: var(--accent2);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(0,212,255,0.1);
+    }
+
+    .int-icon {
+      font-size: 2rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .int-name {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .int-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+    }
+
+    .status-wip .status-dot { background: var(--yellow); }
+    .status-wip { color: var(--yellow); }
+    .status-done .status-dot { background: var(--green); }
+    .status-done { color: var(--green); }
+
+    /* === FEATURES === */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.2rem;
+      margin-top: 3rem;
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.8rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(0,212,255,0.3);
+      box-shadow: 0 0 20px rgba(0,212,255,0.05);
+    }
+
+    .feature-icon {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .feature-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-desc {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.6;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 300;
+    }
+
+    /* === INSTALL === */
+    .install { background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+    .install-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+      margin-top: 3rem;
+    }
+
+    .code-block {
+      background: #060a10;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .code-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+
+    .code-dot:nth-child(1) { background: #ff5f57; }
+    .code-dot:nth-child(2) { background: #febc2e; }
+    .code-dot:nth-child(3) { background: #28c840; }
+
+    .code-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-left: 0.5rem;
+    }
+
+    .code-body {
+      padding: 1.2rem 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 2;
+      overflow-x: auto;
+    }
+
+    .code-line { display: block; }
+    .c-comment { color: #4a6a8a; }
+    .c-cmd { color: var(--accent); }
+    .c-arg { color: #c3e88d; }
+    .c-path { color: #f78c6c; }
+
+    .install-steps { counter-reset: steps; }
+
+    .step {
+      display: flex;
+      gap: 1.2rem;
+      margin-bottom: 1.8rem;
+      counter-increment: steps;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--accent);
+      margin-top: 0.2rem;
+    }
+
+    .step-content h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+    }
+
+    .step-content p {
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 300;
+      line-height: 1.6;
+    }
+
+    /* === CONTRIBUTE === */
+    .contribute-box {
+      margin-top: 3rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .contribute-box h2 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+    }
+
+    .contribute-box p {
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      font-weight: 300;
+      max-width: 400px;
+      line-height: 1.6;
+    }
+
+    .contribute-btns {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    /* === DISCLAIMER === */
+    .disclaimer {
+      background: rgba(255,82,82,0.04);
+      border: 1px solid rgba(255,82,82,0.15);
+      border-radius: 10px;
+      padding: 1.2rem 1.5rem;
+      margin-top: 3rem;
+      display: flex;
+      gap: 0.8rem;
+      align-items: flex-start;
+    }
+
+    .disclaimer-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 0.1rem; }
+
+    .disclaimer p {
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      font-weight: 300;
+    }
+
+    /* === FOOTER === */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+      text-align: center;
+    }
+
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 800;
+      font-size: 0.95rem;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .footer-logo img { width: 24px; height: 24px; border-radius: 5px; }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--accent); }
+
+    .footer-copy {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 300;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+      nav { padding: 1rem 1.2rem; }
+      .nav-links { display: none; }
+      .install-layout { grid-template-columns: 1fr; gap: 2rem; }
+      .contribute-box { padding: 2rem; }
+      .footer-inner { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+
+    /* === GLOW ORBS === */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(80px);
+      opacity: 0.12;
+    }
+
+    .orb-1 {
+      width: 400px; height: 400px;
+      background: var(--accent);
+      top: -100px; left: -100px;
+    }
+
+    .orb-2 {
+      width: 300px; height: 300px;
+      background: #0055ff;
+      bottom: 10%; right: -80px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <!-- NAV -->
+  <nav>
+    <a class="nav-logo" href="#">
+      <img src="https://zdstudios.github.io/SchoolMod/Icons/SchoolMod.png" alt="SchoolMod Logo"/>
+      SchoolMod
+    </a>
+    <ul class="nav-links">
+      <li><a href="#integrations">Integrations</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#contribute">Contribute</a></li>
+      <li><a href="https://github.com/zdstudios/SchoolMod" target="_blank" class="nav-cta">GitHub</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Open Source · Work In Progress
+    </div>
+    <img class="hero-logo" src="https://zdstudios.github.io/SchoolMod/Icons/SchoolMod.png" alt="SchoolMod"/>
+    <h1>School<span>Mod</span></h1>
+    <p class="hero-sub">Supercharge the tools your school already uses. New features, quality-of-life upgrades, and powerful enhancements — all open source.</p>
+    <div class="hero-buttons">
+      <a class="btn btn-primary" href="https://github.com/zdstudios/SchoolMod" target="_blank">
+        ★ View on GitHub
+      </a>
+      <a class="btn btn-secondary" href="#install">
+        Get Started →
+      </a>
+    </div>
+    <div class="scroll-hint">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- INTEGRATIONS -->
+  <section class="integrations" id="integrations">
+    <div class="container">
+      <div class="integrations-header">
+        <span class="section-label">// Platforms</span>
+        <h2 class="section-title">Platform Integrations</h2>
+        <p class="section-desc">SchoolMod enhances the platforms you already use every day at school.</p>
+      </div>
+      <div class="integrations-grid">
+        <div class="int-card">
+          <div class="int-icon">📘</div>
+          <div class="int-name">Education Perfect</div>
+          <div class="int-status status-wip"><span class="status-dot"></span>In Progress</div>
+        </div>
+        <div class="int-card">
+          <div class="int-icon">➗</div>
+          <div class="int-name">Mathspace</div>
+          <div class="int-status status-wip"><span class="status-dot"></span>In Progress</div>
+        </div>
+        <div class="int-card">
+          <div class="int-icon">🟦</div>
+          <div class="int-name">Blooket</div>
+          <div class="int-status status-wip"><span class="status-dot"></span>In Progress</div>
+        </div>
+        <div class="int-card">
+          <div class="int-icon">🎮</div>
+          <div class="int-name">Kahoot</div>
+          <div class="int-status status-wip"><span class="status-dot"></span>In Progress</div>
+        </div>
+        <div class="int-card">
+          <div class="int-icon">📚</div>
+          <div class="int-name">Seqta</div>
+          <div class="int-status status-wip"><span class="status-dot"></span>In Progress</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features">
+    <div class="container">
+      <span class="section-label">// What It Does</span>
+      <h2 class="section-title">Features</h2>
+      <p class="section-desc">Everything you wish your school platforms had — built by the community, for students.</p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🎨</div>
+          <div class="feature-title">UI Improvements</div>
+          <p class="feature-desc">Cleaner interfaces and better readability injected directly into supported platforms.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <div class="feature-title">Performance Tweaks</div>
+          <p class="feature-desc">Reduce lag and improve load times so you can focus on the work, not the wait.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔗</div>
+          <div class="feature-title">Cross-Platform</div>
+          <p class="feature-desc">One unified mod across all your school tools. Enable only what you need.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <div class="feature-title">Enhanced Analytics</div>
+          <p class="feature-desc">Richer stats and data from quizzes, assignments, and study sessions.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🌙</div>
+          <div class="feature-title">Dark Mode</div>
+          <p class="feature-desc">Easy on the eyes during late-night study sessions. Coming soon to all platforms.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🛠️</div>
+          <div class="feature-title">Modular Design</div>
+          <p class="feature-desc">Open source and community-driven. Built to be extended and improved by anyone.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSTALL -->
+  <section class="install" id="install">
+    <div class="container">
+      <span class="section-label">// Setup</span>
+      <h2 class="section-title">Getting Started</h2>
+      <p class="section-desc">SchoolMod is still in early development. Here's how to run it from source right now.</p>
+      <div class="install-layout">
+        <div class="install-steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-content">
+              <h3>Fork & Clone</h3>
+              <p>Fork the repo on GitHub, then clone it to your local machine.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-content">
+              <h3>Navigate Into the Project</h3>
+              <p>Open the project folder in your terminal or code editor.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-content">
+              <h3>Load & Test</h3>
+              <p>Follow the setup guide in the <code style="color:var(--accent); font-family:'JetBrains Mono',monospace;">/docs</code> folder once available.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-content">
+              <h3>Packaged Release Coming Soon</h3>
+              <p>A browser extension build is planned. Watch the repo to get notified.</p>
+            </div>
+          </div>
+        </div>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-dot"></span>
+            <span class="code-dot"></span>
+            <span class="code-dot"></span>
+            <span class="code-title">bash</span>
+          </div>
+          <div class="code-body">
+            <span class="code-line c-comment"># Clone the repository</span>
+            <span class="code-line"><span class="c-cmd">git</span> <span class="c-arg">clone</span> <span class="c-path">https://github.com/zdstudios/SchoolMod.git</span></span>
+            <span class="code-line">&nbsp;</span>
+            <span class="code-line c-comment"># Navigate into the project</span>
+            <span class="code-line"><span class="c-cmd">cd</span> <span class="c-path">SchoolMod</span></span>
+            <span class="code-line">&nbsp;</span>
+            <span class="code-line c-comment"># Follow docs for setup</span>
+            <span class="code-line"><span class="c-cmd">cat</span> <span class="c-path">docs/SETUP.md</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTRIBUTE -->
+  <section id="contribute">
+    <div class="container">
+      <span class="section-label">// Open Source</span>
+      <h2 class="section-title">Get Involved</h2>
+      <p class="section-desc">SchoolMod is built by the community. Every bug report, idea, and line of code makes a difference.</p>
+
+      <div class="contribute-box">
+        <div>
+          <h2>Want to Contribute?</h2>
+          <p>Whether you're fixing a bug, adding a new feature, or improving the docs — you're welcome here. Read the contributing guide to get started.</p>
+        </div>
+        <div class="contribute-btns">
+          <a class="btn btn-primary" href="https://github.com/zdstudios/SchoolMod/blob/main/CONTRIBUTING.md" target="_blank">Contributing Guide</a>
+          <a class="btn btn-secondary" href="https://github.com/zdstudios/SchoolMod/issues" target="_blank">Open an Issue</a>
+        </div>
+      </div>
+
+      <div class="disclaimer">
+        <span class="disclaimer-icon">⚠️</span>
+        <p>SchoolMod is an independent, community-driven project and is not affiliated with, endorsed by, or associated with Education Perfect, Mathspace, Blooket, Kahoot, or Seqta in any way. Use at your own discretion and always follow your school's IT policies.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <a class="footer-logo" href="#">
+        <img src="https://zdstudios.github.io/SchoolMod/Icons/SchoolMod.png" alt="SchoolMod"/>
+        SchoolMod
+      </a>
+      <ul class="footer-links">
+        <li><a href="https://github.com/zdstudios/SchoolMod" target="_blank">GitHub</a></li>
+        <li><a href="https://github.com/zdstudios/SchoolMod/blob/main/README.md" target="_blank">README</a></li>
+        <li><a href="https://github.com/zdstudios/SchoolMod/blob/main/CONTRIBUTING.md" target="_blank">Contributing</a></li>
+        <li><a href="https://github.com/zdstudios/SchoolMod/blob/main/LICENSE" target="_blank">License</a></li>
+      </ul>
+      <span class="footer-copy">MIT License · Open Source · Made with ❤️</span>
+    </div>
+  </footer>
+
+</body>
+</html>
