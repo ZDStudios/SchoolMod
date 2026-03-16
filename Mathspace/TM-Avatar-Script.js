@@ -15,7 +15,7 @@
     "https://mathspace-production-avatars.mathspace.co/img/avatars/avatar_placeholder.png",
     "https://mathspace-au-production-avatars.mathspace.co/img/avatars/avatar_placeholder.png"
   ];
-  const avatarReplacement = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/johnpork.jpg";
+  const avatarReplacement = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/johnpork.png";
 
   const customBgURL = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/JohnPork-Background.svg";
   const defaultThumbnailSrc = "https://mathspace-production-static.mathspace.co/permalink/backgrounds/new/thumbnails/default.png";
