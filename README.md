@@ -48,8 +48,8 @@ SchoolMod currently targets the following platforms:
 
 | Platform | Status | Features |
 |---|---|---|
-| 📘 **Education Perfect (EP)** | 🟡 In Progress | TBA |
-| ➗ **Mathspace** | 🟡 In Progress | TBA |
+| 📘 **Education Perfect (EP)** | 🟢 V5 |  |
+| ➗ **Mathspace** | 🟢 Beta V3 |  |
 | 🟦 **Blooket** | 🟡 In Progress | TBA |
 | 🎮 **Kahoot** | 🟡 In Progress | TBA |
 | 📚 **Seqta** | 🟡 In Progress | TBA |
