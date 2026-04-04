@@ -89,7 +89,7 @@ cd SchoolMod
 - [ ] Education Perfect enhancements
 - [ ] Mathspace enhancements
 - [ ] Blooket enhancements
-- [ ] Kahoot enhancements
+- [x] Kahoot enhancements
 - [ ] Seqta enhancements
 - [ ] Settings UI / dashboard
 - [ ] Browser extension packaging
