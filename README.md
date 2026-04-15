@@ -51,7 +51,7 @@ SchoolMod currently targets the following platforms:
 | 📘 **Education Perfect (EP)** | 🟢 V5 |  |
 | ➗ **Mathspace** | 🟢 Beta V3 |  |
 | 🟦 **Blooket** | 🟡 In Progress | TBA |
-| 🎮 **Kahoot** | 🟡 In Progress | TBA |
+| 🎮 **Kahoot** | 🟢 V2 |  |
 | 📚 **Seqta** | 🟡 In Progress | TBA |
 
 > Want to see a platform added? [Open a feature request →](../../issues/new?template=feature_request.md)
