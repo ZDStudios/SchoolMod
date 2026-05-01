@@ -225,11 +225,13 @@
         });
 
         const id = res.headers.get('ID') || res.headers.get('id') || null;
+        const body = await res.clone().json().catch(() => ({}));
+        const taskId = id || body.instance || body.id || null;
 
         if (res.ok) {
           result.className = 'result success';
           resultLabel.innerHTML = '<span class="status-dot"></span>Running';
-          resultValue.textContent = id ? `ID: ${id}` : 'Bot started successfully!';
+          resultValue.innerHTML = taskId ? 'Bot is running!<br><br>Your Task ID number is <strong>' + taskId + '</strong> — keep this safe!' : 'Bot started successfully!';
         } else {
           result.className = 'result error';
           resultLabel.textContent = 'Error ' + res.status;
