@@ -185,7 +185,12 @@
 
     <div class="field">
       <label>PASSWORD</label>
-      <input id="password" type="password" placeholder="••••••••" />
+      <div style="position:relative;">
+        <input id="password" type="password" placeholder="••••••••" style="padding-right:42px;" />
+        <button type="button" onclick="togglePassword()" id="eyeBtn" style="position:absolute; right:0; top:0; height:100%; width:42px; background:transparent; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#555; transition:color 0.2s; margin:0; padding:0; border-radius:0 10px 10px 0;">
+          <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
     </div>
 
     <button id="btn" onclick="submit()">Run Bot</button>
@@ -213,7 +218,7 @@
       result.style.display = 'none';
 
       try {
-        const res = await fetch('http://zdstudios.duckdns.org:5678/webhook-test/HW-Bot', {
+        const res = await fetch('http://zdstudios.duckdns.org:5678/webhook/HW-Bot', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ software, email, password })
@@ -241,6 +246,17 @@
 
       btn.textContent = 'Run Bot';
       btn.disabled = false;
+    }
+
+    function togglePassword() {
+      const input = document.getElementById('password');
+      const btn = document.getElementById('eyeBtn');
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+      btn.style.color = isHidden ? '#4f8ef7' : '#555';
+      document.getElementById('eyeIcon').innerHTML = isHidden
+        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
     }
 
     document.addEventListener('keydown', e => {
