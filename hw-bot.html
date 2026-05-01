@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HW Bot</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: #080808;
+      color: #e8e8e8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      overflow: hidden;
+    }
+
+    .bg {
+      position: fixed; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse at 20% 50%, #0d1f3c 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 20%, #1a0a2e 0%, transparent 50%),
+                  #080808;
+    }
+
+    .grid-lines {
+      position: fixed; inset: 0; z-index: 0;
+      background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .card {
+      position: relative; z-index: 1;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 420px;
+      backdrop-filter: blur(20px);
+    }
+
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 2rem;
+    }
+
+    .logo-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: linear-gradient(135deg, #4f8ef7, #a855f7);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    .logo-text { font-size: 1.1rem; font-weight: 600; letter-spacing: -0.02em; }
+    .logo-sub { font-size: 11px; color: #555; letter-spacing: 0.05em; text-transform: uppercase; }
+
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: 12px; color: #666; margin-bottom: 6px; letter-spacing: 0.03em; }
+
+    .field input, .field select {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      color: #e8e8e8;
+      padding: 11px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      appearance: none;
+    }
+
+    .field input:focus, .field select:focus {
+      border-color: rgba(79,142,247,0.5);
+      background: rgba(79,142,247,0.05);
+    }
+
+    .field select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+      cursor: pointer;
+    }
+
+    .field select option { background: #111; }
+
+    button {
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      background: linear-gradient(135deg, #4f8ef7, #a855f7);
+      color: #fff;
+      letter-spacing: 0.02em;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    button:hover { opacity: 0.9; }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .result {
+      margin-top: 1.25rem;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .result.success {
+      background: rgba(74,222,128,0.07);
+      border: 1px solid rgba(74,222,128,0.2);
+      color: #4ade80;
+    }
+
+    .result.error {
+      background: rgba(248,113,113,0.07);
+      border: 1px solid rgba(248,113,113,0.2);
+      color: #f87171;
+    }
+
+    .result-label { font-size: 11px; opacity: 0.6; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .result-value { font-size: 15px; font-weight: 500; word-break: break-all; }
+
+    .status-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #4ade80;
+      margin-right: 6px;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="grid-lines"></div>
+
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">🤖</div>
+      <div>
+        <div class="logo-text">HW Bot</div>
+        <div class="logo-sub">Homework Automation</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>SOFTWARE</label>
+      <select id="software">
+        <option value="Mathspace">Mathspace</option>
+        <option value="Education Perfect">Education Perfect</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>EMAIL</label>
+      <input id="email" type="email" placeholder="you@example.com" />
+    </div>
+
+    <div class="field">
+      <label>PASSWORD</label>
+      <input id="password" type="password" placeholder="••••••••" />
+    </div>
+
+    <button id="btn" onclick="submit()">Run Bot</button>
+
+    <div class="result" id="result">
+      <div class="result-label" id="resultLabel"></div>
+      <div class="result-value" id="resultValue"></div>
+    </div>
+  </div>
+
+  <script>
+    async function submit() {
+      const software = document.getElementById('software').value;
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('btn');
+      const result = document.getElementById('result');
+      const resultLabel = document.getElementById('resultLabel');
+      const resultValue = document.getElementById('resultValue');
+
+      if (!email || !password) { alert('Please fill in all fields'); return; }
+
+      btn.textContent = 'Running...';
+      btn.disabled = true;
+      result.style.display = 'none';
+
+      try {
+        const res = await fetch('http://zdstudios.duckdns.org:5678/webhook-test/HW-Bot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ software, email, password })
+        });
+
+        const id = res.headers.get('ID') || res.headers.get('id') || null;
+
+        if (res.ok) {
+          result.className = 'result success';
+          resultLabel.innerHTML = '<span class="status-dot"></span>Running';
+          resultValue.textContent = id ? `ID: ${id}` : 'Bot started successfully!';
+        } else {
+          result.className = 'result error';
+          resultLabel.textContent = 'Error ' + res.status;
+          resultValue.textContent = id || 'Something went wrong.';
+        }
+
+        result.style.display = 'block';
+      } catch (err) {
+        result.className = 'result error';
+        resultLabel.textContent = 'Failed to connect';
+        resultValue.textContent = err.message;
+        result.style.display = 'block';
+      }
+
+      btn.textContent = 'Run Bot';
+      btn.disabled = false;
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') submit();
+    });
+  </script>
+</body>
+</html>
