@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trinity College ID Card Maker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+    gap: 26px;
+  }
+
+  h1 { font-size: 1.3rem; color: #f0c040; letter-spacing: 1px; }
+
+  .layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 26px;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  /* ── FORM ── */
+  .form-panel {
+    background: #16213e;
+    border: 1px solid #2a2a5a;
+    border-radius: 14px;
+    padding: 20px;
+    width: 250px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .form-panel h2 { font-size: .88rem; color: #f0c040; }
+  label { font-size: .7rem; color: #aaa; display: block; margin-bottom: 3px; }
+  input[type="text"] {
+    width: 100%; padding: 7px 10px;
+    border-radius: 7px; border: 1px solid #333;
+    background: #0f0f23; color: #eee;
+    font-size: .85rem; outline: none; transition: border .2s;
+  }
+  input:focus { border-color: #f0c040; }
+  .upload-btn {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    background: #0f0f23; border: 1px dashed #555; border-radius: 7px;
+    padding: 8px; cursor: pointer; font-size: .76rem; color: #aaa;
+    transition: border .2s, color .2s;
+  }
+  .upload-btn:hover { border-color: #f0c040; color: #f0c040; }
+  input[type="file"] { display: none; }
+  .btn {
+    padding: 9px; border-radius: 8px; border: none;
+    font-size: .85rem; font-weight: 600; cursor: pointer;
+    transition: opacity .2s, transform .1s; width: 100%;
+  }
+  .btn:hover { opacity: .88; transform: translateY(-1px); }
+  .btn-update { background: #f0c040; color: #1a1a2e; }
+  .btn-print  { background: #2ecc71; color: #fff; }
+
+  /* ── CARD ── */
+  .preview-panel {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .preview-panel h2 { font-size: .88rem; color: #f0c040; }
+
+  /* 85.6 × 54mm at ~2.4× = 790 × 498px */
+  #card {
+    width: 790px;
+    height: 498px;
+    background: #f2f3f7;
+    border-radius: 22px;
+    box-shadow: 0 12px 50px rgba(0,0,0,.6);
+    position: relative;
+    overflow: hidden;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  #card::after {
+    content: '';
+    position: absolute; inset: 0; border-radius: 22px;
+    background: linear-gradient(130deg, rgba(255,255,255,.4) 0%, transparent 52%);
+    pointer-events: none; z-index: 30;
+  }
+
+  /* ── TOP ROW: logo | TRINITY COLLEGE | address ── */
+  .top-row {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 160px;
+    display: flex;
+    align-items: center;
+    padding: 18px 26px 0 20px;
+    gap: 16px;
+  }
+
+  #crestHolder {
+    width: 106px; height: 118px;
+    object-fit: contain; flex-shrink: 0;
+  }
+  .crest-placeholder {
+    width: 106px; height: 118px; flex-shrink: 0;
+    background: #d5dae8; border: 2px dashed #aaa;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .6rem; color: #888; text-align: center; border-radius: 4px;
+  }
+
+  .trinity-block { line-height: 1; flex: 1; }
+  .trinity-block .t-line {
+    display: block;
+    font-family: 'Times New Roman', Georgia, serif;
+    font-size: 54px; font-weight: 700;
+    color: #3a78c9; letter-spacing: 3px;
+  }
+
+  .card-address {
+    text-align: right; font-size: 17px;
+    font-weight: 700;
+    color: #333; line-height: 1.75;
+    flex-shrink: 0; align-self: flex-start; padding-top: 6px;
+  }
+
+  /* ── MIDDLE: student details, vertically centred between top-row and barcode ── */
+  /* top-row ends ~160px, barcode starts ~340px → midpoint ~250px */
+  .details-block {
+    position: absolute;
+    top: 175px;        /* pushed down from top row */
+    bottom: 155px;     /* stays above barcode area */
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;   /* vertically centres within this space */
+    gap: 8px;
+  }
+  .card-name  { font-size: 19px; font-weight: 700; color: #111; }
+  .info-line  { font-size: 17px; color: #111; font-weight: 700; }
+  .info-val   { font-weight: 700; }
+
+  /* ── BOTTOM RIGHT: photo pinned to corner ── */
+  .photo-box {
+    position: absolute;
+    bottom: 18px;
+    right: 20px;
+    width: 151px; height: 190px;
+    background: #c5d0de; border: 2px solid #aab;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    color: #777; font-size: .65rem; text-align: center;
+  }
+  .photo-box img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* ── BOTTOM LEFT: barcode + bold number centred below ── */
+  .bottom-row {
+    position: absolute;
+    bottom: 18px;
+    left: 20px;
+    width: 390px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #barcodeSVG { width: 100%; height: auto; display: block; }
+  .barcode-num {
+    font-family: 'Courier New', monospace;
+    font-size: 19px;
+    font-weight: 900;
+    color: #111;
+    letter-spacing: 3px;
+    margin-top: 5px;
+    text-align: center;
+  }
+
+  /* ── PRINT ── */
+  @media print {
+    body { background: white; padding: 0; display: block; }
+    h1, .form-panel, .preview-panel h2, .btn { display: none !important; }
+    .layout, .preview-panel { display: block; }
+    #card {
+      width: 85.6mm; height: 54mm;
+      border-radius: 8px; box-shadow: none;
+      margin: 8mm auto; page-break-inside: avoid;
+      position: relative; overflow: hidden;
+    }
+    #card::after { display: none; }
+    .top-row        { height: 17mm; padding: 2mm 3mm 0 2mm; gap: 2mm; }
+    #crestHolder, .crest-placeholder { width: 13mm; height: 14.5mm; }
+    .trinity-block .t-line { font-size: 7mm; letter-spacing: .4mm; }
+    .card-address   { font-size: 1.8mm; line-height: 1.6; padding-top: 1mm; }
+    .details-block  { top: 18mm; bottom: 16mm; left: 2.5mm; gap: 1.2mm; }
+    .card-name      { font-size: 3mm; }
+    .info-line      { font-size: 2.6mm; }
+    .photo-box      { bottom: 2mm; right: 2.5mm; width: 17mm; height: 21mm; }
+    .bottom-row     { bottom: 2mm; left: 2.5mm; width: 55mm; }
+    .barcode-num    { font-size: 2.2mm; margin-top: .5mm; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🎓 Trinity College — ID Card Maker</h1>
+
+<div class="layout">
+
+  <!-- FORM -->
+  <div class="form-panel">
+    <h2>Edit Card Details</h2>
+    <div>
+      <label>Full Name</label>
+      <input type="text" id="inName" value="Zayn De Lobel" />
+    </div>
+    <div>
+      <label>CC No</label>
+      <input type="text" id="inCC" value="36951990" />
+    </div>
+    <div>
+      <label>Date of Birth (DD/MM/YYYY)</label>
+      <input type="text" id="inDOB" value="12/03/2013" />
+    </div>
+    <div>
+      <label>Barcode Number</label>
+      <input type="text" id="inBarcode" value="33855" />
+    </div>
+    <div>
+      <label class="upload-btn" for="logoInput">🛡️ Upload TC Logo / Crest</label>
+      <input type="file" id="logoInput" accept="image/*" />
+    </div>
+    <div>
+      <label class="upload-btn" for="photoInput">📷 Upload Student Photo</label>
+      <input type="file" id="photoInput" accept="image/*" />
+    </div>
+    <button class="btn btn-update" onclick="updateCard()">⟳ Update Card</button>
+    <button class="btn btn-print"  onclick="window.print()">🖨️ Print Card</button>
+  </div>
+
+  <!-- CARD PREVIEW -->
+  <div class="preview-panel">
+    <h2>Card Preview</h2>
+    <div id="card">
+
+      <!-- TOP: logo | TRINITY COLLEGE | address -->
+      <div class="top-row">
+        <div class="crest-placeholder" id="crestHolder">Upload<br>TC Logo</div>
+        <div class="trinity-block">
+          <span class="t-line">TRINITY</span>
+          <span class="t-line">COLLEGE</span>
+        </div>
+        <div class="card-address">
+          Trinity Avenue<br>
+          East Perth WA 6004<br>
+          Ph:9219 1100
+        </div>
+      </div>
+
+      <!-- MIDDLE: student details, vertically centred -->
+      <div class="details-block">
+        <div class="card-name" id="cardName">Zayn De Lobel</div>
+        <div class="info-line">CC No: <span class="info-val" id="cardCC">36951990</span></div>
+        <div class="info-line">DOB: <span class="info-val" id="cardDOB">12/03/2013</span></div>
+      </div>
+
+      <!-- BOTTOM LEFT: barcode + bold number -->
+      <div class="bottom-row">
+        <svg id="barcodeSVG"></svg>
+        <div class="barcode-num" id="barcodeNum">33855</div>
+      </div>
+
+      <!-- BOTTOM RIGHT: photo -->
+      <div class="photo-box" id="photoBox">
+        <span>Upload<br>photo</span>
+      </div>
+
+    </div><!-- #card -->
+  </div>
+
+</div>
+
+<script>
+  function updateCard() {
+    const name    = document.getElementById('inName').value.trim();
+    const cc      = document.getElementById('inCC').value.trim();
+    const dob     = document.getElementById('inDOB').value.trim();
+    const barcode = document.getElementById('inBarcode').value.trim().toUpperCase();
+
+    document.getElementById('cardName').textContent   = name;
+    document.getElementById('cardCC').textContent     = cc;
+    document.getElementById('cardDOB').textContent    = dob;
+    document.getElementById('barcodeNum').textContent = barcode;
+
+    if (barcode) {
+      try {
+        JsBarcode('#barcodeSVG', barcode, {
+          format: 'CODE39',
+          width: 2.0, height: 58,
+          displayValue: false, margin: 0,
+          background: '#f2f3f7', lineColor: '#000'
+        });
+      } catch(e) {
+        document.getElementById('barcodeSVG').innerHTML =
+          '<text y="20" fill="red" font-size="10">Invalid value</text>';
+      }
+    }
+  }
+
+  document.getElementById('photoInput').addEventListener('change', function(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.getElementById('photoBox').innerHTML =
+        `<img src="${ev.target.result}" alt="ID photo">`;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('logoInput').addEventListener('change', function(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const el  = document.getElementById('crestHolder');
+      const img = document.createElement('img');
+      img.id  = 'crestHolder';
+      img.src = ev.target.result;
+      img.alt = 'TC Crest';
+      img.style.cssText = 'width:106px;height:118px;object-fit:contain;flex-shrink:0;';
+      el.replaceWith(img);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  updateCard();
+</script>
+
+</body>
+</html>
