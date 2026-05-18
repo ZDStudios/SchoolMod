@@ -17,16 +17,16 @@
   ];
   const avatarReplacement = "https://zdstudios.github.io/SchoolMod/Mathspace/Henry/Henry-MB-Avatar.png";
 
-  const customBgURL = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/JohnPork-Background.svg";
+  const customBgURL = "https://zdstudios.github.io/SchoolMod/Mathspace/Henry/Henry-MB-Avatar.svg";
   const defaultThumbnailSrc = "https://mathspace-production-static.mathspace.co/permalink/backgrounds/new/thumbnails/default.png";
   const originalBgURL = "https://mathspace-production-static.mathspace.co/permalink/backgrounds/background_placeholder_v2.svg";
   const modalBgURL = "https://mathspace-production-static.mathspace.co/permalink/backgrounds/new/default.svg";
 
-  const customThumbnailSrc = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/JohnPork-Background.png";
+  const customThumbnailSrc = "https://zdstudios.github.io/SchoolMod/Mathspace/Henry/Henry-MB-Avatar.png";
 
   const textReplacements = [
     { from: /Default Avatar/g, to: "Henry Hedley" },
-    { from: /Sandcastle/g, to: "Bob" },
+    { from: /Sandcastle/g, to: "Good Boy☠️" },
     { from: /Girl/g, to: "Minion" }
   ];
 
