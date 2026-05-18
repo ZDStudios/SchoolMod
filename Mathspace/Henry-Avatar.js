@@ -15,7 +15,7 @@
     "https://mathspace-production-avatars.mathspace.co/img/avatars/avatar_placeholder.png",
     "https://mathspace-au-production-avatars.mathspace.co/img/avatars/avatar_placeholder.png"
   ];
-  const avatarReplacement = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/johnpork.png";
+  const avatarReplacement = "https://zdstudios.github.io/SchoolMod/Mathspace/Henry/Henry-MB-Avatar.png";
 
   const customBgURL = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/JohnPork-Background.svg";
   const defaultThumbnailSrc = "https://mathspace-production-static.mathspace.co/permalink/backgrounds/new/thumbnails/default.png";
@@ -25,8 +25,8 @@
   const customThumbnailSrc = "https://zdstudios.github.io/SchoolMod/Mathspace/Icons/JohnPork-Background.png";
 
   const textReplacements = [
-    { from: /Default Avatar/g, to: "John Pork (Limited time)" },
-    { from: /Sandcastle/g, to: "Mr Piggy" },
+    { from: /Default Avatar/g, to: "Henry Hedley" },
+    { from: /Sandcastle/g, to: "Bob" },
     { from: /Girl/g, to: "Minion" }
   ];
 
