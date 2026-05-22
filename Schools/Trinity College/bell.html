@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Bell Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #38bdf8;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --bell-color: #fbbf24;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard {
+            background-color: var(--card-bg);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .day-indicator {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--accent-color);
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .current-status {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .time-range {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin-bottom: 30px;
+        }
+
+        .bell-box {
+            height: 120px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .bell-svg {
+            width: 80px;
+            height: 80px;
+            fill: var(--bell-color);
+            transform-origin: top center;
+        }
+
+        /* Continuous rapid ringing style when active */
+        .ring-active {
+            animation: ring 0.15s ease-in-out infinite alternate;
+        }
+
+        @keyframes ring {
+            0% { transform: rotate(-18deg); }
+            100% { transform: rotate(18deg); }
+        }
+
+        .countdown {
+            font-size: 4.5rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+            margin-bottom: 10px;
+            background: linear-gradient(to bottom right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .next-up {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .next-up span {
+            color: var(--text-color);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        <div id="day-indicator" class="day-indicator">Loading Day...</div>
+        <div id="current-status" class="current-status">Checking Schedule...</div>
+        <div id="time-range" class="time-range">--:-- - --:--</div>
+
+        <div class="bell-box">
+            <svg id="bell" class="bell-svg" viewBox="0 0 24 24">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+            </svg>
+        </div>
+
+        <div id="countdown" class="countdown">00:00</div>
+        <div id="label" class="label">REMAINING</div>
+
+        <div id="next-up" class="next-up">Next: <span id="next-period">--</span></div>
+    </div>
+
+    <script>
+        let isRingingSequenceRunning = false;
+
+        // Handles the visual sequence: Shake -> Stop for 1 second -> Shake -> Resume tracking
+        function triggerDoubleRingSequence() {
+            if (isRingingSequenceRunning) return;
+            isRingingSequenceRunning = true;
+
+            const bellElement = document.getElementById('bell');
+            const ringDuration = 1800; // How long the visual ring shakes
+
+            // First Ring Burst Animation
+            bellElement.classList.add('ring-active');
+
+            // Halt First Ring
+            setTimeout(() => {
+                bellElement.classList.remove('ring-active');
+            }, ringDuration);
+
+            // Wait 1 second silent pause, then trigger Second Ring Burst Animation
+            setTimeout(() => {
+                bellElement.classList.add('ring-active');
+
+                // Ultimate teardown clean-up
+                setTimeout(() => {
+                    bellElement.classList.remove('ring-active');
+                    isRingingSequenceRunning = false;
+                }, ringDuration);
+
+            }, ringDuration + 1000); 
+        }
+
+        const schedules = {
+            standard: [
+                { name: "Pastoral Care (PCG)", start: "08:30", end: "08:40" },
+                { name: "Period 1", start: "08:40", end: "09:35" },
+                { name: "Period 2", start: "09:35", end: "10:30" },
+                { name: "Recess (Break)", start: "10:30", end: "10:55" },
+                { name: "Travel to Class", start: "10:55", end: "11:00" },
+                { name: "Period 3", start: "11:00", end: "11:50" },
+                { name: "Period 4", start: "11:50", end: "12:45" },
+                { name: "Lunch (Break)", start: "12:45", end: "13:10" },
+                { name: "Travel to Class", start: "13:10", end: "13:15" },
+                { name: "Period 5", start: "13:15", end: "14:10" },
+                { name: "Period 6", start: "14:10", end: "15:05" }
+            ],
+            tuesday: [
+                { name: "Pastoral Care (PCG)", start: "08:30", end: "09:20" },
+                { name: "Period 1", start: "09:20", end: "10:10" },
+                { name: "Period 2", start: "10:10", end: "11:00" },
+                { name: "Recess (Break)", start: "11:00", end: "11:25" },
+                { name: "Travel to Class", start: "11:25", end: "11:30" },
+                { name: "Period 3", start: "11:30", end: "12:20" },
+                { name: "Period 4", start: "12:20", end: "13:05" },
+                { name: "Lunch (Break)", start: "13:05", end: "13:30" },
+                { name: "Travel to Class", start: "13:30", end: "13:35" },
+                { name: "Period 5", start: "13:35", end: "14:20" },
+                { name: "Period 6", start: "14:20", end: "15:05" }
+            ],
+            friday: [
+                { name: "Pastoral Care (PCG)", start: "08:30", end: "08:40" },
+                { name: "Period 1", start: "08:40", end: "09:24" },
+                { name: "Period 2", start: "09:24", end: "10:08" },
+                { name: "Period 3", start: "10:08", end: "10:52" },
+                { name: "Recess (Break)", start: "10:52", end: "11:17" },
+                { name: "Travel to Class", start: "11:17", end: "11:22" },
+                { name: "Period 4", start: "11:22", end: "12:06" },
+                { name: "Period 5", start: "12:06", end: "12:50" },
+                { name: "Lunch (Break)", start: "12:50", end: "13:15" },
+                { name: "Travel to Class", start: "13:15", end: "13:20" },
+                { name: "Period 6 (Sport 1)", start: "13:20", end: "14:10" },
+                { name: "Period 7 (Sport 2)", start: "14:10", end: "15:05" }
+            ]
+        };
+
+        function timeToMins(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function formatTimeStr(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            const ampm = hours >= 12 ? 'pm' : 'am';
+            const displayHours = hours % 12 || 12;
+            const displayMinutes = minutes < 10 ? '0' + minutes : minutes;
+            return `${displayHours}:${displayMinutes} ${ampm}`;
+        }
+
+        function updateClock() {
+            // Lock UI processing updates while custom bell animation timeline plays out
+            if (isRingingSequenceRunning) return;
+
+            const now = new Date();
+            const currentDay = now.getDay();
+            
+            // Shift execution backward 2 seconds to match delay instructions
+            const dynamicPastSecs = now.getTime() - 2000;
+            const adjustedTime = new Date(dynamicPastSecs);
+
+            const currentMins = adjustedTime.getHours() * 60 + adjustedTime.getMinutes();
+            const currentSecs = adjustedTime.getSeconds();
+
+            let schedule = [];
+            let dayName = "";
+
+            if (currentDay === 2) {
+                schedule = schedules.tuesday;
+                dayName = "Tuesday Schedule";
+            } else if (currentDay === 5) {
+                schedule = schedules.friday;
+                dayName = "Friday Schedule";
+            } else if (currentDay === 1 || currentDay === 3 || currentDay === 4) {
+                schedule = schedules.standard;
+                dayName = adjustedTime.toLocaleDateString('en-US', { weekday: 'long' }) + " Schedule";
+            } else {
+                document.getElementById('day-indicator').innerText = "Weekend";
+                document.getElementById('current-status').innerText = "School's Out!";
+                document.getElementById('time-range').innerText = "Enjoy your break";
+                document.getElementById('countdown').innerText = "--:--";
+                document.getElementById('next-period').innerText = "Monday PCG (8:30 am)";
+                return;
+            }
+
+            document.getElementById('day-indicator').innerText = dayName;
+
+            let currentPeriod = null;
+            let nextPeriod = null;
+
+            for (let i = 0; i < schedule.length; i++) {
+                const slot = schedule[i];
+                const start = timeToMins(slot.start);
+                const end = timeToMins(slot.end);
+
+                if (currentMins >= start && currentMins < end) {
+                    currentPeriod = slot;
+                    nextPeriod = schedule[i + 1] || null;
+                    break;
+                } else if (currentMins < start) {
+                    nextPeriod = slot;
+                    break;
+                }
+            }
+
+            if (currentPeriod) {
+                document.getElementById('current-status').innerText = currentPeriod.name;
+                document.getElementById('time-range').innerText = `${formatTimeStr(currentPeriod.start)} - ${formatTimeStr(currentPeriod.end)}`;
+                
+                const targetMins = timeToMins(currentPeriod.end);
+                let diffSecs = (targetMins * 60) - ((currentMins * 60) + currentSecs);
+
+                if (diffSecs <= 0) {
+                    document.getElementById('countdown').innerText = "00:00";
+                    triggerDoubleRingSequence();
+                } else {
+                    displayCountdown(diffSecs);
+                }
+                
+                document.getElementById('next-period').innerText = nextPeriod ? `${nextPeriod.name} (${formatTimeStr(nextPeriod.start)})` : "End of School Day";
+
+            } else if (nextPeriod && currentMins < timeToMins(schedule[0].start)) {
+                document.getElementById('current-status').innerText = "Before School";
+                document.getElementById('time-range').innerText = `First Bell at ${formatTimeStr(schedule[0].start)}`;
+                
+                const targetMins = timeToMins(schedule[0].start);
+                let diffSecs = (targetMins * 60) - ((currentMins * 60) + currentSecs);
+                
+                if (diffSecs <= 0) {
+                    document.getElementById('countdown').innerText = "00:00";
+                    triggerDoubleRingSequence();
+                } else {
+                    displayCountdown(diffSecs);
+                }
+                document.getElementById('next-period').innerText = `${schedule[0].name}`;
+            } else {
+                document.getElementById('current-status').innerText = "School Ended";
+                document.getElementById('time-range').innerText = "See you tomorrow!";
+                document.getElementById('countdown').innerText = "00:00";
+                document.getElementById('next-period').innerText = "Monday PCG (8:30 am)";
+            }
+        }
+
+        function displayCountdown(totalSecs) {
+            const minutes = Math.floor(totalSecs / 60);
+            const seconds = totalSecs % 60;
+            const displayMin = minutes < 10 ? '0' + minutes : minutes;
+            const displaySec = seconds < 10 ? '0' + seconds : seconds;
+            document.getElementById('countdown').innerText = `${displayMin}:${displaySec}`;
+        }
+
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>
