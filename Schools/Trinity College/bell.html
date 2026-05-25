@@ -31,7 +31,6 @@
             padding: 20px;
         }
 
-        /* Standard view layout styles */
         .dashboard {
             background-color: var(--card-bg);
             border-radius: 24px;
@@ -76,12 +75,10 @@
             width: 90px;
             height: 90px;
             fill: var(--bell-color);
-            /* Anchor the rotation point strictly to the top center hanger hook of the bell */
             transform-origin: 50% 10%; 
             transition: transform 0.1s linear;
         }
 
-        /* Smooth heavy side-to-side swinging motion physics */
         .ring-active {
             animation: swingSideToSide 0.6s ease-in-out infinite alternate;
         }
@@ -120,13 +117,13 @@
             font-weight: 500;
         }
 
-        /* Raw API layout reset override style */
+        /* Pure text style for code readers */
         body.raw-api-mode {
             background-color: #000000;
-            color: #00ff00;
+            color: #ffffff;
             font-family: monospace;
             display: block;
-            padding: 20px;
+            padding: 10px;
             min-height: auto;
         }
     </style>
@@ -150,23 +147,18 @@
         <div id="next-up" class="next-up">Next: <span id="next-period">--</span></div>
     </div>
 
-    <div id="api-raw-output" style="display: none; font-size: 1.2rem; white-space: pre-wrap;"></div>
+    <div id="api-raw-output" style="display: none; white-space: pre-wrap;"></div>
 
     <script>
         let isRingingSequenceRunning = false;
-
-        // Check if "?api" argument parameter is appended to the current web browser page URL string
-        const urlParams = new URLSearchParams(window.location.search);
         const isApiMode = window.location.search.toLowerCase().includes('api');
 
         if (isApiMode) {
-            // Hide standard UI layer and initialize simple code appearance environment layout
             document.getElementById('dashboard-ui').style.display = 'none';
             document.getElementById('api-raw-output').style.display = 'block';
             document.body.classList.add('raw-api-mode');
         }
 
-        // Handles the structural layout pattern: Swing side-to-side -> Rest 1s -> Swing side-to-side -> Track
         function triggerDoubleRingSequence() {
             if (isRingingSequenceRunning) return;
             isRingingSequenceRunning = true;
@@ -174,14 +166,12 @@
             const bellElement = document.getElementById('bell');
             const ringDuration = 1800; 
 
-            // First Side-to-Side Swing Session
             if (!isApiMode) bellElement.classList.add('ring-active');
 
             setTimeout(() => {
                 if (!isApiMode) bellElement.classList.remove('ring-active');
             }, ringDuration);
 
-            // Wait 1 second structural silence pattern
             setTimeout(() => {
                 if (!isApiMode) bellElement.classList.add('ring-active');
 
@@ -249,10 +239,24 @@
             return `${displayHours}:${displayMinutes} ${ampm}`;
         }
 
-        function handleApiOutput(status, remainingSecs, endTime) {
+        // Helper to structure seconds into clean MM:SS format
+        function getMMSS(totalSecs) {
+            const minutes = Math.floor(totalSecs / 60);
+            const seconds = totalSecs % 60;
+            const displayMin = minutes < 10 ? '0' + minutes : minutes;
+            const displaySec = seconds < 10 ? '0' + seconds : seconds;
+            return `${displayMin}:${displaySec}`;
+        }
+
+        function handleApiOutput(status, remainingMMSS, endTime) {
             if (!isApiMode) return;
-            const formattedOutput = `Status: ${status} | Seconds Remaining: ${remainingSecs} | Ends At: ${formatTimeStr(endTime)}`;
-            document.getElementById('api-raw-output').innerText = formattedOutput;
+            // Build dynamic javascript object and turn it to raw JSON string data
+            const data = {
+                status: status,
+                remaining: remainingMMSS,
+                endTime: endTime ? formatTimeStr(endTime) : "N/A"
+            };
+            document.getElementById('api-raw-output').innerText = JSON.stringify(data);
         }
 
         function updateClock() {
@@ -261,7 +265,7 @@
             const now = new Date();
             const currentDay = now.getDay();
             
-            // Shift execution context backwards 2 seconds to match delay instructions
+            // Shift processing time backwards 2 seconds per rules
             const dynamicPastSecs = now.getTime() - 2000;
             const adjustedTime = new Date(dynamicPastSecs);
 
@@ -273,16 +277,13 @@
 
             if (currentDay === 2) {
                 schedule = schedules.tuesday;
-                dayName = "Tuesday Schedule";
             } else if (currentDay === 5) {
                 schedule = schedules.friday;
-                dayName = "Friday Schedule";
             } else if (currentDay === 1 || currentDay === 3 || currentDay === 4) {
                 schedule = schedules.standard;
-                dayName = adjustedTime.toLocaleDateString('en-US', { weekday: 'long' }) + " Schedule";
             } else {
                 if (isApiMode) {
-                    document.getElementById('api-raw-output').innerText = "Status: Weekend | School's Out!";
+                    handleApiOutput("Weekend", "--:--", null);
                 } else {
                     document.getElementById('day-indicator').innerText = "Weekend";
                     document.getElementById('current-status').innerText = "School's Out!";
@@ -293,7 +294,10 @@
                 return;
             }
 
-            if (!isApiMode) document.getElementById('day-indicator').innerText = dayName;
+            if (!isApiMode) {
+                dayName = adjustedTime.toLocaleDateString('en-US', { weekday: 'long' }) + " Schedule";
+                document.getElementById('day-indicator').innerText = dayName;
+            }
 
             let currentPeriod = null;
             let nextPeriod = null;
@@ -318,19 +322,17 @@
                 let diffSecs = (targetMins * 60) - ((currentMins * 60) + currentSecs);
 
                 if (diffSecs <= 0) {
-                    if (isApiMode) {
-                        handleApiOutput(currentPeriod.name, 0, currentPeriod.end);
-                    } else {
-                        document.getElementById('countdown').innerText = "00:00";
-                    }
+                    handleApiOutput(currentPeriod.name, "00:00", currentPeriod.end);
+                    if (!isApiMode) document.getElementById('countdown').innerText = "00:00";
                     triggerDoubleRingSequence();
                 } else {
+                    const timeString = getMMSS(diffSecs);
                     if (isApiMode) {
-                        handleApiOutput(currentPeriod.name, diffSecs, currentPeriod.end);
+                        handleApiOutput(currentPeriod.name, timeString, currentPeriod.end);
                     } else {
                         document.getElementById('current-status').innerText = currentPeriod.name;
                         document.getElementById('time-range').innerText = `${formatTimeStr(currentPeriod.start)} - ${formatTimeStr(currentPeriod.end)}`;
-                        displayCountdown(diffSecs);
+                        document.getElementById('countdown').innerText = timeString;
                         document.getElementById('next-period').innerText = nextPeriod ? `${nextPeriod.name} (${formatTimeStr(nextPeriod.start)})` : "End of School Day";
                     }
                 }
@@ -340,25 +342,23 @@
                 let diffSecs = (targetMins * 60) - ((currentMins * 60) + currentSecs);
                 
                 if (diffSecs <= 0) {
-                    if (isApiMode) {
-                        handleApiOutput("Before School", 0, schedule[0].start);
-                    } else {
-                        document.getElementById('countdown').innerText = "00:00";
-                    }
+                    handleApiOutput("Before School", "00:00", schedule[0].start);
+                    if (!isApiMode) document.getElementById('countdown').innerText = "00:00";
                     triggerDoubleRingSequence();
                 } else {
+                    const timeString = getMMSS(diffSecs);
                     if (isApiMode) {
-                        handleApiOutput("Before School", diffSecs, schedule[0].start);
+                        handleApiOutput("Before School", timeString, schedule[0].start);
                     } else {
                         document.getElementById('current-status').innerText = "Before School";
                         document.getElementById('time-range').innerText = `First Bell at ${formatTimeStr(schedule[0].start)}`;
-                        displayCountdown(diffSecs);
+                        document.getElementById('countdown').innerText = timeString;
                         document.getElementById('next-period').innerText = `${schedule[0].name}`;
                     }
                 }
             } else {
                 if (isApiMode) {
-                    document.getElementById('api-raw-output').innerText = "Status: School Ended | See you tomorrow!";
+                    handleApiOutput("School Ended", "00:00", null);
                 } else {
                     document.getElementById('current-status').innerText = "School Ended";
                     document.getElementById('time-range').innerText = "See you tomorrow!";
@@ -368,16 +368,8 @@
             }
         }
 
-        function displayCountdown(totalSecs) {
-            const minutes = Math.floor(totalSecs / 60);
-            const seconds = totalSecs % 60;
-            const displayMin = minutes < 10 ? '0' + minutes : minutes;
-            const displaySec = seconds < 10 ? '0' + seconds : seconds;
-            document.getElementById('countdown').innerText = `${displayMin}:${displaySec}`;
-        }
-
         updateClock();
-        setInterval(updateClock, 1000); // Ticks live every second
+        setInterval(updateClock, 1000); // Live tracking updates every single second
     </script>
 </body>
 </html>
