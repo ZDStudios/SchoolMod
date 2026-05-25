@@ -31,6 +31,7 @@
             padding: 20px;
         }
 
+        /* Standard view layout styles */
         .dashboard {
             background-color: var(--card-bg);
             border-radius: 24px;
@@ -64,28 +65,30 @@
         }
 
         .bell-box {
-            height: 120px;
+            height: 140px;
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .bell-svg {
-            width: 80px;
-            height: 80px;
+            width: 90px;
+            height: 90px;
             fill: var(--bell-color);
-            transform-origin: top center;
+            /* Anchor the rotation point strictly to the top center hanger hook of the bell */
+            transform-origin: 50% 10%; 
+            transition: transform 0.1s linear;
         }
 
-        /* Continuous rapid ringing style when active */
+        /* Smooth heavy side-to-side swinging motion physics */
         .ring-active {
-            animation: ring 0.15s ease-in-out infinite alternate;
+            animation: swingSideToSide 0.6s ease-in-out infinite alternate;
         }
 
-        @keyframes ring {
-            0% { transform: rotate(-18deg); }
-            100% { transform: rotate(18deg); }
+        @keyframes swingSideToSide {
+            0% { transform: rotate(-35deg); }
+            100% { transform: rotate(35deg); }
         }
 
         .countdown {
@@ -116,18 +119,28 @@
             color: var(--text-color);
             font-weight: 500;
         }
+
+        /* Raw API layout reset override style */
+        body.raw-api-mode {
+            background-color: #000000;
+            color: #00ff00;
+            font-family: monospace;
+            display: block;
+            padding: 20px;
+            min-height: auto;
+        }
     </style>
 </head>
 <body>
 
-    <div class="dashboard">
+    <div id="dashboard-ui" class="dashboard">
         <div id="day-indicator" class="day-indicator">Loading Day...</div>
         <div id="current-status" class="current-status">Checking Schedule...</div>
         <div id="time-range" class="time-range">--:-- - --:--</div>
 
         <div class="bell-box">
             <svg id="bell" class="bell-svg" viewBox="0 0 24 24">
-                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                <path d="M12 2c1.1 0 2 .9 2 2v.68C17.64 5.36 21 8.92 21 13v5l2 2v1H1v-1l2-2v-5c0-4.08 3.36-7.64 7-8.32V4c0-1.1.9-2 2-2zm0 20c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2z"/>
             </svg>
         </div>
 
@@ -137,32 +150,43 @@
         <div id="next-up" class="next-up">Next: <span id="next-period">--</span></div>
     </div>
 
+    <div id="api-raw-output" style="display: none; font-size: 1.2rem; white-space: pre-wrap;"></div>
+
     <script>
         let isRingingSequenceRunning = false;
 
-        // Handles the visual sequence: Shake -> Stop for 1 second -> Shake -> Resume tracking
+        // Check if "?api" argument parameter is appended to the current web browser page URL string
+        const urlParams = new URLSearchParams(window.location.search);
+        const isApiMode = window.location.search.toLowerCase().includes('api');
+
+        if (isApiMode) {
+            // Hide standard UI layer and initialize simple code appearance environment layout
+            document.getElementById('dashboard-ui').style.display = 'none';
+            document.getElementById('api-raw-output').style.display = 'block';
+            document.body.classList.add('raw-api-mode');
+        }
+
+        // Handles the structural layout pattern: Swing side-to-side -> Rest 1s -> Swing side-to-side -> Track
         function triggerDoubleRingSequence() {
             if (isRingingSequenceRunning) return;
             isRingingSequenceRunning = true;
 
             const bellElement = document.getElementById('bell');
-            const ringDuration = 1800; // How long the visual ring shakes
+            const ringDuration = 1800; 
 
-            // First Ring Burst Animation
-            bellElement.classList.add('ring-active');
+            // First Side-to-Side Swing Session
+            if (!isApiMode) bellElement.classList.add('ring-active');
 
-            // Halt First Ring
             setTimeout(() => {
-                bellElement.classList.remove('ring-active');
+                if (!isApiMode) bellElement.classList.remove('ring-active');
             }, ringDuration);
 
-            // Wait 1 second silent pause, then trigger Second Ring Burst Animation
+            // Wait 1 second structural silence pattern
             setTimeout(() => {
-                bellElement.classList.add('ring-active');
+                if (!isApiMode) bellElement.classList.add('ring-active');
 
-                // Ultimate teardown clean-up
                 setTimeout(() => {
-                    bellElement.classList.remove('ring-active');
+                    if (!isApiMode) bellElement.classList.remove('ring-active');
                     isRingingSequenceRunning = false;
                 }, ringDuration);
 
@@ -225,14 +249,19 @@
             return `${displayHours}:${displayMinutes} ${ampm}`;
         }
 
+        function handleApiOutput(status, remainingSecs, endTime) {
+            if (!isApiMode) return;
+            const formattedOutput = `Status: ${status} | Seconds Remaining: ${remainingSecs} | Ends At: ${formatTimeStr(endTime)}`;
+            document.getElementById('api-raw-output').innerText = formattedOutput;
+        }
+
         function updateClock() {
-            // Lock UI processing updates while custom bell animation timeline plays out
             if (isRingingSequenceRunning) return;
 
             const now = new Date();
             const currentDay = now.getDay();
             
-            // Shift execution backward 2 seconds to match delay instructions
+            // Shift execution context backwards 2 seconds to match delay instructions
             const dynamicPastSecs = now.getTime() - 2000;
             const adjustedTime = new Date(dynamicPastSecs);
 
@@ -252,15 +281,19 @@
                 schedule = schedules.standard;
                 dayName = adjustedTime.toLocaleDateString('en-US', { weekday: 'long' }) + " Schedule";
             } else {
-                document.getElementById('day-indicator').innerText = "Weekend";
-                document.getElementById('current-status').innerText = "School's Out!";
-                document.getElementById('time-range').innerText = "Enjoy your break";
-                document.getElementById('countdown').innerText = "--:--";
-                document.getElementById('next-period').innerText = "Monday PCG (8:30 am)";
+                if (isApiMode) {
+                    document.getElementById('api-raw-output').innerText = "Status: Weekend | School's Out!";
+                } else {
+                    document.getElementById('day-indicator').innerText = "Weekend";
+                    document.getElementById('current-status').innerText = "School's Out!";
+                    document.getElementById('time-range').innerText = "Enjoy your break";
+                    document.getElementById('countdown').innerText = "--:--";
+                    document.getElementById('next-period').innerText = "Monday PCG (8:30 am)";
+                }
                 return;
             }
 
-            document.getElementById('day-indicator').innerText = dayName;
+            if (!isApiMode) document.getElementById('day-indicator').innerText = dayName;
 
             let currentPeriod = null;
             let nextPeriod = null;
@@ -281,40 +314,57 @@
             }
 
             if (currentPeriod) {
-                document.getElementById('current-status').innerText = currentPeriod.name;
-                document.getElementById('time-range').innerText = `${formatTimeStr(currentPeriod.start)} - ${formatTimeStr(currentPeriod.end)}`;
-                
                 const targetMins = timeToMins(currentPeriod.end);
                 let diffSecs = (targetMins * 60) - ((currentMins * 60) + currentSecs);
 
                 if (diffSecs <= 0) {
-                    document.getElementById('countdown').innerText = "00:00";
+                    if (isApiMode) {
+                        handleApiOutput(currentPeriod.name, 0, currentPeriod.end);
+                    } else {
+                        document.getElementById('countdown').innerText = "00:00";
+                    }
                     triggerDoubleRingSequence();
                 } else {
-                    displayCountdown(diffSecs);
+                    if (isApiMode) {
+                        handleApiOutput(currentPeriod.name, diffSecs, currentPeriod.end);
+                    } else {
+                        document.getElementById('current-status').innerText = currentPeriod.name;
+                        document.getElementById('time-range').innerText = `${formatTimeStr(currentPeriod.start)} - ${formatTimeStr(currentPeriod.end)}`;
+                        displayCountdown(diffSecs);
+                        document.getElementById('next-period').innerText = nextPeriod ? `${nextPeriod.name} (${formatTimeStr(nextPeriod.start)})` : "End of School Day";
+                    }
                 }
-                
-                document.getElementById('next-period').innerText = nextPeriod ? `${nextPeriod.name} (${formatTimeStr(nextPeriod.start)})` : "End of School Day";
 
             } else if (nextPeriod && currentMins < timeToMins(schedule[0].start)) {
-                document.getElementById('current-status').innerText = "Before School";
-                document.getElementById('time-range').innerText = `First Bell at ${formatTimeStr(schedule[0].start)}`;
-                
                 const targetMins = timeToMins(schedule[0].start);
                 let diffSecs = (targetMins * 60) - ((currentMins * 60) + currentSecs);
                 
                 if (diffSecs <= 0) {
-                    document.getElementById('countdown').innerText = "00:00";
+                    if (isApiMode) {
+                        handleApiOutput("Before School", 0, schedule[0].start);
+                    } else {
+                        document.getElementById('countdown').innerText = "00:00";
+                    }
                     triggerDoubleRingSequence();
                 } else {
-                    displayCountdown(diffSecs);
+                    if (isApiMode) {
+                        handleApiOutput("Before School", diffSecs, schedule[0].start);
+                    } else {
+                        document.getElementById('current-status').innerText = "Before School";
+                        document.getElementById('time-range').innerText = `First Bell at ${formatTimeStr(schedule[0].start)}`;
+                        displayCountdown(diffSecs);
+                        document.getElementById('next-period').innerText = `${schedule[0].name}`;
+                    }
                 }
-                document.getElementById('next-period').innerText = `${schedule[0].name}`;
             } else {
-                document.getElementById('current-status').innerText = "School Ended";
-                document.getElementById('time-range').innerText = "See you tomorrow!";
-                document.getElementById('countdown').innerText = "00:00";
-                document.getElementById('next-period').innerText = "Monday PCG (8:30 am)";
+                if (isApiMode) {
+                    document.getElementById('api-raw-output').innerText = "Status: School Ended | See you tomorrow!";
+                } else {
+                    document.getElementById('current-status').innerText = "School Ended";
+                    document.getElementById('time-range').innerText = "See you tomorrow!";
+                    document.getElementById('countdown').innerText = "00:00";
+                    document.getElementById('next-period').innerText = "Monday PCG (8:30 am)";
+                }
             }
         }
 
@@ -327,7 +377,7 @@
         }
 
         updateClock();
-        setInterval(updateClock, 1000);
+        setInterval(updateClock, 1000); // Ticks live every second
     </script>
 </body>
 </html>
