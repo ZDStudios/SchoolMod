@@ -64,7 +64,6 @@
             margin-bottom: 35px;
         }
 
-        /* Expanded container to ensure the side-to-side swing never clips or looks crowded */
         .bell-box {
             height: 160px;
             width: 100%;
@@ -79,19 +78,19 @@
             width: 100px;
             height: 100px;
             fill: var(--bell-color);
-            /* Pivot perfectly centered on the top-most loop of the bell */
-            transform-origin: 50% 8%; 
+            /* Fixed pivot anchor coordinates aligned to the top handle hook */
+            transform-origin: 50% 5%; 
             will-change: transform;
         }
 
-        /* Fluid, realistic side-to-side swing animation */
+        /* Smooth, non-distorting side-to-side swing */
         .ring-active {
             animation: swingSideToSide 0.6s ease-in-out infinite alternate;
         }
 
         @keyframes swingSideToSide {
-            0% { transform: rotate(-38deg); }
-            100% { transform: rotate(38deg); }
+            0% { transform: rotate(-35deg); }
+            100% { transform: rotate(35deg); }
         }
 
         .countdown {
@@ -127,7 +126,6 @@
             font-weight: 600;
         }
 
-        /* API Overrides */
         body.raw-api-mode {
             background-color: #000000;
             color: #ffffff;
@@ -147,7 +145,7 @@
 
         <div class="bell-box">
             <svg id="bell" class="bell-svg" viewBox="0 0 24 24">
-                <path d="M12 2c1.1 0 2 .9 2 2v.68C17.64 5.36 21 8.92 21 13v5l2 2v1H1v-1l2-2v-5c0-4.08 3.36-7.64 7-8.32V4c0-1.1.9-2 2-2zm0 20c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2z"/>
+                <path d="M12 2a2 2 0 0 1 2 2v1.161C17.345 5.926 19.6 8.87 19.6 12.381V16.6l1.24 1.24A1 1 0 0 1 20.132 19.5H3.868a1 1 0 0 1-.708-1.71l1.24-1.24v-4.219c0-3.51 2.255-6.455 5.6-7.22V4a2 2 0 0 1 2-2zm0 19.5a2.5 2.5 0 0 1-2.45-2h4.9a2.5 2.5 0 0 1-2.45 2z"/>
             </svg>
         </div>
 
@@ -273,7 +271,6 @@
             const now = new Date();
             const currentDay = now.getDay();
             
-            // Adjust calculations back exactly 2 seconds
             const dynamicPastSecs = now.getTime() - 2000;
             const adjustedTime = new Date(dynamicPastSecs);
 
