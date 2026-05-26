@@ -6,11 +6,11 @@
     <title>School Bell Dashboard</title>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
+            --bg-color: #0b0f19;
+            --card-bg: #151f32;
             --accent-color: #38bdf8;
             --text-color: #f8fafc;
-            --text-muted: #94a3b8;
+            --text-muted: #64748b;
             --bell-color: #fbbf24;
         }
 
@@ -28,102 +28,112 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            padding: 20px;
+            padding: 24px;
         }
 
         .dashboard {
             background-color: var(--card-bg);
-            border-radius: 24px;
-            padding: 40px;
+            border-radius: 28px;
+            padding: 45px 35px;
             width: 100%;
-            max-width: 500px;
+            max-width: 480px;
             text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.04);
         }
 
         .day-indicator {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             text-transform: uppercase;
-            letter-spacing: 0.15em;
+            letter-spacing: 0.2em;
             color: var(--accent-color);
-            font-weight: 700;
-            margin-bottom: 10px;
+            font-weight: 800;
+            margin-bottom: 12px;
         }
 
         .current-status {
-            font-size: 1.8rem;
-            font-weight: 600;
-            margin-bottom: 5px;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            margin-bottom: 6px;
         }
 
         .time-range {
-            font-size: 1rem;
+            font-size: 1.05rem;
             color: var(--text-muted);
-            margin-bottom: 30px;
+            margin-bottom: 35px;
         }
 
+        /* Expanded container to ensure the side-to-side swing never clips or looks crowded */
         .bell-box {
-            height: 140px;
+            height: 160px;
+            width: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 25px;
+            overflow: visible;
         }
 
         .bell-svg {
-            width: 90px;
-            height: 90px;
+            width: 100px;
+            height: 100px;
             fill: var(--bell-color);
-            transform-origin: 50% 10%; 
-            transition: transform 0.1s linear;
+            /* Pivot perfectly centered on the top-most loop of the bell */
+            transform-origin: 50% 8%; 
+            will-change: transform;
         }
 
+        /* Fluid, realistic side-to-side swing animation */
         .ring-active {
             animation: swingSideToSide 0.6s ease-in-out infinite alternate;
         }
 
         @keyframes swingSideToSide {
-            0% { transform: rotate(-35deg); }
-            100% { transform: rotate(35deg); }
+            0% { transform: rotate(-38deg); }
+            100% { transform: rotate(38deg); }
         }
 
         .countdown {
-            font-size: 4.5rem;
-            font-weight: 800;
+            font-size: 5rem;
+            font-weight: 900;
             font-variant-numeric: tabular-nums;
-            letter-spacing: -0.02em;
-            margin-bottom: 10px;
-            background: linear-gradient(to bottom right, #ffffff, #94a3b8);
+            letter-spacing: -0.03em;
+            line-height: 1;
+            margin-bottom: 8px;
+            background: linear-gradient(to bottom, #ffffff 40%, #cbd5e1 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
         .label {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
             color: var(--text-muted);
+            text-transform: uppercase;
         }
 
         .next-up {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
             font-size: 0.95rem;
             color: var(--text-muted);
         }
 
         .next-up span {
             color: var(--text-color);
-            font-weight: 500;
+            font-weight: 600;
         }
 
-        /* Pure text style for code readers */
+        /* API Overrides */
         body.raw-api-mode {
             background-color: #000000;
             color: #ffffff;
             font-family: monospace;
             display: block;
-            padding: 10px;
+            padding: 15px;
             min-height: auto;
         }
     </style>
@@ -239,7 +249,6 @@
             return `${displayHours}:${displayMinutes} ${ampm}`;
         }
 
-        // Helper to structure seconds into clean MM:SS format
         function getMMSS(totalSecs) {
             const minutes = Math.floor(totalSecs / 60);
             const seconds = totalSecs % 60;
@@ -250,7 +259,6 @@
 
         function handleApiOutput(status, remainingMMSS, endTime) {
             if (!isApiMode) return;
-            // Build dynamic javascript object and turn it to raw JSON string data
             const data = {
                 status: status,
                 remaining: remainingMMSS,
@@ -265,7 +273,7 @@
             const now = new Date();
             const currentDay = now.getDay();
             
-            // Shift processing time backwards 2 seconds per rules
+            // Adjust calculations back exactly 2 seconds
             const dynamicPastSecs = now.getTime() - 2000;
             const adjustedTime = new Date(dynamicPastSecs);
 
@@ -369,7 +377,7 @@
         }
 
         updateClock();
-        setInterval(updateClock, 1000); // Live tracking updates every single second
+        setInterval(updateClock, 1000);
     </script>
 </body>
 </html>
