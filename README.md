@@ -27,7 +27,15 @@ Everything runs **locally on your device**. Your notes, decks and credentials ne
 | 🔷 **Microsoft 365** | One-click launch for OneNote, Word, Excel, PowerPoint, Teams, Outlook, OneDrive & To Do, plus your recent OneDrive files via Microsoft Graph. |
 | 🧮 **Mathspace** | Launch Mathspace and get step-by-step worked solutions from your AI tutor, with a practice streak tracker. |
 | 🎓 **Education Perfect** | Launch EP and get an AI study coach that builds a revision sheet with practice questions for any topic. |
+| 🔔 **Bell times** | Live current-period tracker with a countdown to the next bell — ported from the original SchoolMod repo, including Trinity's Tuesday and Friday variants. |
+| ⌘ **Command palette** | `Ctrl`/`⌘`+`K` to jump anywhere or fire an action. |
+| ⏱️ **Focus · To-do · Scratchpad** | A Pomodoro timer tracking daily focus minutes, a task list, and an auto-saving notepad. |
 | 🎨 **Polished & yours** | Light/dark themes, 8 accent colours, custom frameless window, keyboard-friendly. |
+
+## 🔗 Relationship to SchoolMod 1.x
+This is a **new desktop app**, developed alongside the original browser-extension repo — nothing from `main` has been removed. Enhancements that belong in a study tool (bell times, Education Perfect, Mathspace, SEQTA, school profiles) have been rebuilt natively here.
+
+The predecessor's quiz auto-answer scripts (AutoBOT, Kahoot/Blooket, `hw-bot.html`), the Education Perfect answer-extraction notes, the Mathspace shop/avatar GraphQL overrides, and the FortiGuard filter bypass are **deliberately not carried over** — they do your schoolwork for you, unlock paid cosmetics, or evade school network controls. They remain untouched on the original branch.
 
 ## 🚀 Download
 

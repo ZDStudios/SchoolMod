@@ -15,7 +15,7 @@ import {
   Megaphone
 } from 'lucide-react'
 import { StatCard } from '../components/ui'
-import { FocusTimer, Scratchpad, TodoList, DailyBrief, QuoteCard } from '../components/widgets'
+import { FocusTimer, Scratchpad, TodoList, DailyBrief, QuoteCard, BellTimes } from '../components/widgets'
 import { useApp } from '../store/app'
 import { call, fmtDate, daysUntil, friendlyName } from '../lib/utils'
 import type { SeqtaLesson, SeqtaAssessment, SeqtaNotice, Deck, Notebook } from '../../../shared/types'
@@ -116,9 +116,12 @@ export default function Dashboard() {
       </div>
 
       {/* Interactive widgets */}
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="mb-4 grid grid-cols-3 gap-4">
+        <BellTimes />
         <FocusTimer />
         <TodoList />
+      </div>
+      <div className="mb-6">
         <Scratchpad />
       </div>
 
