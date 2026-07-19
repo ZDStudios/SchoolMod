@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "SchoolMod BetterKahoot+",
+  "version": "0.1.0",
+  "description": "A lightweight Chrome extension that adds BetterKahoot+ quality-of-life enhancements to Kahoot.",
+  "icons": {
+    "128": "icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://kahoot.it/*",
+        "https://play.kahoot.it/*",
+        "https://create.kahoot.it/*"
+      ],
+      "js": ["betterkahoot.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": [
+    "https://kahoot.it/*",
+    "https://play.kahoot.it/*",
+    "https://create.kahoot.it/*"
+  ],
+  "action": {
+    "default_title": "BetterKahoot+"
+  }
+}

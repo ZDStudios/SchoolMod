@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Bell Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #151f32;
+            --accent-color: #38bdf8;
+            --text-color: #f8fafc;
+            --text-muted: #64748b;
+            --bell-color: #fbbf24;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .dashboard {
+            background-color: var(--card-bg);
+            border-radius: 28px;
+            padding: 45px 35px;
+            width: 100%;
+            max-width: 480px;
+            text-align: center;
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .day-indicator {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--accent-color);
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        .current-status {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            margin-bottom: 6px;
+        }
+
+        .time-range {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            margin-bottom: 35px;
+        }
+
+        .bell-box {
+            height: 160px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 25px;
+            overflow: visible;
+        }
+
+        .bell-svg {
+            width: 100px;
+            height: 100px;
+            fill: var(--bell-color);
+            /* Fixed pivot anchor coordinates aligned to the top handle hook */
+            transform-origin: 50% 5%; 
+            will-change: transform;
+        }
+
+        /* Smooth, non-distorting side-to-side swing */
+        .ring-active {
+            animation: swingSideToSide 0.6s ease-in-out infinite alternate;
+        }
+
+        @keyframes swingSideToSide {
+            0% { transform: rotate(-35deg); }
+            100% { transform: rotate(35deg); }
+        }
+
+        .countdown {
+            font-size: 5rem;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.03em;
+            line-height: 1;
+            margin-bottom: 8px;
+            background: linear-gradient(to bottom, #ffffff 40%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .next-up {
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .next-up span {
+            color: var(--text-color);
+            font-weight: 600;
+        }
+
+        body.raw-api-mode {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: monospace;
+            display: block;
+            padding: 15px;
+            min-height: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="dashboard-ui" class="dashboard">
+        <div id="day-indicator" class="day-indicator">Loading Day...</div>
+        <div id="current-status" class="current-status">Checking Schedule...</div>
+        <div id="time-range" class="time-range">--:-- - --:--</div>
+
+        <div class="bell-box">
+            <svg id="bell" class="bell-svg" viewBox="0 0 24 24">
+                <path d="M12 2a2 2 0 0 1 2 2v1.161C17.345 5.926 19.6 8.87 19.6 12.381V16.6l1.24 1.24A1 1 0 0 1 20.132 19.5H3.868a1 1 0 0 1-.708-1.71l1.24-1.24v-4.219c0-3.51 2.255-6.455 5.6-7.22V4a2 2 0 0 1 2-2zm0 19.5a2.5 2.5 0 0 1-2.45-2h4.9a2.5 2.5 0 0 1-2.45 2z"/>
+            </svg>
+        </div>
+
+        <div id="countdown" class="countdown">00:00</div>
+        <div id="label" class="label">REMAINING</div>
+
+        <div id="next-up" class="next-up">Next: <span id="next-period">--</span></div>
+    </div>
+
+    <div id="api-raw-output" style="display: none; white-space: pre-wrap;"></div>
+
+    <script>
+        let isRingingSequenceRunning = false;
+        const isApiMode = window.location.search.toLowerCase().includes('api');
+
+        if (isApiMode) {
+            document.getElementById('dashboard-ui').style.display = 'none';
+            document.getElementById('api-raw-output').style.display = 'block';
+            document.body.classList.add('raw-api-mode');
+        }
+
+        function triggerDoubleRingSequence() {
+            if (isRingingSequenceRunning) return;
+            isRingingSequenceRunning = true;
+
+            const bellElement = document.getElementById('bell');
+            const ringDuration = 1800; 
+
+            if (!isApiMode) bellElement.classList.add('ring-active');
+
+            setTimeout(() => {
+                if (!isApiMode) bellElement.classList.remove('ring-active');
+            }, ringDuration);
+
+            setTimeout(() => {
+                if (!isApiMode) bellElement.classList.add('ring-active');
+
+                setTimeout(() => {
+                    if (!isApiMode) bellElement.classList.remove('ring-active');
+                    isRingingSequenceRunning = false;
+                }, ringDuration);
+
+            }, ringDuration + 1000); 
+        }
+
+        const schedules = {
+            standard: [
+                { name: "Pastoral Care (PCG)", start: "08:30", end: "08:40" },
+                { name: "Period 1", start: "08:40", end: "09:35" },
+                { name: "Period 2", start: "09:35", end: "10:30" },
+                { name: "Recess (Break)", start: "10:30", end: "10:55" },
+                { name: "Travel to Class", start: "10:55", end: "11:00" },
+                { name: "Period 3", start: "11:00", end: "11:50" },
+                { name: "Period 4", start: "11:50", end: "12:45" },
+                { name: "Lunch (Break)", start: "12:45", end: "13:10" },
+                { name: "Travel to Class", start: "13:10", end: "13:15" },
+                { name: "Period 5", start: "13:15", end: "14:10" },
+                { name: "Period 6", start: "14:10", end: "15:05" }
+            ],
+            tuesday: [
+                { name: "Pastoral Care (PCG)", start: "08:30", end: "09:20" },
+                { name: "Period 1", start: "09:20", end: "10:10" },
+                { name: "Period 2", start: "10:10", end: "11:00" },
+                { name: "Recess (Break)", start: "11:00", end: "11:25" },
+                { name: "Travel to Class", start: "11:25", end: "11:30" },
+                { name: "Period 3", start: "11:30", end: "12:20" },
+                { name: "Period 4", start: "12:20", end: "13:05" },
+                { name: "Lunch (Break)", start: "13:05", end: "13:30" },
+                { name: "Travel to Class", start: "13:30", end: "13:35" },
+                { name: "Period 5", start: "13:35", end: "14:20" },
+                { name: "Period 6", start: "14:20", end: "15:05" }
+            ],
+            friday: [
+                { name: "Pastoral Care (PCG)", start: "08:30", end: "08:40" },
+                { name: "Period 1", start: "08:40", end: "09:24" },
+                { name: "Period 2", start: "09:24", end: "10:08" },
+                { name: "Period 3", start: "10:08", end: "10:52" },
+                { name: "Recess (Break)", start: "10:52", end: "11:17" },
+                { name: "Travel to Class", start: "11:17", end: "11:22" },
+                { name: "Period 4", start: "11:22", end: "12:06" },
+                { name: "Period 5", start: "12:06", end: "12:50" },
+                { name: "Lunch (Break)", start: "12:50", end: "13:15" },
+                { name: "Travel to Class", start: "13:15", end: "13:20" },
+                { name: "Period 6 (Sport 1)", start: "13:20", end: "14:10" },
+                { name: "Period 7 (Sport 2)", start: "14:10", end: "15:05" }
+            ]
+        };
+
+        function timeToMins(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function formatTimeStr(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            const ampm = hours >= 12 ? 'pm' : 'am';
+            const displayHours = hours % 12 || 12;
+            const displayMinutes = minutes < 10 ? '0' + minutes : minutes;
+            return `${displayHours}:${displayMinutes} ${ampm}`;
+        }
+
+        function getMMSS(totalSecs) {
+            const minutes = Math.floor(totalSecs / 60);
+            const seconds = totalSecs % 60;
+            const displayMin = minutes < 10 ? '0' + minutes : minutes;
+            const displaySec = seconds < 10 ? '0' + seconds : seconds;
+            return `${displayMin}:${displaySec}`;
+        }
+
+        function handleApiOutput(status, remainingMMSS, endTime) {
+            if (!isApiMode) return;
+            const data = {
+                status: status,
+                remaining: remainingMMSS,
+                endTime: endTime ? formatTimeStr(endTime) : "N/A"
+            };
+            document.getElementById('api-raw-output').innerText = JSON.stringify(data);
+        }
+
+        function updateClock() {
+            if (isRingingSequenceRunning) return;
+
+            const now = new Date();
+            const currentDay = now.getDay();
+            
+            const dynamicPastSecs = now.getTime() - 2000;
+            const adjustedTime = new Date(dynamicPastSecs);
+
+            const currentMins = adjustedTime.getHours() * 60 + adjustedTime.getMinutes();
+            const currentSecs = adjustedTime.getSeconds();
+
+            let schedule = [];
+            let dayName = "";
+
+            if (currentDay === 2) {
+                schedule = schedules.tuesday;
+            } else if (currentDay === 5) {
+                schedule = schedules.friday;
+            } else if (currentDay === 1 || currentDay === 3 || currentDay === 4) {
+                schedule = schedules.standard;
+            } else {
+                if (isApiMode) {
+                    handleApiOutput("Weekend", "--:--", null);
+                } else {
+                    document.getElementById('day-indicator').innerText = "Weekend";
+                    document.getElementById('current-status').innerText = "School's Out!";
+                    document.getElementById('time-range').innerText = "Enjoy your break";
+                    document.getElementById('countdown').innerText = "--:--";
+                    document.getElementById('next-period').innerText = "Monday PCG (8:30 am)";
+                }
+                return;
+            }
+
+            if (!isApiMode) {
+                dayName = adjustedTime.toLocaleDateString('en-US', { weekday: 'long' }) + " Schedule";
+                document.getElementById('day-indicator').innerText = dayName;
+            }
+
+            let currentPeriod = null;
+            let nextPeriod = null;
+
+            for (let i = 0; i < schedule.length; i++) {
+                const slot = schedule[i];
+                const start = timeToMins(slot.start);
+                const end = timeToMins(slot.end);
+
+                if (currentMins >= start && currentMins < end) {
+                    currentPeriod = slot;
+                    nextPeriod = schedule[i + 1] || null;
+                    break;
+                } else if (currentMins < start) {
+                    nextPeriod = slot;
+                    break;
+                }
+            }
+
+            if (currentPeriod) {
+                const targetMins = timeToMins(currentPeriod.end);
+                let diffSecs = (targetMins * 60) - ((currentMins * 60) + currentSecs);
+
+                if (diffSecs <= 0) {
+                    handleApiOutput(currentPeriod.name, "00:00", currentPeriod.end);
+                    if (!isApiMode) document.getElementById('countdown').innerText = "00:00";
+                    triggerDoubleRingSequence();
+                } else {
+                    const timeString = getMMSS(diffSecs);
+                    if (isApiMode) {
+                        handleApiOutput(currentPeriod.name, timeString, currentPeriod.end);
+                    } else {
+                        document.getElementById('current-status').innerText = currentPeriod.name;
+                        document.getElementById('time-range').innerText = `${formatTimeStr(currentPeriod.start)} - ${formatTimeStr(currentPeriod.end)}`;
+                        document.getElementById('countdown').innerText = timeString;
+                        document.getElementById('next-period').innerText = nextPeriod ? `${nextPeriod.name} (${formatTimeStr(nextPeriod.start)})` : "End of School Day";
+                    }
+                }
+
+            } else if (nextPeriod && currentMins < timeToMins(schedule[0].start)) {
+                const targetMins = timeToMins(schedule[0].start);
+                let diffSecs = (targetMins * 60) - ((currentMins * 60) + currentSecs);
+                
+                if (diffSecs <= 0) {
+                    handleApiOutput("Before School", "00:00", schedule[0].start);
+                    if (!isApiMode) document.getElementById('countdown').innerText = "00:00";
+                    triggerDoubleRingSequence();
+                } else {
+                    const timeString = getMMSS(diffSecs);
+                    if (isApiMode) {
+                        handleApiOutput("Before School", timeString, schedule[0].start);
+                    } else {
+                        document.getElementById('current-status').innerText = "Before School";
+                        document.getElementById('time-range').innerText = `First Bell at ${formatTimeStr(schedule[0].start)}`;
+                        document.getElementById('countdown').innerText = timeString;
+                        document.getElementById('next-period').innerText = `${schedule[0].name}`;
+                    }
+                }
+            } else {
+                if (isApiMode) {
+                    handleApiOutput("School Ended", "00:00", null);
+                } else {
+                    document.getElementById('current-status').innerText = "School Ended";
+                    document.getElementById('time-range').innerText = "See you tomorrow!";
+                    document.getElementById('countdown').innerText = "00:00";
+                    document.getElementById('next-period').innerText = "Monday PCG (8:30 am)";
+                }
+            }
+        }
+
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>
