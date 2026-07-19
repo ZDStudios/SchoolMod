@@ -5,11 +5,13 @@ import * as store from './store'
 import * as claude from './services/claude'
 import * as claudeCli from './services/claudeCli'
 import * as codexCli from './services/codexCli'
+import { runAgent } from './services/agent'
 import { getSettings } from './store'
 import * as seqta from './services/seqta'
 import * as notebooks from './services/notebooks'
 import * as flashcards from './services/flashcards'
 import * as graph from './services/graph'
+import * as msElectron from './services/msElectron'
 
 /** Wrap a handler so every IPC call returns a uniform {ok,data,error} envelope. */
 function handle<T>(channel: string, fn: (e: Electron.IpcMainInvokeEvent, ...args: any[]) => Promise<T> | T) {
@@ -58,6 +60,22 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
       (delta) => e.sender.send(CH.claudeStreamChunk, delta),
       model
     )
+  })
+
+  // Tool-using assistant: can read the student's real SEQTA data and drive the app.
+  handle(CH.agentChat, async (e, messages) => {
+    const before = JSON.stringify(store.getSettings())
+    const result = await runAgent(
+      messages,
+      (msgs) => claude.chat(msgs),
+      {
+        onTool: (name) => e.sender.send(CH.agentTool, name),
+        onDelta: (text) => e.sender.send(CH.claudeStreamChunk, text)
+      }
+    )
+    // If a tool changed settings (theme/accent), tell the UI to refresh.
+    if (JSON.stringify(store.getSettings()) !== before) e.sender.send(CH.settingsChanged)
+    return result
   })
 
   // ---- seqta ----
@@ -114,6 +132,10 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
     return graph.startDeviceLogin((result) => e.sender.send('ms:loginDone', result))
   })
   handle(CH.msGraph, (_e, method, path, body) => graph.graph(method, path, body))
+  // Quick connect: signs in via Electron's browser — no Azure app registration.
+  handle(CH.msQuickConnect, () => msElectron.connect())
+  handle(CH.msRecentFiles, () => msElectron.recentFiles())
+  handle(CH.msOneNote, () => msElectron.oneNoteNotebooks())
   handle(CH.msOpenApp, (_e, appKey) => {
     const url = graph.APP_URLS[appKey] || appKey
     return shell.openExternal(url)

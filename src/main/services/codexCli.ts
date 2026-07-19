@@ -139,5 +139,10 @@ export async function chatStream(
 export async function chat(messages: ChatMessage[]): Promise<string> {
   let full = ''
   await chatStream(messages, (d) => (full += d))
+  const t = full.trim()
+  if (t.length < 400) {
+    if (/rate limit|too many requests|quota/i.test(t)) throw new Error('ChatGPT is rate-limited right now. Try again shortly.')
+    if (/not logged in|unauthor|sign in|401/i.test(t)) throw new Error('Codex is not signed in. Open Settings → AI provider → Connect.')
+  }
   return full
 }

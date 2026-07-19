@@ -9,7 +9,8 @@ import { BrowserWindow, session } from 'electron'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-const FILL_SCRIPT = (email: string, password: string) => `(function () {
+/** Advances the Microsoft sign-in form one step. Shared with the Microsoft 365 login. */
+export const FILL_SCRIPT = (email: string, password: string) => `(function () {
   function setVal(sel, val) {
     var e = document.querySelector(sel);
     if (e && !e.value) { e.value = val; e.dispatchEvent(new Event('input', { bubbles: true })); return true; }

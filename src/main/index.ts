@@ -20,6 +20,38 @@ async function runDiagnostics() {
       log(`${label}: FAILED ->`, e?.message)
     }
   }
+  if (process.env.SCHOOLMOD_DIAG === 'agent') {
+    const { runAgent } = await import('./services/agent')
+    for (const q of [
+      'Set the accent colour to purple',
+      "What's my current average?"
+    ]) {
+      log(`--- ASK: "${q}"`)
+      const tools: string[] = []
+      let answer = ''
+      try {
+        await runAgent([{ role: 'user', content: q }], (m) => ai.chat(m), {
+          onTool: (t) => tools.push(t),
+          onDelta: (t) => (answer += t)
+        })
+        log('tools called:', tools.join(', ') || '(none)')
+        log('answer:', answer.replace(/\s+/g, ' ').slice(0, 300))
+      } catch (e: any) {
+        log('FAILED:', e?.message)
+      }
+    }
+    log('theme now =', getSettings().theme)
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'ms') {
+    const ms = await import('./services/msElectron')
+    await step('ms.connect', () => ms.connect())
+    await step('ms.recentFiles', () => ms.recentFiles())
+    await step('ms.oneNoteNotebooks', () => ms.oneNoteNotebooks())
+    log('DONE')
+    return
+  }
   if (process.env.SCHOOLMOD_DIAG === 'ai') {
     log('PATH has APPDATA/npm?', (process.env.PATH || '').toLowerCase().includes('roaming\\npm'))
     log('findExecutable(claude) ->', findExecutable('claude'))

@@ -1,9 +1,39 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { ReactNode } from 'react'
 import { Grid2x2, FileText, ExternalLink, Clock } from 'lucide-react'
 import { PageHeader, Spinner } from '../components/ui'
 import { useApp } from '../store/app'
-import { call, timeAgo } from '../lib/utils'
+import { call } from '../lib/utils'
+
+function FileList({
+  title, icon, items, loading, empty
+}: { title: string; icon: ReactNode; items: any[]; loading: boolean; empty: string }) {
+  return (
+    <div className="card p-5">
+      <h2 className="mb-3 flex items-center gap-2 font-semibold">{icon} {title}</h2>
+      {loading ? (
+        <div className="py-6"><Spinner size={20} /></div>
+      ) : items.length === 0 ? (
+        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>{empty}</p>
+      ) : (
+        <div className="space-y-1.5">
+          {items.map((f, i) => (
+            <button
+              key={i}
+              onClick={() => f.url && window.api.openExternal(f.url)}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-[var(--accent-soft)]"
+            >
+              <FileText size={15} style={{ color: 'var(--accent)' }} />
+              <span className="min-w-0 flex-1 truncate text-sm">{f.name}</span>
+              <span className="shrink-0 text-[10px]" style={{ color: 'var(--text-dim)' }}>{f.app}</span>
+              <ExternalLink size={13} style={{ color: 'var(--text-dim)' }} />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const APPS = [
   { key: 'onenote', name: 'OneNote', color: '#7719aa', emoji: '📓' },
@@ -19,16 +49,36 @@ const APPS = [
 export default function Microsoft() {
   const account = useApp((s) => s.settings?.microsoft.account)
   const [recent, setRecent] = useState<any[]>([])
+  const [notes, setNotes] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [connecting, setConnecting] = useState(false)
+  const [err, setErr] = useState('')
+
+  const loadData = () => {
+    setLoading(true)
+    Promise.all([
+      call(window.api.microsoft.recentFiles()).then(setRecent).catch(() => {}),
+      call(window.api.microsoft.oneNote()).then(setNotes).catch(() => {})
+    ]).finally(() => setLoading(false))
+  }
 
   useEffect(() => {
-    if (!account) return
-    setLoading(true)
-    call(window.api.microsoft.graph('GET', '/me/drive/recent'))
-      .then((r) => setRecent((r.value || []).slice(0, 8)))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    if (account) loadData()
   }, [account])
+
+  const quickConnect = async () => {
+    setConnecting(true)
+    setErr('')
+    try {
+      await call(window.api.microsoft.quickConnect())
+      await useApp.getState().load()
+      loadData()
+    } catch (e: any) {
+      setErr(e.message)
+    } finally {
+      setConnecting(false)
+    }
+  }
 
   return (
     <div className="p-8">
@@ -53,47 +103,25 @@ export default function Microsoft() {
         ))}
       </div>
 
+      {err && <p className="mb-3 text-sm text-red-500">{err}</p>}
+
       {!account ? (
         <div className="card flex items-center justify-between p-6">
           <div>
             <p className="font-semibold">Connect your school account</p>
             <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-              Sign in to see your recent OneDrive files and documents right here.
+              One click — signs in with the same school Microsoft account you use for SEQTA. No Azure setup needed.
             </p>
           </div>
-          <Link to="/settings" className="btn btn-primary">Connect Microsoft</Link>
+          <button className="btn btn-primary" onClick={quickConnect} disabled={connecting}>
+            {connecting ? <Spinner size={15} /> : <Grid2x2 size={15} />}
+            {connecting ? 'Signing in…' : 'Connect Microsoft'}
+          </button>
         </div>
       ) : (
-        <div>
-          <h2 className="mb-3 flex items-center gap-2 font-semibold">
-            <Clock size={17} /> Recent files
-          </h2>
-          {loading ? (
-            <div className="py-8"><Spinner size={22} /></div>
-          ) : recent.length === 0 ? (
-            <p className="text-sm" style={{ color: 'var(--text-dim)' }}>No recent files found.</p>
-          ) : (
-            <div className="space-y-2">
-              {recent.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => f.webUrl && window.api.openExternal(f.webUrl)}
-                  className="card flex w-full items-center gap-3 p-3.5 text-left transition hover:border-[var(--accent)]"
-                >
-                  <FileText size={18} style={{ color: 'var(--accent)' }} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{f.name}</p>
-                    {f.lastModifiedDateTime && (
-                      <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                        edited {timeAgo(new Date(f.lastModifiedDateTime).getTime())}
-                      </p>
-                    )}
-                  </div>
-                  <ExternalLink size={15} style={{ color: 'var(--text-dim)' }} />
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="grid grid-cols-2 gap-4">
+          <FileList title="Recent files" icon={<Clock size={17} />} items={recent} loading={loading} empty="No recent files found." />
+          <FileList title="OneNote notebooks" icon={<FileText size={17} />} items={notes} loading={loading} empty="No notebooks found." />
         </div>
       )}
     </div>

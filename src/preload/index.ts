@@ -31,7 +31,13 @@ const api = {
   },
   settings: {
     get: () => invoke<Settings>(CH.settingsGet),
-    set: (patch: Partial<Settings>) => invoke<Settings>(CH.settingsSet, patch)
+    set: (patch: Partial<Settings>) => invoke<Settings>(CH.settingsSet, patch),
+    /** Fires when the agent changes settings (e.g. theme) so the UI can refresh. */
+    onChanged: (cb: () => void) => {
+      const l = () => cb()
+      ipcRenderer.on(CH.settingsChanged, l)
+      return () => ipcRenderer.removeListener(CH.settingsChanged, l)
+    }
   },
   claude: {
     ping: () => invoke<{ ok: boolean; detail: string }>(CH.claudePing),
@@ -51,6 +57,13 @@ const api = {
     chat: (messages: ChatMessage[], model?: string) => invoke<string>(CH.claudeChat, messages, model),
     chatStream: (messages: ChatMessage[], model?: string) =>
       invoke<string>(CH.claudeChatStream, messages, model),
+    /** Tool-using agent: reads real SEQTA data and can change app settings. */
+    agentChat: (messages: ChatMessage[]) => invoke<string>(CH.agentChat, messages),
+    onAgentTool: (cb: (tool: string) => void) => {
+      const l = (_e: any, tool: string) => cb(tool)
+      ipcRenderer.on(CH.agentTool, l)
+      return () => ipcRenderer.removeListener(CH.agentTool, l)
+    },
     onStreamChunk: (cb: (delta: string) => void) => {
       const listener = (_e: any, delta: string) => cb(delta)
       ipcRenderer.on(CH.claudeStreamChunk, listener)
@@ -110,7 +123,11 @@ const api = {
       return () => ipcRenderer.removeListener('ms:loginDone', listener)
     },
     graph: (method: string, path: string, body?: unknown) => invoke<any>(CH.msGraph, method, path, body),
-    openApp: (appKey: string) => invoke(CH.msOpenApp, appKey)
+    openApp: (appKey: string) => invoke(CH.msOpenApp, appKey),
+    /** Sign in via Electron's built-in browser — no Azure app registration needed. */
+    quickConnect: () => invoke<{ account: string }>(CH.msQuickConnect),
+    recentFiles: () => invoke<{ name: string; url: string; app: string }[]>(CH.msRecentFiles),
+    oneNote: () => invoke<{ name: string; url: string; app: string }[]>(CH.msOneNote)
   },
   openExternal: (url: string) => invoke(CH.openExternal, url),
   saveFile: (defaultName: string, content: string) =>

@@ -1,0 +1,242 @@
+import { getSettings, setSettings, getNotebooks, getDecks } from '../store'
+import * as seqta from './seqta'
+import * as notebooks from './notebooks'
+import * as flashcards from './flashcards'
+import { bellState } from '../../shared/bells'
+import { ChatMessage } from '../../shared/types'
+
+/**
+ * A provider-agnostic agent loop: the model can call SchoolMod's own tools to
+ * read the user's real SEQTA data and drive the app (themes, notebooks, decks).
+ *
+ * We use a plain-text tool protocol rather than provider-native function calling
+ * so it works identically across the Claude CLI, Codex and the OpenAI wrapper.
+ */
+
+export interface Tool {
+  name: string
+  description: string
+  args: string
+  run: (args: any) => Promise<unknown> | unknown
+}
+
+const ok = (msg: string) => ({ ok: true, message: msg })
+
+export const TOOLS: Tool[] = [
+  // ---- SEQTA (read) ----
+  {
+    name: 'seqta_me',
+    description: "The student's own name, student code and id.",
+    args: '{}',
+    run: () => seqta.me()
+  },
+  {
+    name: 'seqta_timetable',
+    description: 'Lessons for a date (YYYY-MM-DD, defaults today). Use seqta_timetable_week for the whole week.',
+    args: '{"date"?: "YYYY-MM-DD"}',
+    run: (a) => seqta.timetable(a?.date, a?.date)
+  },
+  {
+    name: 'seqta_timetable_week',
+    description: 'All lessons for the current week.',
+    args: '{}',
+    run: () => seqta.timetableWeek()
+  },
+  {
+    name: 'seqta_assessments',
+    description: 'Upcoming and overdue assessments with due dates and subjects.',
+    args: '{}',
+    run: () => seqta.assessments()
+  },
+  {
+    name: 'seqta_grades',
+    description: 'Marked results, per-subject averages and the overall average.',
+    args: '{}',
+    run: () => seqta.grades()
+  },
+  {
+    name: 'seqta_notices',
+    description: 'School notices for a date (defaults today).',
+    args: '{"date"?: "YYYY-MM-DD"}',
+    run: (a) => seqta.notices(a?.date)
+  },
+  { name: 'seqta_homework', description: 'Homework set, grouped by subject.', args: '{}', run: () => seqta.homework() },
+  { name: 'seqta_messages', description: 'Recent SEQTA inbox messages.', args: '{}', run: () => seqta.messages() },
+  {
+    name: 'bell_times',
+    description: 'Current period, next period and minutes until the next bell.',
+    args: '{}',
+    run: () => bellState('trinity')
+  },
+
+  // ---- App control ----
+  {
+    name: 'app_set_theme',
+    description: 'Change the app theme.',
+    args: '{"theme": "light" | "dark" | "system"}',
+    run: (a) => {
+      const theme = ['light', 'dark', 'system'].includes(a?.theme) ? a.theme : 'system'
+      setSettings({ theme })
+      return ok(`Theme set to ${theme}.`)
+    }
+  },
+  {
+    name: 'app_set_accent',
+    description: 'Change the accent colour. Accepts a hex colour or a common colour name.',
+    args: '{"colour": "#3366ff" | "blue" | "purple" | "pink" | "red" | "orange" | "green" | "teal" | "amber"}',
+    run: (a) => {
+      const named: Record<string, string> = {
+        blue: '#3366ff', purple: '#7c3aed', pink: '#db2777', red: '#e11d48',
+        orange: '#ea580c', green: '#16a34a', teal: '#0891b2', amber: '#f59e0b'
+      }
+      const raw = String(a?.colour || '').toLowerCase().trim()
+      const accent = /^#[0-9a-f]{6}$/.test(raw) ? raw : named[raw]
+      if (!accent) return { ok: false, message: `Unknown colour. Try one of: ${Object.keys(named).join(', ')}` }
+      setSettings({ accent })
+      return ok(`Accent set to ${accent}.`)
+    }
+  },
+  {
+    name: 'app_list_notebooks',
+    description: 'List the notebooks and how many sources each has.',
+    args: '{}',
+    run: () => getNotebooks().map((n) => ({ id: n.id, title: n.title, sources: n.sources.length }))
+  },
+  {
+    name: 'app_create_notebook',
+    description: 'Create a new (empty) notebook.',
+    args: '{"title": "string"}',
+    run: (a) => {
+      const nb = notebooks.create(String(a?.title || 'Untitled notebook'))
+      return ok(`Created notebook "${nb.title}".`)
+    }
+  },
+  {
+    name: 'app_list_decks',
+    description: 'List flashcard decks with card counts and how many are due.',
+    args: '{}',
+    run: () =>
+      getDecks().map((d) => ({
+        id: d.id,
+        title: d.title,
+        cards: d.cards.length,
+        due: d.cards.filter((c) => c.due <= Date.now() || c.repetitions === 0).length
+      }))
+  },
+  {
+    name: 'app_create_flashcards',
+    description:
+      'Create a flashcard deck and fill it with AI-generated cards about a topic. Use this when the user asks for flashcards.',
+    args: '{"title": "string", "topic": "string", "count"?: number}',
+    run: async (a) => {
+      const deck = flashcards.create(String(a?.title || a?.topic || 'New deck'))
+      const updated = await flashcards.generate(deck.id, String(a?.topic || a?.title), Number(a?.count) || 12)
+      return ok(`Created deck "${updated.title}" with ${updated.cards.length} cards.`)
+    }
+  },
+  {
+    name: 'app_get_settings',
+    description: 'Current app settings (theme, accent, which integrations are connected).',
+    args: '{}',
+    run: () => {
+      const s = getSettings()
+      return {
+        theme: s.theme,
+        accent: s.accent,
+        seqtaConnected: s.seqta.connected,
+        seqtaMode: s.seqta.mode,
+        aiProvider: s.claude.mode,
+        microsoftAccount: s.microsoft.account || null
+      }
+    }
+  }
+]
+
+function toolDocs(): string {
+  return TOOLS.map((t) => `- ${t.name} ${t.args} — ${t.description}`).join('\n')
+}
+
+const SYSTEM = `You are SchoolMod Assistant, a sharp, friendly study companion built into the SchoolMod desktop app.
+
+You can call tools to read the student's REAL school data and to control the app.
+
+AVAILABLE TOOLS:
+${toolDocs()}
+
+HOW TO CALL A TOOL — emit exactly one line, nothing else:
+<tool>{"name":"tool_name","args":{}}</tool>
+
+Rules:
+- Call a tool whenever the answer depends on the student's actual data (timetable, assessments, grades, notices, homework, messages) or when they ask you to change something in the app. Never guess or make up their data.
+- You will then receive an OBSERVATION with the result, and may call another tool or answer.
+- When you have what you need, reply normally in markdown. Do NOT mention tool names or the tool syntax in your final answer — just answer naturally.
+- Keep answers concise and useful. Show working for maths. Encourage understanding, never just hand over answers to assessments.
+- Dates are YYYY-MM-DD. Today is ${new Date().toISOString().slice(0, 10)}.`
+
+const TOOL_RE = /<tool>\s*(\{[\s\S]*?\})\s*<\/tool>/
+
+export interface AgentEvents {
+  onTool?: (name: string) => void
+  onDelta: (text: string) => void
+}
+
+/**
+ * Runs the tool loop. `chatFn` is the underlying provider call (non-streaming),
+ * injected so this works with Claude, Codex or the wrapper.
+ */
+export async function runAgent(
+  messages: ChatMessage[],
+  chatFn: (msgs: ChatMessage[]) => Promise<string>,
+  ev: AgentEvents,
+  maxSteps = 6
+): Promise<string> {
+  const convo: ChatMessage[] = [
+    { role: 'system', content: SYSTEM },
+    ...messages.filter((m) => m.role !== 'system')
+  ]
+
+  for (let step = 0; step < maxSteps; step++) {
+    const reply = await chatFn(convo)
+    const match = reply.match(TOOL_RE)
+
+    if (!match) {
+      ev.onDelta(reply.trim())
+      return reply.trim()
+    }
+
+    let call: { name?: string; args?: any } = {}
+    try {
+      call = JSON.parse(match[1])
+    } catch {
+      ev.onDelta(reply.replace(TOOL_RE, '').trim() || 'Sorry — I got confused mid-step. Try asking again.')
+      return reply
+    }
+
+    const tool = TOOLS.find((t) => t.name === call.name)
+    convo.push({ role: 'assistant', content: match[0] })
+
+    if (!tool) {
+      convo.push({ role: 'user', content: `OBSERVATION: no such tool "${call.name}". Available: ${TOOLS.map((t) => t.name).join(', ')}` })
+      continue
+    }
+
+    ev.onTool?.(tool.name)
+    try {
+      const result = await tool.run(call.args || {})
+      const json = JSON.stringify(result)
+      convo.push({
+        role: 'user',
+        content:
+          `OBSERVATION (${tool.name}): ${json.length > 6000 ? json.slice(0, 6000) + '…(truncated)' : json}\n\n` +
+          `Now answer my ORIGINAL request using this result. If it was an action, confirm briefly what you did. ` +
+          `Do not greet me, do not restate the question, and do not mention tools.`
+      })
+    } catch (e: any) {
+      convo.push({ role: 'user', content: `OBSERVATION (${tool.name}) FAILED: ${e?.message || e}` })
+    }
+  }
+
+  const fallback = "I couldn't finish that in a reasonable number of steps — try narrowing the question."
+  ev.onDelta(fallback)
+  return fallback
+}

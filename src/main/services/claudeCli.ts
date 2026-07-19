@@ -195,8 +195,34 @@ export async function chatStream(
   return full
 }
 
+/**
+ * The CLI exits 0 and prints these as if they were an answer, which would
+ * otherwise be shown to the student as Claude's reply. Surface them as errors.
+ */
+const CLI_NOTICES: { re: RegExp; msg: (m: RegExpMatchArray) => string }[] = [
+  {
+    re: /you'?ve hit your (session|usage) limit[^\n]*/i,
+    msg: (m) => `Claude ${m[0].replace(/^you'?ve hit your /i, '')}. Your subscription's limit will reset — try again then, or switch to ChatGPT/Codex in Settings.`
+  },
+  { re: /rate limit|too many requests/i, msg: () => 'Claude is rate-limited right now. Wait a moment and try again.' },
+  { re: /not logged in|please run\s*\/?login|invalid api key|authentication/i, msg: () => 'Claude Code is not signed in. Open Settings → AI provider → Connect.' },
+  { re: /credit balance is too low|insufficient/i, msg: () => 'Your Claude account is out of credit for now.' }
+]
+
+export function assertNotNotice(text: string) {
+  const t = (text || '').trim()
+  // Only treat short replies as notices — a long answer that merely mentions
+  // "rate limit" is a real answer, not an error.
+  if (t.length > 400) return
+  for (const n of CLI_NOTICES) {
+    const m = t.match(n.re)
+    if (m) throw new Error(n.msg(m))
+  }
+}
+
 export async function chat(messages: ChatMessage[], model?: string): Promise<string> {
   let full = ''
   await chatStream(messages, (d) => (full += d), model)
+  assertNotNotice(full)
   return full
 }

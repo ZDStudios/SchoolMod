@@ -3,22 +3,35 @@ import { Sparkles, Send, Trash2, Square } from 'lucide-react'
 import { PageHeader } from '../components/ui'
 import { Markdown } from '../lib/md'
 import { call } from '../lib/utils'
+import { useApp } from '../store/app'
 import type { ChatMessage } from '../../../shared/types'
 
-const SYSTEM: ChatMessage = {
-  role: 'system',
-  content:
-    'You are SchoolMod Assistant, a friendly, sharp study companion for a high-school / senior student. ' +
-    'Explain clearly, show working for maths and science, and keep answers well-structured with markdown. ' +
-    'Encourage understanding over shortcuts.'
-}
-
 const SUGGESTIONS = [
-  'Explain photosynthesis like I\'m 15',
-  'Help me plan an essay on climate change',
-  'Quiz me on quadratic equations',
-  'Summarise the causes of WWI'
+  "What's on my timetable today?",
+  'What assessments do I have coming up?',
+  'How are my grades looking?',
+  'Switch the app to dark mode'
 ]
+
+/** Friendly labels for the tools the agent can call. */
+const TOOL_LABEL: Record<string, string> = {
+  seqta_me: 'Checking your profile',
+  seqta_timetable: 'Reading your timetable',
+  seqta_timetable_week: 'Reading your week',
+  seqta_assessments: 'Looking up assessments',
+  seqta_grades: 'Fetching your grades',
+  seqta_notices: 'Reading notices',
+  seqta_homework: 'Checking homework',
+  seqta_messages: 'Checking your inbox',
+  bell_times: 'Checking bell times',
+  app_set_theme: 'Changing the theme',
+  app_set_accent: 'Changing the accent colour',
+  app_list_notebooks: 'Listing notebooks',
+  app_create_notebook: 'Creating a notebook',
+  app_list_decks: 'Listing decks',
+  app_create_flashcards: 'Building flashcards',
+  app_get_settings: 'Checking settings'
+}
 
 const KEY = 'schoolmod.assistant.chat'
 
@@ -32,6 +45,7 @@ export default function Assistant() {
   })
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
+  const [tool, setTool] = useState('')
   const scroller = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -46,8 +60,9 @@ export default function Assistant() {
     setMessages([...next, { role: 'assistant', content: '' }])
     setInput('')
     setStreaming(true)
+    setTool('')
 
-    const off = window.api.claude.onStreamChunk((delta) => {
+    const offChunk = window.api.claude.onStreamChunk((delta) => {
       setMessages((prev) => {
         const copy = [...prev]
         const last = copy[copy.length - 1]
@@ -55,16 +70,22 @@ export default function Assistant() {
         return copy
       })
     })
+    const offTool = window.api.claude.onAgentTool((t) => setTool(TOOL_LABEL[t] || t))
+    const offSettings = window.api.settings.onChanged(() => useApp.getState().load())
+
     try {
-      await call(window.api.claude.chatStream([SYSTEM, ...next]))
+      await call(window.api.claude.agentChat(next))
     } catch (e: any) {
       setMessages((prev) => {
         const copy = [...prev]
-        copy[copy.length - 1] = { role: 'assistant', content: `⚠️ ${e.message}\n\nCheck your Claude connection in **Settings**.` }
+        copy[copy.length - 1] = { role: 'assistant', content: `⚠️ ${e.message}\n\nCheck your AI connection in **Settings**.` }
         return copy
       })
     } finally {
-      off()
+      offChunk()
+      offTool()
+      offSettings()
+      setTool('')
       setStreaming(false)
     }
   }
@@ -92,7 +113,7 @@ export default function Assistant() {
             </div>
             <h2 className="text-xl font-bold">How can I help you study today?</h2>
             <p className="mt-1 text-sm" style={{ color: 'var(--text-dim)' }}>
-              Ask anything — explanations, essay help, practice questions and more.
+              I can read your real SEQTA data — timetable, assessments, grades, notices — and change the app for you.
             </p>
             <div className="mt-6 grid max-w-lg grid-cols-2 gap-2.5">
               {SUGGESTIONS.map((s) => (
@@ -104,6 +125,12 @@ export default function Assistant() {
           </div>
         ) : (
           messages.map((m, i) => <Bubble key={i} msg={m} streaming={streaming && i === messages.length - 1} />)
+        )}
+        {tool && (
+          <div className="ml-11 flex items-center gap-2 text-xs" style={{ color: 'var(--accent)' }}>
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: 'var(--accent)' }} />
+            {tool}…
+          </div>
         )}
       </div>
 

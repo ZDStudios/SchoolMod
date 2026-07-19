@@ -15,6 +15,10 @@ extraResources:
     filter:
       - "**/*"
 win:
+  # Pinned explicitly: the 1.x repo's Icons/ folder sits at the project root and
+  # Windows' case-insensitive paths made electron-builder mistake it for its own
+  # icon directory ("icon directory ...\icons doesn't contain icons").
+  icon: build/icon.png
   target:
     - target: nsis
       arch:
@@ -33,6 +37,7 @@ nsis:
 portable:
   artifactName: ${productName}-${version}-Portable.${ext}
 mac:
+  icon: build/icon.png
   category: public.app-category.education
   target:
     - target: dmg

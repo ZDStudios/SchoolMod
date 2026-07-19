@@ -21,6 +21,11 @@ export const CH = {
   claudeSetupLog: 'claude:setupLog',
   claudeLoginUrl: 'claude:loginUrl',
 
+  // agent (tool-using assistant)
+  agentChat: 'agent:chat',
+  agentTool: 'agent:tool',
+  settingsChanged: 'settings:changed',
+
   // seqta
   seqtaLogin: 'seqta:login',
   seqtaTestMcp: 'seqta:testMcp',
@@ -63,6 +68,9 @@ export const CH = {
   msGraph: 'ms:graph',
   msDeviceLogin: 'ms:deviceLogin',
   msOpenApp: 'ms:openApp',
+  msQuickConnect: 'ms:quickConnect',
+  msRecentFiles: 'ms:recentFiles',
+  msOneNote: 'ms:oneNote',
 
   // misc
   openExternal: 'app:openExternal',
