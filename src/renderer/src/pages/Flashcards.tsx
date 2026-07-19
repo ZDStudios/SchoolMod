@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Layers, Plus, Sparkles, Trash2, Play, X, RotateCcw, Check } from 'lucide-react'
-import { PageHeader, Empty, Spinner } from '../components/ui'
+import { PageHeader, Empty, Spinner, PromptModal } from '../components/ui'
 import { call } from '../lib/utils'
 import type { Deck, Flashcard, ReviewGrade } from '../../../shared/types'
 
@@ -11,6 +11,7 @@ export default function Flashcards() {
   const [loading, setLoading] = useState(true)
   const [studying, setStudying] = useState<Deck | null>(null)
   const [generating, setGenerating] = useState<Deck | null>(null)
+  const [naming, setNaming] = useState(false)
 
   const load = async () => {
     setDecks(await call(window.api.decks.list()))
@@ -20,10 +21,8 @@ export default function Flashcards() {
     load()
   }, [])
 
-  const create = async () => {
-    const title = prompt('Deck name', 'New deck')
-    if (title === null) return
-    await call(window.api.decks.create(title || 'New deck'))
+  const create = async (title: string) => {
+    await call(window.api.decks.create(title))
     await load()
   }
   const remove = async (id: string) => {
@@ -42,7 +41,7 @@ export default function Flashcards() {
         subtitle="AI-generated cards with spaced repetition, like Gizmo"
         icon={<Layers size={20} />}
         actions={
-          <button className="btn btn-primary" onClick={create}>
+          <button className="btn btn-primary" onClick={() => setNaming(true)}>
             <Plus size={16} /> New deck
           </button>
         }
@@ -52,7 +51,7 @@ export default function Flashcards() {
           icon={<Layers size={40} />}
           title="No decks yet"
           hint="Create a deck, then let Claude generate flashcards from a topic or your notes. Review them with proven spaced repetition."
-          action={<button className="btn btn-primary" onClick={create}><Plus size={16} /> New deck</button>}
+          action={<button className="btn btn-primary" onClick={() => setNaming(true)}><Plus size={16} /> New deck</button>}
         />
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
@@ -85,6 +84,9 @@ export default function Flashcards() {
         </div>
       )}
       {generating && <GenerateModal deck={generating} onClose={() => setGenerating(null)} onDone={load} />}
+      {naming && (
+        <PromptModal title="New deck" label="Deck name" defaultValue="New deck" onSubmit={create} onClose={() => setNaming(false)} />
+      )}
     </div>
   )
 }

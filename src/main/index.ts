@@ -44,6 +44,33 @@ async function runDiagnostics() {
     log('DONE')
     return
   }
+  if (process.env.SCHOOLMOD_DIAG === 'study') {
+    const nbs = await import('./services/notebooks')
+    const decks = await import('./services/flashcards')
+    let nbId = ''
+    let deckId = ''
+    await step('notebook.create', async () => {
+      const nb = nbs.create('DIAG notebook')
+      nbId = nb.id
+      return nb.title
+    })
+    await step('notebook.addSourceText', () =>
+      nbs.addSourceText(nbId, 'diag.txt', 'Photosynthesis converts light energy into glucose in chloroplasts. The Calvin cycle fixes carbon dioxide.')
+    )
+    await step('notebook.ask', async () => (await nbs.ask(nbId, 'Where does photosynthesis happen?')).answer.slice(0, 120))
+    await step('deck.create', async () => {
+      const d = decks.create('DIAG deck')
+      deckId = d.id
+      return d.title
+    })
+    await step('deck.generate', async () => (await decks.generate(deckId, 'Photosynthesis basics', 4)).cards.length + ' cards')
+    // clean up the diagnostic artefacts
+    nbs.remove(nbId)
+    decks.remove(deckId)
+    log('cleaned up DIAG notebook + deck')
+    log('DONE')
+    return
+  }
   if (process.env.SCHOOLMOD_DIAG === 'ms') {
     const ms = await import('./services/msElectron')
     await step('ms.connect', () => ms.connect())

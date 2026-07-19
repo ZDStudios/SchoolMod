@@ -107,7 +107,7 @@ export async function connect(): Promise<{ account: string }> {
  * Office web apps are slow single-page apps, so poll until items appear rather
  * than guessing a fixed delay (a fixed wait returned almost nothing).
  */
-async function scrapeUntil(win: BrowserWindow, script: string, want = 3, timeoutMs = 25000): Promise<MsFile[]> {
+async function scrapeUntil(win: BrowserWindow, script: string, want = 3, timeoutMs = 11000): Promise<MsFile[]> {
   const deadline = Date.now() + timeoutMs
   let best: MsFile[] = []
   while (Date.now() < deadline) {
@@ -145,11 +145,10 @@ export async function recentFiles(): Promise<MsFile[]> {
   const win = await openSignedIn('https://m365.cloud.microsoft/')
   try {
     let files = await scrapeUntil(win, FILE_SCRIPT, 5)
-    if (files.length < 3) {
-      // Fall back to the OneDrive file list, which renders a plain list.
+    // Only pay for the fallback navigation if the feed gave us nothing at all.
+    if (files.length === 0) {
       await win.loadURL('https://www.office.com/launch/onedrive').catch(() => {})
-      const more = await scrapeUntil(win, FILE_SCRIPT, 5)
-      if (more.length > files.length) files = more
+      files = await scrapeUntil(win, FILE_SCRIPT, 5)
     }
     return files
   } finally {

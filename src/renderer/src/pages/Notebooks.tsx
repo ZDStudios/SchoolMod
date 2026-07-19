@@ -14,7 +14,7 @@ import {
   Layers,
   Download
 } from 'lucide-react'
-import { PageHeader, Empty, Spinner } from '../components/ui'
+import { PageHeader, Empty, Spinner, PromptModal } from '../components/ui'
 import { Markdown } from '../lib/md'
 import { call, timeAgo } from '../lib/utils'
 import type { Notebook, ChatMessage, Citation } from '../../../shared/types'
@@ -22,6 +22,7 @@ import type { Notebook, ChatMessage, Citation } from '../../../shared/types'
 export default function Notebooks() {
   const [notebooks, setNotebooks] = useState<Notebook[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [naming, setNaming] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const load = async () => {
@@ -34,10 +35,8 @@ export default function Notebooks() {
 
   const active = notebooks.find((n) => n.id === activeId) || null
 
-  const create = async () => {
-    const title = prompt('Name your notebook', 'Untitled notebook')
-    if (title === null) return
-    const nb = await call(window.api.notebooks.create(title || 'Untitled notebook'))
+  const create = async (title: string) => {
+    const nb = await call(window.api.notebooks.create(title))
     await load()
     setActiveId(nb.id)
   }
@@ -54,7 +53,7 @@ export default function Notebooks() {
         subtitle="Your private NotebookLM — chat with your notes and documents"
         icon={<BookOpen size={20} />}
         actions={
-          <button className="btn btn-primary" onClick={create}>
+          <button className="btn btn-primary" onClick={() => setNaming(true)}>
             <Plus size={16} /> New notebook
           </button>
         }
@@ -65,7 +64,7 @@ export default function Notebooks() {
           title="Create your first notebook"
           hint="Add your class notes, textbook PDFs or handouts, then ask questions and get answers grounded in your own sources."
           action={
-            <button className="btn btn-primary" onClick={create}>
+            <button className="btn btn-primary" onClick={() => setNaming(true)}>
               <Plus size={16} /> New notebook
             </button>
           }
@@ -86,6 +85,15 @@ export default function Notebooks() {
             </button>
           ))}
         </div>
+      )}
+      {naming && (
+        <PromptModal
+          title="New notebook"
+          label="Notebook name"
+          defaultValue="Untitled notebook"
+          onSubmit={create}
+          onClose={() => setNaming(false)}
+        />
       )}
     </div>
   )

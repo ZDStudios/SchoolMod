@@ -1,5 +1,73 @@
-import { ReactNode } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 import { Loader2, AlertCircle } from 'lucide-react'
+
+/**
+ * Electron does not implement window.prompt() — it throws, which silently broke
+ * "New notebook" and "New deck". This is the in-app replacement.
+ */
+export function PromptModal({
+  title,
+  label,
+  defaultValue = '',
+  confirmText = 'Create',
+  onSubmit,
+  onClose
+}: {
+  title: string
+  label?: string
+  defaultValue?: string
+  confirmText?: string
+  onSubmit: (value: string) => void
+  onClose: () => void
+}) {
+  const [value, setValue] = useState(defaultValue)
+  const ref = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setTimeout(() => {
+      ref.current?.focus()
+      ref.current?.select()
+    }, 30)
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const submit = () => {
+    const v = value.trim()
+    if (!v) return
+    onSubmit(v)
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-[90] grid place-items-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="card w-[420px] max-w-[90vw] p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="mb-3 font-semibold">{title}</h3>
+        {label && (
+          <span className="mb-1.5 block text-xs font-medium" style={{ color: 'var(--text-dim)' }}>
+            {label}
+          </span>
+        )}
+        <input
+          ref={ref}
+          className="input"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && submit()}
+        />
+        <div className="mt-4 flex justify-end gap-2">
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn btn-primary" onClick={submit} disabled={!value.trim()}>
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function Spinner({ size = 18, className = '' }: { size?: number; className?: string }) {
   return <Loader2 size={size} className={`animate-spin ${className}`} />
