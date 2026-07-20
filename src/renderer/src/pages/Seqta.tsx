@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CalendarDays, Clock, MapPin, User, FileText, Megaphone, RefreshCw, ClipboardList, Mail, FileBadge2 } from 'lucide-react'
+import { CalendarDays, Clock, MapPin, User, FileText, Megaphone, RefreshCw, ClipboardList, Mail, FileBadge2, GraduationCap, ChevronLeft, Search, Paperclip } from 'lucide-react'
 import { PageHeader, Empty, Spinner, ErrorBanner } from '../components/ui'
 import { useApp } from '../store/app'
 import { call, fmtDate, daysUntil } from '../lib/utils'
-import type { SeqtaLesson, SeqtaAssessment, SeqtaNotice, SeqtaHomeworkGroup, SeqtaMessage, SeqtaReport } from '../../../shared/types'
+import type { SeqtaLesson, SeqtaAssessment, SeqtaNotice, SeqtaHomeworkGroup, SeqtaMessage, SeqtaReport, SeqtaSubject, SeqtaCourseContent } from '../../../shared/types'
 
 export default function Seqta() {
   const connected = !!useApp((s) => s.settings?.seqta.connected)
-  const [tab, setTab] = useState<'timetable' | 'assessments' | 'homework' | 'notices' | 'messages' | 'reports'>('timetable')
+  const [tab, setTab] = useState<'timetable' | 'assessments' | 'homework' | 'notices' | 'messages' | 'reports' | 'courses'>('timetable')
   const [week, setWeek] = useState(false)
   const [lessons, setLessons] = useState<SeqtaLesson[]>([])
   const [assessments, setAssessments] = useState<SeqtaAssessment[]>([])
@@ -71,7 +71,8 @@ export default function Seqta() {
     { id: 'homework', label: 'Homework', icon: ClipboardList, count: homework.length },
     { id: 'notices', label: 'Notices', icon: Megaphone, count: notices.length },
     { id: 'messages', label: 'Messages', icon: Mail, count: messages.length },
-    { id: 'reports', label: 'Reports', icon: FileBadge2, count: reports.length }
+    { id: 'reports', label: 'Reports', icon: FileBadge2, count: reports.length },
+    { id: 'courses', label: 'Courses', icon: GraduationCap, count: null }
   ] as const
 
   return (
@@ -97,9 +98,11 @@ export default function Seqta() {
             style={{ background: tab === t.id ? 'var(--accent)' : 'transparent' }}
           >
             <t.icon size={15} /> {t.label}
-            <span className="rounded-full px-1.5 text-xs" style={{ background: tab === t.id ? 'rgba(255,255,255,.2)' : 'var(--accent-soft)', color: tab === t.id ? '#fff' : 'var(--accent)' }}>
-              {t.count}
-            </span>
+            {t.count !== null && (
+              <span className="rounded-full px-1.5 text-xs" style={{ background: tab === t.id ? 'rgba(255,255,255,.2)' : 'var(--accent-soft)', color: tab === t.id ? '#fff' : 'var(--accent)' }}>
+                {t.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -123,8 +126,10 @@ export default function Seqta() {
         <Notices items={notices} />
       ) : tab === 'messages' ? (
         <Messages items={messages} />
-      ) : (
+      ) : tab === 'reports' ? (
         <Reports items={reports} />
+      ) : (
+        <Courses />
       )}
     </div>
   )
@@ -278,6 +283,112 @@ function Notices({ items }: { items: SeqtaNotice[] }) {
           {n.staff && <p className="mt-2 text-xs" style={{ color: 'var(--text-dim)' }}>— {n.staff}</p>}
         </div>
       ))}
+    </div>
+  )
+}
+
+function Courses() {
+  const [subjects, setSubjects] = useState<SeqtaSubject[]>([])
+  const [q, setQ] = useState('')
+  const [active, setActive] = useState<SeqtaSubject | null>(null)
+  const [content, setContent] = useState<SeqtaCourseContent[] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadingContent, setLoadingContent] = useState(false)
+  const [err, setErr] = useState('')
+
+  useEffect(() => {
+    call(window.api.seqta.subjectsList())
+      .then(setSubjects)
+      .catch((e) => setErr(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const open = async (s: SeqtaSubject) => {
+    setActive(s)
+    setContent(null)
+    setLoadingContent(true)
+    setErr('')
+    try {
+      setContent(await call(window.api.seqta.courseContent(s.title)))
+    } catch (e: any) {
+      setErr(e.message)
+    } finally {
+      setLoadingContent(false)
+    }
+  }
+
+  if (active) {
+    return (
+      <div>
+        <button className="btn btn-ghost mb-3 px-2" onClick={() => setActive(null)}>
+          <ChevronLeft size={15} /> All subjects
+        </button>
+        <ErrorBanner message={err} />
+        <div className="card p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <GraduationCap size={18} style={{ color: 'var(--accent)' }} />
+            <h2 className="font-semibold">{active.title}</h2>
+            <span className="chip">{active.code}</span>
+          </div>
+          {loadingContent ? (
+            <div className="py-8"><Spinner size={20} /></div>
+          ) : content && content.length ? (
+            content.map((c, i) => (
+              <div key={i} className={i > 0 ? 'mt-5 border-t pt-5' : ''} style={{ borderColor: 'var(--border)' }}>
+                {c.files.length > 0 && (
+                  <div className="mb-3">
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-dim)' }}>Files</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {c.files.map((f, j) => (
+                        <span key={j} className="chip"><Paperclip size={11} /> {f}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-dim)' }}>Lesson content</p>
+                <p className="whitespace-pre-wrap text-sm" style={{ color: 'var(--text-dim)' }}>{c.text}</p>
+              </div>
+            ))
+          ) : (
+            <p className="py-6 text-center text-sm" style={{ color: 'var(--text-dim)' }}>No course content published yet for this subject.</p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  const filtered = subjects.filter((s) => s.title.toLowerCase().includes(q.toLowerCase()) || s.code.toLowerCase().includes(q.toLowerCase()))
+
+  return (
+    <div>
+      <ErrorBanner message={err} />
+      <div className="relative mb-3">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} />
+        <input className="input pl-8" placeholder="Search your subjects…" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      {loading ? (
+        <div className="grid place-items-center py-16"><Spinner size={22} /></div>
+      ) : filtered.length === 0 ? (
+        <Empty icon={<GraduationCap size={36} />} title="No subjects found" />
+      ) : (
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
+          {filtered.map((s) => (
+            <button
+              key={s.code}
+              onClick={() => open(s)}
+              className="card flex items-center gap-3 p-4 text-left transition hover:border-[var(--accent)]"
+            >
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
+                <GraduationCap size={17} />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{s.title}</p>
+                <p className="text-[11px]" style={{ color: 'var(--text-dim)' }}>{s.code}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

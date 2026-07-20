@@ -37,7 +37,8 @@ const TOOL_LABEL: Record<string, string> = {
   computer_list_dir: 'Looking at your files',
   computer_read_file: 'Reading a file on your computer',
   computer_search_files: 'Searching your files',
-  computer_open_path: 'Opening a file'
+  computer_open_path: 'Opening a file',
+  computer_write_file: 'Writing a file'
 }
 
 export default function Assistant() {

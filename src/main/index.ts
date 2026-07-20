@@ -107,16 +107,41 @@ async function runDiagnostics() {
   }
   if (process.env.SCHOOLMOD_DIAG === 'computer') {
     const s = await import('./store')
+    const fs = await import('fs')
+    const path = await import('path')
+    const os = await import('os')
     s.setSettings({ computerAccess: true })
     const { runAgent } = await import('./services/agent')
-    let answer = ''
-    const tools: string[] = []
-    await runAgent([{ role: 'user', content: 'List the files in my Desktop folder' }], (m) => import('./services/claude').then((ai) => ai.chat(m)), {
-      onTool: (t) => tools.push(t),
-      onDelta: (t) => (answer += t)
-    })
-    log('tools called:', tools.join(', ') || '(none)')
-    log('answer:', answer.replace(/\s+/g, ' ').slice(0, 300))
+    const { chat } = await import('./services/claude')
+    const testFile = path.join(os.tmpdir(), 'schoolmod-write-test.txt')
+    if (fs.existsSync(testFile)) fs.unlinkSync(testFile)
+
+    for (const q of [`Write the exact text "SCHOOLMOD_WRITE_OK" to the file ${testFile.replace(/\\/g, '\\\\')}`]) {
+      log(`--- ASK: "${q}"`)
+      let answer = ''
+      const tools: string[] = []
+      // Wrap chat() to log the model's raw reply at each turn — tells us
+      // whether it emitted <tool> syntax at all, vs just narrating in prose.
+      let turn = 0
+      const chatSpy = async (msgs: any[]) => {
+        const r = await chat(msgs)
+        log(`  raw reply [turn ${++turn}]:`, JSON.stringify(r))
+        return r
+      }
+      await runAgent([{ role: 'user', content: q }], chatSpy, {
+        onTool: (t) => tools.push(t),
+        onDelta: (t) => (answer += t)
+      })
+      log('tools called:', tools.join(', ') || '(none)')
+      log('answer (full):', JSON.stringify(answer))
+    }
+
+    // Ground truth: did the file actually get written, independent of what the model claims?
+    const exists = fs.existsSync(testFile)
+    const content = exists ? fs.readFileSync(testFile, 'utf-8') : null
+    log('GROUND TRUTH: file exists ->', exists, '| content ->', JSON.stringify(content))
+    if (exists) fs.unlinkSync(testFile)
+
     s.setSettings({ computerAccess: false })
     log('DONE')
     return

@@ -252,13 +252,13 @@ function ComputerAccessSection() {
   const { settings, save } = useApp()
   const on = !!settings!.computerAccess
   return (
-    <Section icon={<HardDrive size={18} />} title="Computer access" desc="Let the assistant browse and read files on this device.">
+    <Section icon={<HardDrive size={18} />} title="Computer access" desc="Let the assistant browse, read and write files on this device.">
       <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: 'var(--bg)' }}>
         <div className="pr-4">
           <p className="text-sm font-medium">Allow file access</p>
           <p className="mt-0.5 text-xs" style={{ color: 'var(--text-dim)' }}>
-            When on, the assistant can list folders, read text files, search filenames, and open a file for you —
-            e.g. "find my Humanities essay draft" or "read notes.txt on my desktop".
+            When on, the assistant can list folders, read and write text files, search filenames, and open a file for
+            you — e.g. "find my Humanities essay draft", "save this summary to notes.txt on my desktop".
           </p>
         </div>
         <button
@@ -277,8 +277,8 @@ function ComputerAccessSection() {
       <div className="mt-3 flex gap-2 rounded-xl border px-3.5 py-2.5 text-xs" style={{ borderColor: 'var(--border)', color: 'var(--text-dim)' }}>
         <ShieldAlert size={14} className="mt-0.5 shrink-0" />
         <span>
-          <strong>Read-only, always.</strong> Even with this on, the assistant can never write, delete, move or run
-          files — only look at them. Off by default; turn it off any time.
+          The assistant can create, edit and read files you point it at — but even with this on, it can never{' '}
+          <strong>delete a file/folder or run a program or command</strong>. Off by default; turn it off any time.
         </span>
       </div>
     </Section>

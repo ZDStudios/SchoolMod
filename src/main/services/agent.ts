@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
-import { join, resolve } from 'path'
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'fs'
+import { join, resolve, dirname } from 'path'
 import { homedir } from 'os'
 import { shell } from 'electron'
 import { getSettings, setSettings, getNotebooks, getDecks } from '../store'
@@ -198,10 +198,11 @@ const BASE_TOOLS: Tool[] = [
   }
 ]
 
-// ---- Computer access (opt-in via Settings → AI Assistant → "Let the assistant
-// access this computer"). Strictly READ-ONLY: browse folders, read text files,
-// search filenames, and open a file/folder in its default app. No writing,
-// deleting, or running anything — that boundary holds regardless of the toggle.
+// ---- Computer access (opt-in via Settings → Computer access). Browse
+// folders, read/write text files, search filenames, and open a file/folder in
+// its default app. Deliberately still excludes deleting files/folders and
+// running programs/commands — those aren't exposed as tools regardless of
+// the toggle.
 const MAX_FILE_BYTES = 300_000
 const MAX_LIST_ENTRIES = 200
 
@@ -280,6 +281,27 @@ const COMPUTER_TOOLS: Tool[] = [
     }
   },
   {
+    name: 'computer_write_file',
+    description:
+      'Write text to a file — creates it (and any missing parent folders) if it doesn\'t exist, or overwrites/appends if it does. Use for saving notes, essay drafts, generated summaries, etc. for the student.',
+    args: '{"path": "string", "content": "string", "mode"?: "overwrite" | "append"}',
+    run: (a) => {
+      if (!a?.path) throw new Error('Missing "path".')
+      if (typeof a?.content !== 'string') throw new Error('Missing "content".')
+      const target = resolve(String(a.path).replace(/^~/, homedir()))
+      if (existsSync(target) && statSync(target).isDirectory()) throw new Error(`"${target}" is a folder, not a file.`)
+      mkdirSync(dirname(target), { recursive: true })
+      const existed = existsSync(target)
+      if (a.mode === 'append' && existed) {
+        writeFileSync(target, a.content, { flag: 'a' })
+      } else {
+        writeFileSync(target, a.content)
+      }
+      const st = statSync(target)
+      return ok(`${existed ? (a.mode === 'append' ? 'Appended to' : 'Overwrote') : 'Created'} ${target} (${st.size} bytes).`)
+    }
+  },
+  {
     name: 'computer_open_path',
     description: "Open a file or folder in its default app (like double-clicking it) — e.g. open a homework PDF the student mentions.",
     args: '{"path": "string"}',
@@ -321,7 +343,7 @@ Rules:
 - Keep answers concise and useful. Show working for maths. Encourage understanding, never just hand over answers to assessments.
 ${
   tools.some((t) => t.name.startsWith('computer_'))
-    ? '- You have READ-ONLY access to this computer\'s files (list/read/search/open). Never claim you can write, delete, move or run anything — you cannot, by design.'
+    ? '- You have access to this computer\'s files: list/read/search/open, and write/create/append files (computer_write_file). Confirm briefly what you wrote and where. You cannot delete files/folders or run programs/commands — those are not available to you, by design.'
     : ''
 }
 - Dates are YYYY-MM-DD. Today is ${new Date().toISOString().slice(0, 10)}.`
