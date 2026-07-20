@@ -68,6 +68,8 @@ export interface Settings {
   codex: CodexSettings
   seqta: SeqtaSettings
   microsoft: MicrosoftSettings
+  /** Off by default. When on, the AI assistant can browse/read files on this device (read-only — never write, delete or run anything). */
+  computerAccess: boolean
   onboardingDone: boolean
 }
 
@@ -95,6 +97,7 @@ export const DEFAULT_SETTINGS: Settings = {
     mcp: { command: 'python', args: [], cwd: '' }
   },
   microsoft: { clientId: '', tenant: 'common', account: '' },
+  computerAccess: false,
   onboardingDone: false
 }
 
@@ -168,6 +171,18 @@ export interface SeqtaReport {
   terms: string
   year: string
   date: string
+}
+
+export interface SeqtaSubject {
+  code: string
+  title: string
+}
+
+export interface SeqtaCourseContent {
+  subject: string
+  code: string
+  files: string[]
+  text: string
 }
 
 // ---- Notebooks (RAG) ----

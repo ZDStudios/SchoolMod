@@ -250,6 +250,12 @@ interface Subject {
   metaclass: number
   programme: number
 }
+/** Public listing for UI pickers ("import from this subject"). */
+export async function subjectsList(): Promise<{ code: string; title: string }[]> {
+  await ensure()
+  return (await subjects()).map((s) => ({ code: s.code, title: s.title }))
+}
+
 async function subjects(): Promise<Subject[]> {
   const data = await payload('/seqta/student/load/subjects')
   const out: Subject[] = []
@@ -424,4 +430,58 @@ export async function openReport(uuid: string): Promise<void> {
   const file = join(tmpdir(), `seqta-report-${uuid}.pdf`)
   writeFileSync(file, buf)
   await shell.openPath(file)
+}
+
+export interface CourseContent {
+  subject: string
+  code: string
+  files: string[]
+  text: string
+}
+
+/**
+ * Course/lesson content for a subject — used to import directly into a
+ * Notebook or a Flashcards deck without leaving SchoolMod. Matches by
+ * code/title substring so "humanities" or "8HU23" both work.
+ */
+export async function courseContent(subjectKeyword: string): Promise<CourseContent[]> {
+  await ensure()
+  const kw = subjectKeyword.trim().toLowerCase()
+  const subs = (await subjects()).filter(
+    (s) => !kw || s.title.toLowerCase().includes(kw) || s.code.toLowerCase().includes(kw)
+  )
+  if (!subs.length) throw new Error(`No subject matching "${subjectKeyword}". Call seqta_subjects (or check Settings → SEQTA) for exact names.`)
+
+  const results: CourseContent[] = []
+  for (const s of subs) {
+    const data = await payload('/seqta/student/load/courses', {
+      programme: String(s.programme),
+      metaclass: String(s.metaclass)
+    }).catch(() => null)
+    if (!data) continue
+
+    const files: string[] = (data.cf || []).map((f: any) => f.filename).filter(Boolean)
+    const dWeeks: any[] = data.d || []
+    const wWeeks: any[] = data.w || []
+    const lines: string[] = []
+    for (let i = 0; i < dWeeks.length; i++) {
+      const week = dWeeks[i]
+      const content = wWeeks[i]
+      const items = Array.isArray(content) ? content : content ? [content] : []
+      for (const item of items) {
+        const title = item?.t
+        if (title) lines.push(`Term ${week?.t ?? '?'} Week ${week?.w ?? '?'}: ${title}`)
+        const notes = item?.n
+        if (notes) lines.push(String(notes).replace(/<[^>]+>/g, ' ').trim())
+      }
+    }
+    results.push({
+      subject: s.title,
+      code: s.code,
+      files,
+      text: lines.filter(Boolean).join('\n\n') || '(No lesson plan content published yet for this subject.)'
+    })
+  }
+  if (!results.length) throw new Error(`Found the subject but could not load its course content.`)
+  return results
 }

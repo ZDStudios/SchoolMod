@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Layers, Plus, Sparkles, Trash2, Play, X, RotateCcw, Check } from 'lucide-react'
+import { Layers, Plus, Sparkles, Trash2, Play, X, RotateCcw, Check, Download } from 'lucide-react'
 import { PageHeader, Empty, Spinner, PromptModal } from '../components/ui'
+import ImportSourceModal from '../components/ImportSourceModal'
 import { call } from '../lib/utils'
 import type { Deck, Flashcard, ReviewGrade } from '../../../shared/types'
 
@@ -96,6 +97,7 @@ function GenerateModal({ deck, onClose, onDone }: { deck: Deck; onClose: () => v
   const [count, setCount] = useState(12)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [importing, setImporting] = useState(false)
 
   const go = async () => {
     if (!source.trim()) return
@@ -119,6 +121,9 @@ function GenerateModal({ deck, onClose, onDone }: { deck: Deck; onClose: () => v
           <h3 className="font-semibold">Generate cards · {deck.emoji} {deck.title}</h3>
           <button className="btn btn-ghost px-2" onClick={onClose}><X size={16} /></button>
         </div>
+        <button className="btn mb-2 w-full px-2 text-xs" onClick={() => setImporting(true)}>
+          <Download size={14} /> Import from SEQTA / OneNote
+        </button>
         <textarea
           className="input h-40 resize-none"
           placeholder="A topic (e.g. 'The French Revolution') or paste your notes to turn into flashcards…"
@@ -138,6 +143,12 @@ function GenerateModal({ deck, onClose, onDone }: { deck: Deck; onClose: () => v
           </button>
         </div>
       </div>
+      {importing && (
+        <ImportSourceModal
+          onImport={(s) => setSource((prev) => (prev ? prev + '\n\n' + s.text : s.text))}
+          onClose={() => setImporting(false)}
+        />
+      )}
     </div>
   )
 }

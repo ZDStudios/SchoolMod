@@ -15,6 +15,7 @@ import {
   Download
 } from 'lucide-react'
 import { PageHeader, Empty, Spinner, PromptModal } from '../components/ui'
+import ImportSourceModal from '../components/ImportSourceModal'
 import { Markdown } from '../lib/md'
 import { call, timeAgo } from '../lib/utils'
 import type { Notebook, ChatMessage, Citation } from '../../../shared/types'
@@ -106,6 +107,7 @@ function NotebookDetail({ notebook, onBack, onChange }: { notebook: Notebook; on
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [pasting, setPasting] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [panel, setPanel] = useState<'summary' | 'guide' | null>(null)
   const [panelText, setPanelText] = useState('')
   const [panelBusy, setPanelBusy] = useState(false)
@@ -131,6 +133,11 @@ function NotebookDetail({ notebook, onBack, onChange }: { notebook: Notebook; on
     } finally {
       setBusy(false)
     }
+  }
+
+  const handleImport = async (source: { name: string; text: string }) => {
+    const updated = await call(window.api.notebooks.addSourceText(nb.id, source.name, source.text))
+    await refresh(updated)
   }
 
   const removeSource = async (sourceId: string) => {
@@ -229,6 +236,9 @@ function NotebookDetail({ notebook, onBack, onChange }: { notebook: Notebook; on
               <FileText size={14} /> Paste
             </button>
           </div>
+          <button className="btn mb-3 w-full px-2 text-xs" onClick={() => setImporting(true)}>
+            <Download size={14} /> Import from SEQTA / OneNote
+          </button>
           <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
             {nb.sources.length === 0 && (
               <p className="mt-6 text-center text-xs" style={{ color: 'var(--text-dim)' }}>
@@ -314,6 +324,7 @@ function NotebookDetail({ notebook, onBack, onChange }: { notebook: Notebook; on
       </div>
 
       {pasting && <PasteModal nbId={nb.id} onClose={() => setPasting(false)} onDone={refresh} />}
+      {importing && <ImportSourceModal onImport={handleImport} onClose={() => setImporting(false)} />}
       {panel && (
         <SidePanel title={panel === 'summary' ? 'Summary' : 'Study guide'} busy={panelBusy} text={panelText} onClose={() => setPanel(null)} />
       )}

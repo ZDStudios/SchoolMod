@@ -11,6 +11,8 @@ import type {
   SeqtaSubjectAverage,
   SeqtaMessage,
   SeqtaReport,
+  SeqtaSubject,
+  SeqtaCourseContent,
   Notebook,
   RagAnswer,
   Deck,
@@ -86,7 +88,9 @@ const api = {
     grades: () => invoke<{ grades: SeqtaGrade[]; averages: SeqtaSubjectAverage[]; overall: number | null }>(CH.seqtaGrades),
     messages: () => invoke<SeqtaMessage[]>(CH.seqtaMessages),
     reports: () => invoke<SeqtaReport[]>(CH.seqtaReports),
-    openReport: (uuid: string) => invoke(CH.seqtaOpenReport, uuid)
+    openReport: (uuid: string) => invoke(CH.seqtaOpenReport, uuid),
+    subjectsList: () => invoke<SeqtaSubject[]>(CH.seqtaSubjectsList),
+    courseContent: (subjectKeyword: string) => invoke<SeqtaCourseContent[]>(CH.seqtaCourseContent, subjectKeyword)
   },
   notebooks: {
     list: () => invoke<Notebook[]>(CH.nbList),

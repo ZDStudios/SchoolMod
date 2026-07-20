@@ -41,6 +41,8 @@ export const CH = {
   seqtaMessages: 'seqta:messages',
   seqtaReports: 'seqta:reports',
   seqtaOpenReport: 'seqta:openReport',
+  seqtaSubjectsList: 'seqta:subjectsList',
+  seqtaCourseContent: 'seqta:courseContent',
   seqtaLogout: 'seqta:logout',
 
   // notebooks

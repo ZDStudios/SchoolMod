@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Sparkles, Send, Trash2, Square, Plus, MessageSquare, Pencil, Check, X } from 'lucide-react'
 import { Markdown } from '../lib/md'
-import { call } from '../lib/utils'
-import { useApp } from '../store/app'
+import { useChat } from '../store/chat'
 import type { ChatMessage } from '../../../shared/types'
 
 const SUGGESTIONS = [
@@ -22,6 +21,8 @@ const TOOL_LABEL: Record<string, string> = {
   seqta_notices: 'Reading notices',
   seqta_homework: 'Checking homework',
   seqta_messages: 'Checking your inbox',
+  seqta_subjects: 'Listing your subjects',
+  seqta_course_content: 'Reading course content',
   bell_times: 'Checking bell times',
   app_set_theme: 'Changing the theme',
   app_set_accent: 'Changing the accent colour',
@@ -32,58 +33,16 @@ const TOOL_LABEL: Record<string, string> = {
   app_get_settings: 'Checking settings',
   ms_onenote_notebooks: 'Listing OneNote notebooks',
   ms_onenote_read: 'Reading your OneNote notebook',
-  ms_recent_files: 'Checking recent Office files'
-}
-
-interface Chat {
-  id: string
-  title: string
-  messages: ChatMessage[]
-  createdAt: number
-  updatedAt: number
-}
-
-const STORE_KEY = 'schoolmod.assistant.chats'
-const uid = () => (crypto as any).randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
-
-function loadChats(): { chats: Chat[]; activeId: string } {
-  try {
-    const raw = localStorage.getItem(STORE_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (parsed?.chats?.length) return parsed
-    }
-  } catch {
-    /* fall through to legacy migration */
-  }
-  // Migrate the old single-conversation format if present.
-  try {
-    const legacy = JSON.parse(localStorage.getItem('schoolmod.assistant.chat') || '[]')
-    if (Array.isArray(legacy) && legacy.length) {
-      const chat: Chat = { id: uid(), title: titleFrom(legacy), messages: legacy, createdAt: Date.now(), updatedAt: Date.now() }
-      return { chats: [chat], activeId: chat.id }
-    }
-  } catch {
-    /* ignore */
-  }
-  const chat = newChat()
-  return { chats: [chat], activeId: chat.id }
-}
-
-function newChat(): Chat {
-  return { id: uid(), title: 'New chat', messages: [], createdAt: Date.now(), updatedAt: Date.now() }
-}
-
-function titleFrom(messages: ChatMessage[]): string {
-  const first = messages.find((m) => m.role === 'user')?.content?.trim() || 'New chat'
-  return first.length > 42 ? first.slice(0, 42) + '…' : first
+  ms_recent_files: 'Checking recent Office files',
+  computer_list_dir: 'Looking at your files',
+  computer_read_file: 'Reading a file on your computer',
+  computer_search_files: 'Searching your files',
+  computer_open_path: 'Opening a file'
 }
 
 export default function Assistant() {
-  const [{ chats, activeId }, setState] = useState(loadChats)
+  const { chats, activeId, streaming, streamingChatId, tool, createChat, deleteChat, renameChat, switchChat, clearActive, send } = useChat()
   const [input, setInput] = useState('')
-  const [streaming, setStreaming] = useState(false)
-  const [tool, setTool] = useState('')
   const [renaming, setRenaming] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const scroller = useRef<HTMLDivElement>(null)
@@ -91,10 +50,8 @@ export default function Assistant() {
 
   const active = chats.find((c) => c.id === activeId) || chats[0]
   const messages = active?.messages || []
-
-  useEffect(() => {
-    localStorage.setItem(STORE_KEY, JSON.stringify({ chats, activeId }))
-  }, [chats, activeId])
+  const activeIsStreaming = streaming && streamingChatId === activeId
+  const otherChatStreaming = streaming && streamingChatId !== activeId
 
   useEffect(() => {
     const el = scroller.current
@@ -107,6 +64,13 @@ export default function Assistant() {
   }, [])
 
   useEffect(() => {
+    // The chat keeps streaming even while this page isn't mounted (it lives
+    // in a zustand store, not component state) — jump to the bottom whenever
+    // we land back on it mid-answer, then keep following new content.
+    stickToBottom.current = true
+  }, [activeId])
+
+  useEffect(() => {
     if (!stickToBottom.current) return
     const el = scroller.current
     if (!el) return
@@ -115,70 +79,12 @@ export default function Assistant() {
     })
   }, [messages, tool, streaming, activeId])
 
-  const updateActive = (fn: (c: Chat) => Chat) =>
-    setState((s) => ({ ...s, chats: s.chats.map((c) => (c.id === s.activeId ? fn(c) : c)) }))
-
-  const createChat = () => {
-    const c = newChat()
-    setState((s) => ({ chats: [c, ...s.chats], activeId: c.id }))
-  }
-
-  const deleteChat = (id: string) => {
-    setState((s) => {
-      const remaining = s.chats.filter((c) => c.id !== id)
-      if (remaining.length === 0) {
-        const c = newChat()
-        return { chats: [c], activeId: c.id }
-      }
-      return { chats: remaining, activeId: s.activeId === id ? remaining[0].id : s.activeId }
-    })
-  }
-
-  const send = async (text?: string) => {
+  const submit = (text?: string) => {
     const content = (text ?? input).trim()
-    if (!content || streaming || !active) return
-    const next = [...active.messages, { role: 'user', content } as ChatMessage]
+    if (!content || streaming) return
     stickToBottom.current = true
-    const chatId = active.id
-    const isFirstMessage = active.messages.length === 0
-    updateActive((c) => ({
-      ...c,
-      messages: [...next, { role: 'assistant', content: '' }],
-      title: isFirstMessage ? titleFrom(next) : c.title,
-      updatedAt: Date.now()
-    }))
     setInput('')
-    setStreaming(true)
-    setTool('')
-
-    const patchLast = (fn: (m: ChatMessage) => ChatMessage) =>
-      setState((s) => ({
-        ...s,
-        chats: s.chats.map((c) => {
-          if (c.id !== chatId) return c
-          const copy = [...c.messages]
-          copy[copy.length - 1] = fn(copy[copy.length - 1])
-          return { ...c, messages: copy }
-        })
-      }))
-
-    const offChunk = window.api.claude.onStreamChunk((delta) => {
-      patchLast((last) => ({ ...last, content: last.content + delta }))
-    })
-    const offTool = window.api.claude.onAgentTool((t) => setTool(TOOL_LABEL[t] || t))
-    const offSettings = window.api.settings.onChanged(() => useApp.getState().load())
-
-    try {
-      await call(window.api.claude.agentChat(next))
-    } catch (e: any) {
-      patchLast(() => ({ role: 'assistant', content: `⚠️ ${e.message}\n\nCheck your AI connection in **Settings**.` }))
-    } finally {
-      offChunk()
-      offTool()
-      offSettings()
-      setTool('')
-      setStreaming(false)
-    }
+    send(content)
   }
 
   return (
@@ -195,11 +101,15 @@ export default function Assistant() {
             .map((c) => (
               <div
                 key={c.id}
-                onClick={() => setState((s) => ({ ...s, activeId: c.id }))}
+                onClick={() => switchChat(c.id)}
                 className="group flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm cursor-pointer"
                 style={{ background: c.id === activeId ? 'var(--accent-soft)' : 'transparent', color: c.id === activeId ? 'var(--accent)' : 'var(--text)' }}
               >
-                <MessageSquare size={14} className="shrink-0" />
+                {c.id === streamingChatId ? (
+                  <span className="h-3.5 w-3.5 shrink-0 animate-pulse rounded-full" style={{ background: 'var(--accent)' }} />
+                ) : (
+                  <MessageSquare size={14} className="shrink-0" />
+                )}
                 {renaming === c.id ? (
                   <input
                     autoFocus
@@ -209,7 +119,7 @@ export default function Assistant() {
                     onChange={(e) => setRenameValue(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
-                        setState((s) => ({ ...s, chats: s.chats.map((x) => (x.id === c.id ? { ...x, title: renameValue.trim() || x.title } : x)) }))
+                        renameChat(c.id, renameValue)
                         setRenaming(null)
                       }
                       if (e.key === 'Escape') setRenaming(null)
@@ -219,7 +129,7 @@ export default function Assistant() {
                   <span className="min-w-0 flex-1 truncate">{c.title}</span>
                 )}
                 {renaming === c.id ? (
-                  <button onClick={(e) => { e.stopPropagation(); setState((s) => ({ ...s, chats: s.chats.map((x) => (x.id === c.id ? { ...x, title: renameValue.trim() || x.title } : x)) })); setRenaming(null) }}>
+                  <button onClick={(e) => { e.stopPropagation(); renameChat(c.id, renameValue); setRenaming(null) }}>
                     <Check size={13} />
                   </button>
                 ) : (
@@ -252,11 +162,13 @@ export default function Assistant() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">{active?.title || 'AI Assistant'}</h1>
-              <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Powered by your Claude subscription</p>
+              <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+                {otherChatStreaming ? 'Still answering in another chat…' : 'Powered by your Claude subscription'}
+              </p>
             </div>
           </div>
           {messages.length > 0 && (
-            <button className="btn btn-ghost" onClick={() => updateActive((c) => ({ ...c, messages: [], title: 'New chat' }))}>
+            <button className="btn btn-ghost" onClick={clearActive}>
               <Trash2 size={15} /> Clear
             </button>
           )}
@@ -271,22 +183,23 @@ export default function Assistant() {
               <h2 className="text-xl font-bold">How can I help you study today?</h2>
               <p className="mt-1 text-sm" style={{ color: 'var(--text-dim)' }}>
                 I can read your real SEQTA data — timetable, assessments, grades, notices — and change the app for you.
+                I keep working even if you switch tabs.
               </p>
               <div className="mt-6 grid max-w-lg grid-cols-2 gap-2.5">
                 {SUGGESTIONS.map((s) => (
-                  <button key={s} onClick={() => send(s)} className="card p-3 text-left text-sm hover:border-[var(--accent)]" style={{ transition: 'border-color .15s' }}>
+                  <button key={s} onClick={() => submit(s)} className="card p-3 text-left text-sm hover:border-[var(--accent)]" style={{ transition: 'border-color .15s' }}>
                     {s}
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-            messages.map((m, i) => <Bubble key={i} msg={m} streaming={streaming && i === messages.length - 1} />)
+            messages.map((m, i) => <Bubble key={i} msg={m} streaming={activeIsStreaming && i === messages.length - 1} />)
           )}
-          {tool && (
+          {tool && activeIsStreaming && (
             <div className="ml-11 flex items-center gap-2 text-xs" style={{ color: 'var(--accent)' }}>
               <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: 'var(--accent)' }} />
-              {tool}…
+              {TOOL_LABEL[tool] || tool}…
             </div>
           )}
         </div>
@@ -296,17 +209,17 @@ export default function Assistant() {
             <textarea
               className="input max-h-40 min-h-[46px] flex-1 resize-none"
               rows={1}
-              placeholder="Message SchoolMod Assistant…"
+              placeholder={streaming ? 'Waiting for the current reply to finish…' : 'Message SchoolMod Assistant…'}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  send()
+                  submit()
                 }
               }}
             />
-            <button className="btn btn-primary h-[46px] px-4" onClick={() => send()} disabled={streaming || !input.trim()}>
+            <button className="btn btn-primary h-[46px] px-4" onClick={() => submit()} disabled={streaming || !input.trim()}>
               {streaming ? <Square size={16} /> : <Send size={16} />}
             </button>
           </div>

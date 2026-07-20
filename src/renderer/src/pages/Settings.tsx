@@ -10,7 +10,9 @@ import {
   LogOut,
   Download,
   Rocket,
-  Copy
+  Copy,
+  HardDrive,
+  ShieldAlert
 } from 'lucide-react'
 import { useApp } from '../store/app'
 import { PageHeader, ErrorBanner } from '../components/ui'
@@ -58,6 +60,7 @@ export default function Settings() {
       </Section>
 
       <ClaudeSection />
+      <ComputerAccessSection />
       <SeqtaSection />
       <MicrosoftSection />
 
@@ -241,6 +244,43 @@ function ClaudeSection() {
           </div>
         </>
       )}
+    </Section>
+  )
+}
+
+function ComputerAccessSection() {
+  const { settings, save } = useApp()
+  const on = !!settings!.computerAccess
+  return (
+    <Section icon={<HardDrive size={18} />} title="Computer access" desc="Let the assistant browse and read files on this device.">
+      <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: 'var(--bg)' }}>
+        <div className="pr-4">
+          <p className="text-sm font-medium">Allow file access</p>
+          <p className="mt-0.5 text-xs" style={{ color: 'var(--text-dim)' }}>
+            When on, the assistant can list folders, read text files, search filenames, and open a file for you —
+            e.g. "find my Humanities essay draft" or "read notes.txt on my desktop".
+          </p>
+        </div>
+        <button
+          role="switch"
+          aria-checked={on}
+          onClick={() => save({ computerAccess: !on })}
+          className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+          style={{ background: on ? 'var(--accent)' : 'var(--border)' }}
+        >
+          <span
+            className="absolute top-1 h-5 w-5 rounded-full bg-white transition-transform"
+            style={{ transform: on ? 'translateX(22px)' : 'translateX(4px)' }}
+          />
+        </button>
+      </div>
+      <div className="mt-3 flex gap-2 rounded-xl border px-3.5 py-2.5 text-xs" style={{ borderColor: 'var(--border)', color: 'var(--text-dim)' }}>
+        <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+        <span>
+          <strong>Read-only, always.</strong> Even with this on, the assistant can never write, delete, move or run
+          files — only look at them. Off by default; turn it off any time.
+        </span>
+      </div>
     </Section>
   )
 }

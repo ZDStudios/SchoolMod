@@ -106,6 +106,8 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
   handle(CH.seqtaMessages, async () => (await getSeqta()).messages())
   handle(CH.seqtaReports, async () => (await getSeqta()).reports())
   handle(CH.seqtaOpenReport, async (_e, uuid) => (await getSeqta()).openReport(uuid))
+  handle(CH.seqtaSubjectsList, async () => (await getSeqta()).subjectsList())
+  handle(CH.seqtaCourseContent, async (_e, subjectKeyword) => (await getSeqta()).courseContent(subjectKeyword))
 
   // ---- notebooks ----
   handle(CH.nbList, async () => (await getNotebooks()).list())

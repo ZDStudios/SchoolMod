@@ -1,3 +1,7 @@
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
+import { join, resolve } from 'path'
+import { homedir } from 'os'
+import { shell } from 'electron'
 import { getSettings, setSettings, getNotebooks, getDecks } from '../store'
 import * as seqta from './seqta'
 import * as notebooks from './notebooks'
@@ -23,7 +27,7 @@ export interface Tool {
 
 const ok = (msg: string) => ({ ok: true, message: msg })
 
-export const TOOLS: Tool[] = [
+const BASE_TOOLS: Tool[] = [
   // ---- SEQTA (read) ----
   {
     name: 'seqta_me',
@@ -63,6 +67,16 @@ export const TOOLS: Tool[] = [
   },
   { name: 'seqta_homework', description: 'Homework set, grouped by subject.', args: '{}', run: () => seqta.homework() },
   { name: 'seqta_messages', description: 'Recent SEQTA inbox messages.', args: '{}', run: () => seqta.messages() },
+  { name: 'seqta_subjects', description: 'List enrolled subjects with their exact codes/titles.', args: '{}', run: () => seqta.subjectsList() },
+  {
+    name: 'seqta_course_content',
+    description: 'Lesson plan / course content and files for a subject. Use to help the student study or to build a notebook/flashcards from class material.',
+    args: '{"subject": "string"}',
+    run: (a) => {
+      if (!a?.subject) throw new Error('Missing "subject".')
+      return seqta.courseContent(String(a.subject))
+    }
+  },
   {
     name: 'bell_times',
     description: 'Current period, next period and minutes until the next bell.',
@@ -184,16 +198,116 @@ export const TOOLS: Tool[] = [
   }
 ]
 
-function toolDocs(): string {
-  return TOOLS.map((t) => `- ${t.name} ${t.args} — ${t.description}`).join('\n')
+// ---- Computer access (opt-in via Settings → AI Assistant → "Let the assistant
+// access this computer"). Strictly READ-ONLY: browse folders, read text files,
+// search filenames, and open a file/folder in its default app. No writing,
+// deleting, or running anything — that boundary holds regardless of the toggle.
+const MAX_FILE_BYTES = 300_000
+const MAX_LIST_ENTRIES = 200
+
+function safePath(p: string): string {
+  const resolved = resolve(String(p || homedir()).replace(/^~/, homedir()))
+  if (!existsSync(resolved)) throw new Error(`Path does not exist: ${resolved}`)
+  return resolved
 }
 
-const SYSTEM = `You are SchoolMod Assistant, a sharp, friendly study companion built into the SchoolMod desktop app.
+const COMPUTER_TOOLS: Tool[] = [
+  {
+    name: 'computer_list_dir',
+    description: "List files and folders in a directory on the student's computer. Omit path to start at their home folder.",
+    args: '{"path"?: "string"}',
+    run: (a) => {
+      const dir = safePath(a?.path || homedir())
+      const st = statSync(dir)
+      if (!st.isDirectory()) throw new Error(`Not a directory: ${dir}`)
+      const entries = readdirSync(dir, { withFileTypes: true })
+        .slice(0, MAX_LIST_ENTRIES)
+        .map((e) => {
+          let size: number | null = null
+          try {
+            if (e.isFile()) size = statSync(join(dir, e.name)).size
+          } catch {
+            /* permission errors etc — skip size */
+          }
+          return { name: e.name, type: e.isDirectory() ? 'folder' : 'file', size }
+        })
+      return { path: dir, entries }
+    }
+  },
+  {
+    name: 'computer_read_file',
+    description: `Read a text file's contents (source code, notes, .txt/.md/.csv/.json etc). Files over ${Math.round(MAX_FILE_BYTES / 1000)}KB are truncated.`,
+    args: '{"path": "string"}',
+    run: (a) => {
+      if (!a?.path) throw new Error('Missing "path".')
+      const file = safePath(a.path)
+      const st = statSync(file)
+      if (st.isDirectory()) throw new Error(`"${file}" is a folder, not a file. Use computer_list_dir.`)
+      const buf = readFileSync(file)
+      const truncated = buf.length > MAX_FILE_BYTES
+      const text = buf.slice(0, MAX_FILE_BYTES).toString('utf-8')
+      return { path: file, bytes: st.size, truncated, text }
+    }
+  },
+  {
+    name: 'computer_search_files',
+    description: 'Search for files by name (substring match) under a folder, recursively. Defaults to the home folder.',
+    args: '{"query": "string", "dir"?: "string"}',
+    run: (a) => {
+      if (!a?.query) throw new Error('Missing "query".')
+      const start = safePath(a?.dir || homedir())
+      const q = String(a.query).toLowerCase()
+      const results: string[] = []
+      const skip = /^(node_modules|\.git|\.cache|AppData|\$Recycle\.Bin|System Volume Information)$/i
+      const walk = (dir: string, depth: number) => {
+        if (results.length >= 100 || depth > 6) return
+        let entries: import('fs').Dirent[]
+        try {
+          entries = readdirSync(dir, { withFileTypes: true })
+        } catch {
+          return
+        }
+        for (const e of entries) {
+          if (results.length >= 100) return
+          if (skip.test(e.name)) continue
+          const full = join(dir, e.name)
+          if (e.name.toLowerCase().includes(q)) results.push(full)
+          if (e.isDirectory()) walk(full, depth + 1)
+        }
+      }
+      walk(start, 0)
+      return { query: a.query, searchedFrom: start, matches: results }
+    }
+  },
+  {
+    name: 'computer_open_path',
+    description: "Open a file or folder in its default app (like double-clicking it) — e.g. open a homework PDF the student mentions.",
+    args: '{"path": "string"}',
+    run: async (a) => {
+      if (!a?.path) throw new Error('Missing "path".')
+      const p = safePath(a.path)
+      const err = await shell.openPath(p)
+      if (err) throw new Error(err)
+      return ok(`Opened ${p}`)
+    }
+  }
+]
+
+function activeTools(): Tool[] {
+  return getSettings().computerAccess ? [...BASE_TOOLS, ...COMPUTER_TOOLS] : BASE_TOOLS
+}
+
+function toolDocs(tools: Tool[]): string {
+  return tools.map((t) => `- ${t.name} ${t.args} — ${t.description}`).join('\n')
+}
+
+function systemPrompt(tools: Tool[]): string {
+  return `You are SchoolMod Assistant, a sharp, friendly study companion built into the SchoolMod desktop app.
 
 You can call tools to read the student's REAL school data and to control the app.
 
 AVAILABLE TOOLS:
-${toolDocs()}
+${toolDocs(tools)}
 
 HOW TO CALL A TOOL — emit exactly one line, nothing else:
 <tool>{"name":"tool_name","args":{}}</tool>
@@ -205,7 +319,13 @@ Rules:
 - You will then receive an OBSERVATION with the result, and may call another tool or answer.
 - When you have what you need, reply normally in markdown. Do NOT mention tool names or the tool syntax in your final answer — just answer naturally.
 - Keep answers concise and useful. Show working for maths. Encourage understanding, never just hand over answers to assessments.
+${
+  tools.some((t) => t.name.startsWith('computer_'))
+    ? '- You have READ-ONLY access to this computer\'s files (list/read/search/open). Never claim you can write, delete, move or run anything — you cannot, by design.'
+    : ''
+}
 - Dates are YYYY-MM-DD. Today is ${new Date().toISOString().slice(0, 10)}.`
+}
 
 const TOOL_RE = /<tool>\s*(\{[\s\S]*?\})\s*<\/tool>/
 
@@ -224,8 +344,9 @@ export async function runAgent(
   ev: AgentEvents,
   maxSteps = 6
 ): Promise<string> {
+  const tools = activeTools()
   const convo: ChatMessage[] = [
-    { role: 'system', content: SYSTEM },
+    { role: 'system', content: systemPrompt(tools) },
     ...messages.filter((m) => m.role !== 'system')
   ]
 
@@ -246,11 +367,11 @@ export async function runAgent(
       return reply
     }
 
-    const tool = TOOLS.find((t) => t.name === call.name)
+    const tool = tools.find((t) => t.name === call.name)
     convo.push({ role: 'assistant', content: match[0] })
 
     if (!tool) {
-      convo.push({ role: 'user', content: `OBSERVATION: no such tool "${call.name}". Available: ${TOOLS.map((t) => t.name).join(', ')}` })
+      convo.push({ role: 'user', content: `OBSERVATION: no such tool "${call.name}". Available: ${tools.map((t) => t.name).join(', ')}` })
       continue
     }
 

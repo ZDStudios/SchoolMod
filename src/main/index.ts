@@ -95,6 +95,32 @@ async function runDiagnostics() {
     log('DONE')
     return
   }
+  if (process.env.SCHOOLMOD_DIAG === 'course') {
+    const seqta = await import('./services/seqta')
+    await step('subjectsList', async () => (await seqta.subjectsList()).map((s: any) => s.title))
+    await step('courseContent("humanities")', async () => {
+      const r = await seqta.courseContent('humanities')
+      return r.map((c: any) => ({ subject: c.subject, files: c.files.length, textLen: c.text.length, sample: c.text.slice(0, 150) }))
+    })
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'computer') {
+    const s = await import('./store')
+    s.setSettings({ computerAccess: true })
+    const { runAgent } = await import('./services/agent')
+    let answer = ''
+    const tools: string[] = []
+    await runAgent([{ role: 'user', content: 'List the files in my Desktop folder' }], (m) => import('./services/claude').then((ai) => ai.chat(m)), {
+      onTool: (t) => tools.push(t),
+      onDelta: (t) => (answer += t)
+    })
+    log('tools called:', tools.join(', ') || '(none)')
+    log('answer:', answer.replace(/\s+/g, ' ').slice(0, 300))
+    s.setSettings({ computerAccess: false })
+    log('DONE')
+    return
+  }
   if (process.env.SCHOOLMOD_DIAG === 'ai') {
     log('PATH has APPDATA/npm?', (process.env.PATH || '').toLowerCase().includes('roaming\\npm'))
     log('findExecutable(claude) ->', findExecutable('claude'))
