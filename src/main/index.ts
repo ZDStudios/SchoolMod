@@ -23,8 +23,8 @@ async function runDiagnostics() {
   if (process.env.SCHOOLMOD_DIAG === 'agent') {
     const { runAgent } = await import('./services/agent')
     for (const q of [
-      'Set the accent colour to purple',
-      "What's my current average?"
+      'What OneNote notebooks do I have?',
+      'What topics are covered in my Humanities notebook?'
     ]) {
       log(`--- ASK: "${q}"`)
       const tools: string[] = []
@@ -75,7 +75,17 @@ async function runDiagnostics() {
     const ms = await import('./services/msElectron')
     await step('ms.connect', () => ms.connect())
     await step('ms.recentFiles', () => ms.recentFiles())
-    await step('ms.oneNoteNotebooks', () => ms.oneNoteNotebooks())
+    let notebooks: any[] = []
+    await step('ms.oneNoteNotebooks', async () => {
+      notebooks = await ms.oneNoteNotebooks()
+      return notebooks.map((n: any) => n.name)
+    })
+    if (notebooks.length) {
+      await step(`ms.readNotebook("${notebooks[0].name}")`, async () => {
+        const r = await ms.readNotebook(notebooks[0].name)
+        return { notebook: r.notebook, sections: r.sections, pages: r.pages, textLen: r.text.length, textSample: r.text.slice(0, 200) }
+      })
+    }
     log('DONE')
     return
   }

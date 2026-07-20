@@ -71,6 +71,7 @@ export const CH = {
   msQuickConnect: 'ms:quickConnect',
   msRecentFiles: 'ms:recentFiles',
   msOneNote: 'ms:oneNote',
+  msReadNotebook: 'ms:readNotebook',
 
   // misc
   openExternal: 'app:openExternal',

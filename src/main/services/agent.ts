@@ -2,6 +2,7 @@ import { getSettings, setSettings, getNotebooks, getDecks } from '../store'
 import * as seqta from './seqta'
 import * as notebooks from './notebooks'
 import * as flashcards from './flashcards'
+import * as msElectron from './msElectron'
 import { bellState } from '../../shared/bells'
 import { ChatMessage } from '../../shared/types'
 
@@ -134,6 +135,37 @@ export const TOOLS: Tool[] = [
       return ok(`Created deck "${updated.title}" with ${updated.cards.length} cards.`)
     }
   },
+  // ---- Microsoft 365 / OneNote ----
+  {
+    name: 'ms_onenote_notebooks',
+    description: "List the student's OneNote notebooks (school + personal). Requires Microsoft to be connected in Settings.",
+    args: '{}',
+    run: () => {
+      if (!msElectron.isConnected()) return { ok: false, message: 'Microsoft is not connected. Ask the user to connect it in Settings → Microsoft.' }
+      return msElectron.oneNoteNotebooks()
+    }
+  },
+  {
+    name: 'ms_onenote_read',
+    description:
+      'Open a specific OneNote notebook and read its sections, page titles and visible page text. Use the exact notebook name from ms_onenote_notebooks.',
+    args: '{"notebook": "string"}',
+    run: (a) => {
+      if (!msElectron.isConnected()) return { ok: false, message: 'Microsoft is not connected. Ask the user to connect it in Settings → Microsoft.' }
+      if (!a?.notebook) return { ok: false, message: 'Missing "notebook" argument.' }
+      return msElectron.readNotebook(String(a.notebook))
+    }
+  },
+  {
+    name: 'ms_recent_files',
+    description: 'Recently used Word/Excel/PowerPoint/OneDrive files.',
+    args: '{}',
+    run: () => {
+      if (!msElectron.isConnected()) return { ok: false, message: 'Microsoft is not connected. Ask the user to connect it in Settings → Microsoft.' }
+      return msElectron.recentFiles()
+    }
+  },
+
   {
     name: 'app_get_settings',
     description: 'Current app settings (theme, accent, which integrations are connected).',
@@ -167,7 +199,9 @@ HOW TO CALL A TOOL — emit exactly one line, nothing else:
 <tool>{"name":"tool_name","args":{}}</tool>
 
 Rules:
-- Call a tool whenever the answer depends on the student's actual data (timetable, assessments, grades, notices, homework, messages) or when they ask you to change something in the app. Never guess or make up their data.
+- Call a tool whenever the answer depends on the student's actual data (timetable, assessments, grades, notices, homework, messages, OneNote content) or when they ask you to change something in the app. Never guess or make up their data.
+- NEVER ask permission before calling a read-only tool. Reading data (SEQTA, OneNote, settings) cannot break anything, so just call the tool and answer — asking "want me to open it?" wastes the user's turn and is treated as a mistake.
+- If asked what's IN a notebook, or about topics/content/pages in a subject's notes, this ALWAYS takes exactly two tool calls in the SAME turn, never one: (1) ms_onenote_notebooks to get the exact name, (2) ms_onenote_read with that exact name — then answer from its "pages"/"text" fields. Example: user asks "what topics are in my Humanities notebook" → call ms_onenote_notebooks → see "2026 Humanities Course 2 (Mainstream) 8HU23 Notebook" → immediately call ms_onenote_read with that exact string → THEN answer using its content. Stopping after step 1 is wrong.
 - You will then receive an OBSERVATION with the result, and may call another tool or answer.
 - When you have what you need, reply normally in markdown. Do NOT mention tool names or the tool syntax in your final answer — just answer naturally.
 - Keep answers concise and useful. Show working for maths. Encourage understanding, never just hand over answers to assessments.

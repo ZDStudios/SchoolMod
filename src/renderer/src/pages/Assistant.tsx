@@ -30,7 +30,10 @@ const TOOL_LABEL: Record<string, string> = {
   app_create_notebook: 'Creating a notebook',
   app_list_decks: 'Listing decks',
   app_create_flashcards: 'Building flashcards',
-  app_get_settings: 'Checking settings'
+  app_get_settings: 'Checking settings',
+  ms_onenote_notebooks: 'Listing OneNote notebooks',
+  ms_onenote_read: 'Reading your OneNote notebook',
+  ms_recent_files: 'Checking recent Office files'
 }
 
 const KEY = 'schoolmod.assistant.chat'
@@ -47,16 +50,38 @@ export default function Assistant() {
   const [streaming, setStreaming] = useState(false)
   const [tool, setTool] = useState('')
   const scroller = useRef<HTMLDivElement>(null)
+  // Auto-scroll follows new content, but backs off the moment the user scrolls
+  // up to read earlier messages — re-engages once they return to the bottom.
+  const stickToBottom = useRef(true)
+
+  useEffect(() => {
+    const el = scroller.current
+    if (!el) return
+    const onScroll = () => {
+      stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
 
   useEffect(() => {
     localStorage.setItem(KEY, JSON.stringify(messages))
-    scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (!stickToBottom.current) return
+    const el = scroller.current
+    if (!el) return
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight
+    })
+  }, [messages, tool, streaming])
 
   const send = async (text?: string) => {
     const content = (text ?? input).trim()
     if (!content || streaming) return
     const next = [...messages, { role: 'user', content } as ChatMessage]
+    stickToBottom.current = true
     setMessages([...next, { role: 'assistant', content: '' }])
     setInput('')
     setStreaming(true)

@@ -127,7 +127,9 @@ const api = {
     /** Sign in via Electron's built-in browser — no Azure app registration needed. */
     quickConnect: () => invoke<{ account: string }>(CH.msQuickConnect),
     recentFiles: () => invoke<{ name: string; url: string; app: string }[]>(CH.msRecentFiles),
-    oneNote: () => invoke<{ name: string; url: string; app: string }[]>(CH.msOneNote)
+    oneNote: () => invoke<{ name: string; url: string; app: string }[]>(CH.msOneNote),
+    readNotebook: (nameOrUrl: string) =>
+      invoke<{ notebook: string; sections: string[]; pages: string[]; text: string }>(CH.msReadNotebook, nameOrUrl)
   },
   openExternal: (url: string) => invoke(CH.openExternal, url),
   saveFile: (defaultName: string, content: string) =>
