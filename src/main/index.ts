@@ -22,10 +22,7 @@ async function runDiagnostics() {
   }
   if (process.env.SCHOOLMOD_DIAG === 'agent') {
     const { runAgent } = await import('./services/agent')
-    for (const q of [
-      'What OneNote notebooks do I have?',
-      'What topics are covered in my Humanities notebook?'
-    ]) {
+    for (const q of ['What OneNote notebooks do I have?', 'Switch the app to dark mode, then back to system']) {
       log(`--- ASK: "${q}"`)
       const tools: string[] = []
       let answer = ''
@@ -148,7 +145,9 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      // Powers the embedded browser panels (OneNote/Mathspace/Education Perfect).
+      webviewTag: true
     }
   })
 
@@ -196,6 +195,32 @@ app.whenReady().then(() => {
 
   const theme = getSettings().theme
   nativeTheme.themeSource = theme === 'system' ? 'system' : theme
+
+  // Lock down the embedded browser panels (OneNote/Mathspace/Education
+  // Perfect): no Node access inside the guest page, and restrict navigation
+  // to the school-relevant domains we actually embed.
+  const ALLOWED_WEBVIEW_HOSTS =
+    /(\.|^)(onenote\.com|onenote\.cloud\.microsoft|sharepoint\.com|officeapps\.live\.com|office\.com|cloud\.microsoft|live\.com|microsoftonline\.com|microsoft\.com|mathspace\.co|educationperfect\.com)$/i
+  app.on('web-contents-created', (_e, contents) => {
+    if (contents.getType() !== 'webview') return
+    contents.setWindowOpenHandler((details) => {
+      try {
+        const host = new URL(details.url).hostname
+        if (ALLOWED_WEBVIEW_HOSTS.test(host)) return { action: 'allow' }
+      } catch {
+        /* fall through to deny */
+      }
+      shell.openExternal(details.url).catch(() => {})
+      return { action: 'deny' }
+    })
+    contents.on('will-navigate', (e, url) => {
+      try {
+        if (!ALLOWED_WEBVIEW_HOSTS.test(new URL(url).hostname)) e.preventDefault()
+      } catch {
+        e.preventDefault()
+      }
+    })
+  })
 
   registerIpc(() => mainWindow)
   createWindow()

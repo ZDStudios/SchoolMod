@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Calculator, ExternalLink, Sparkles, Send, Flame } from 'lucide-react'
 import { PageHeader, Spinner } from '../components/ui'
+import WebFrame from '../components/WebFrame'
 import { Markdown } from '../lib/md'
 import { call } from '../lib/utils'
 import type { ChatMessage } from '../../../shared/types'
@@ -33,6 +34,7 @@ export default function Mathspace() {
   const [answer, setAnswer] = useState('')
   const [busy, setBusy] = useState(false)
   const [log, setLog] = useState(loadLog())
+  const [showFrame, setShowFrame] = useState(false)
 
   const solve = async () => {
     if (!problem.trim() || busy) return
@@ -68,11 +70,14 @@ export default function Mathspace() {
         subtitle="Launch Mathspace and get step-by-step help from your AI tutor"
         icon={<Calculator size={20} />}
         actions={
-          <button className="btn btn-primary" onClick={() => window.api.openExternal('https://mathspace.co/accounts/login/')}>
+          <button className="btn btn-primary" onClick={() => setShowFrame(true)}>
             <ExternalLink size={15} /> Open Mathspace
           </button>
         }
       />
+      {showFrame && (
+        <WebFrame src="https://mathspace.co/accounts/login/" partition="persist:mathspace" title="Mathspace" onClose={() => setShowFrame(false)} />
+      )}
 
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2 space-y-4">

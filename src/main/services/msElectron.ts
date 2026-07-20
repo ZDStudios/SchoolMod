@@ -321,55 +321,77 @@ export interface NotebookContent {
  * innerText is currently rendered, which is usually enough to answer
  * questions about the content.
  */
+async function clickNotebookAndGetEditUrl(
+  win: BrowserWindow,
+  lastPopupUrl: () => string,
+  nameOrUrl: string
+): Promise<string> {
+  if (/^https?:\/\//i.test(nameOrUrl)) return nameOrUrl
+
+  // Notebook rows only exist on the real "My notebooks" TABLE (reached via
+  // "All Notebooks"), not the /copilotnotebooks landing page — clicking a
+  // name there opens a Copilot promo panel instead of the notebook.
+  await goToNotebooksTable(win)
+
+  // Rows are Fluent UI DataGrid items (role="row", tabIndex=0), not <a>
+  // elements — confirmed by walking the ancestor chain of a real click.
+  // A bare .click() on the text leaf doesn't reach the grid's handler, so
+  // we find the nearest interactive ancestor and dispatch a full
+  // pointer+mouse event sequence on it, matching real user input.
+  const clicked = await win.webContents.executeJavaScript(
+    `(function(){
+       var target = ${JSON.stringify(nameOrUrl.trim().toLowerCase())};
+       var all = document.querySelectorAll('body *'), leaf = null;
+       for (var i = 0; i < all.length; i++) {
+         var el = all[i], own = (el.textContent || '').trim().toLowerCase();
+         if (!own || own.length > 200) continue;
+         if (own === target || own.indexOf(target) === 0) {
+           if (!leaf || el.querySelectorAll('*').length < leaf.querySelectorAll('*').length) leaf = el;
+         }
+       }
+       if (!leaf) return false;
+       var node = leaf, chosen = leaf;
+       for (var d = 0; d < 8 && node; d++) {
+         if (node.getAttribute && (node.getAttribute('role') === 'row' || node.tabIndex >= 0)) { chosen = node; break; }
+         node = node.parentElement;
+       }
+       function fire(type) { chosen.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window, button: 0 })); }
+       fire('pointerdown'); fire('mousedown'); fire('pointerup'); fire('mouseup'); fire('click');
+       return true;
+     })()`,
+    true
+  )
+  if (!clicked) throw new Error(`Could not find a notebook matching "${nameOrUrl}". Call ms_onenote_notebooks first for exact names.`)
+
+  // The click calls window.open() to a SharePoint-hosted editor URL — we
+  // intercept and deny the popup (see makeWindow) and navigate here instead.
+  const deadline0 = Date.now() + 8000
+  while (Date.now() < deadline0 && !lastPopupUrl()) await sleep(300)
+  const popup = lastPopupUrl()
+  if (!popup) throw new Error(`Clicked "${nameOrUrl}" but no notebook opened — it may need to be opened manually once in a browser first.`)
+  return popup
+}
+
+/**
+ * Resolve a notebook name to its real, directly-loadable SharePoint editor URL
+ * — for embedding a live, fully-interactive OneNote view in the app (the
+ * renderer loads this URL in a <webview> on the same persist:ms365 session,
+ * so it's already signed in).
+ */
+export async function getNotebookUrl(nameOrUrl: string): Promise<string> {
+  const { win, lastPopupUrl } = await openSignedIn('https://onenote.cloud.microsoft/')
+  try {
+    return await clickNotebookAndGetEditUrl(win, lastPopupUrl, nameOrUrl)
+  } finally {
+    if (!win.isDestroyed()) win.destroy()
+  }
+}
+
 export async function readNotebook(nameOrUrl: string): Promise<NotebookContent> {
   const { win, lastPopupUrl } = await openSignedIn('https://onenote.cloud.microsoft/')
   try {
-    if (/^https?:\/\//i.test(nameOrUrl)) {
-      await win.loadURL(nameOrUrl).catch(() => {})
-    } else {
-      // Notebook rows only exist on the real "My notebooks" TABLE (reached via
-      // "All Notebooks"), not the /copilotnotebooks landing page — clicking a
-      // name there opens a Copilot promo panel instead of the notebook.
-      await goToNotebooksTable(win)
-
-      // Rows are Fluent UI DataGrid items (role="row", tabIndex=0), not <a>
-      // elements — confirmed by walking the ancestor chain of a real click.
-      // A bare .click() on the text leaf doesn't reach the grid's handler, so
-      // we find the nearest interactive ancestor and dispatch a full
-      // pointer+mouse event sequence on it, matching real user input.
-      const clicked = await win.webContents.executeJavaScript(
-        `(function(){
-           var target = ${JSON.stringify(nameOrUrl.trim().toLowerCase())};
-           var all = document.querySelectorAll('body *'), leaf = null;
-           for (var i = 0; i < all.length; i++) {
-             var el = all[i], own = (el.textContent || '').trim().toLowerCase();
-             if (!own || own.length > 200) continue;
-             if (own === target || own.indexOf(target) === 0) {
-               if (!leaf || el.querySelectorAll('*').length < leaf.querySelectorAll('*').length) leaf = el;
-             }
-           }
-           if (!leaf) return false;
-           var node = leaf, chosen = leaf;
-           for (var d = 0; d < 8 && node; d++) {
-             if (node.getAttribute && (node.getAttribute('role') === 'row' || node.tabIndex >= 0)) { chosen = node; break; }
-             node = node.parentElement;
-           }
-           function fire(type) { chosen.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window, button: 0 })); }
-           fire('pointerdown'); fire('mousedown'); fire('pointerup'); fire('mouseup'); fire('click');
-           return true;
-         })()`,
-        true
-      )
-      if (!clicked) throw new Error(`Could not find a notebook matching "${nameOrUrl}". Call ms_onenote_notebooks first for exact names.`)
-
-      // The click calls window.open() to a SharePoint-hosted editor URL — we
-      // intercept and deny the popup (see makeWindow) and navigate here instead.
-      const deadline0 = Date.now() + 8000
-      while (Date.now() < deadline0 && !lastPopupUrl()) await sleep(300)
-      const popup = lastPopupUrl()
-      if (!popup) throw new Error(`Clicked "${nameOrUrl}" but no notebook opened — it may need to be opened manually once in a browser first.`)
-      await win.loadURL(popup).catch(() => {})
-    }
+    const editUrl = await clickNotebookAndGetEditUrl(win, lastPopupUrl, nameOrUrl)
+    await win.loadURL(editUrl).catch(() => {})
 
     // The notebook canvas renders inside an <iframe> (the SharePoint Doc.aspx
     // page embeds the Office Online Server editor). document.body.innerText on

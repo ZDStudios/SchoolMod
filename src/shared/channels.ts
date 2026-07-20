@@ -72,6 +72,7 @@ export const CH = {
   msRecentFiles: 'ms:recentFiles',
   msOneNote: 'ms:oneNote',
   msReadNotebook: 'ms:readNotebook',
+  msGetNotebookUrl: 'ms:getNotebookUrl',
 
   // misc
   openExternal: 'app:openExternal',

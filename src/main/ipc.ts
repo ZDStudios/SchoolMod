@@ -137,6 +137,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
   handle(CH.msRecentFiles, () => msElectron.recentFiles())
   handle(CH.msOneNote, () => msElectron.oneNoteNotebooks())
   handle(CH.msReadNotebook, (_e, nameOrUrl) => msElectron.readNotebook(nameOrUrl))
+  handle(CH.msGetNotebookUrl, (_e, nameOrUrl) => msElectron.getNotebookUrl(nameOrUrl))
   handle(CH.msOpenApp, (_e, appKey) => {
     const url = graph.APP_URLS[appKey] || appKey
     return shell.openExternal(url)

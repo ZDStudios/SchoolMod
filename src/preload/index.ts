@@ -129,7 +129,8 @@ const api = {
     recentFiles: () => invoke<{ name: string; url: string; app: string }[]>(CH.msRecentFiles),
     oneNote: () => invoke<{ name: string; url: string; app: string }[]>(CH.msOneNote),
     readNotebook: (nameOrUrl: string) =>
-      invoke<{ notebook: string; sections: string[]; pages: string[]; text: string }>(CH.msReadNotebook, nameOrUrl)
+      invoke<{ notebook: string; sections: string[]; pages: string[]; text: string }>(CH.msReadNotebook, nameOrUrl),
+    getNotebookUrl: (nameOrUrl: string) => invoke<string>(CH.msGetNotebookUrl, nameOrUrl)
   },
   openExternal: (url: string) => invoke(CH.openExternal, url),
   saveFile: (defaultName: string, content: string) =>

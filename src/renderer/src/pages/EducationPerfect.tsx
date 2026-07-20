@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { GraduationCap, ExternalLink, Sparkles, Send, Languages, FlaskConical, Calculator } from 'lucide-react'
 import { PageHeader, Spinner } from '../components/ui'
+import WebFrame from '../components/WebFrame'
 import { Markdown } from '../lib/md'
 import { call } from '../lib/utils'
 import type { ChatMessage } from '../../../shared/types'
@@ -15,6 +16,7 @@ export default function EducationPerfect() {
   const [topic, setTopic] = useState('')
   const [answer, setAnswer] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showFrame, setShowFrame] = useState(false)
 
   const help = async (t?: string) => {
     const q = (t ?? topic).trim()
@@ -47,11 +49,14 @@ export default function EducationPerfect() {
         subtitle="Launch EP and prep for your tasks with an AI study coach"
         icon={<GraduationCap size={20} />}
         actions={
-          <button className="btn btn-primary" onClick={() => window.api.openExternal('https://www.educationperfect.com/app/')}>
+          <button className="btn btn-primary" onClick={() => setShowFrame(true)}>
             <ExternalLink size={15} /> Open Education Perfect
           </button>
         }
       />
+      {showFrame && (
+        <WebFrame src="https://www.educationperfect.com/app/" partition="persist:educationperfect" title="Education Perfect" onClose={() => setShowFrame(false)} />
+      )}
 
       <div className="mb-5 grid grid-cols-3 gap-3">
         {TOPICS.map((t) => (
