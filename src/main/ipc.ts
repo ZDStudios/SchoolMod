@@ -2,16 +2,6 @@ import { ipcMain, BrowserWindow, dialog, shell } from 'electron'
 import { CH } from '../shared/channels'
 import { IpcResult } from '../shared/types'
 import * as store from './store'
-import * as claude from './services/claude'
-import * as claudeCli from './services/claudeCli'
-import * as codexCli from './services/codexCli'
-import { runAgent } from './services/agent'
-import { getSettings } from './store'
-import * as seqta from './services/seqta'
-import * as notebooks from './services/notebooks'
-import * as flashcards from './services/flashcards'
-import * as graph from './services/graph'
-import * as msElectron from './services/msElectron'
 
 /** Wrap a handler so every IPC call returns a uniform {ok,data,error} envelope. */
 function handle<T>(channel: string, fn: (e: Electron.IpcMainInvokeEvent, ...args: any[]) => Promise<T> | T) {
@@ -23,6 +13,27 @@ function handle<T>(channel: string, fn: (e: Electron.IpcMainInvokeEvent, ...args
     }
   })
 }
+
+/**
+ * Every feature service (SEQTA, notebooks, flashcards, Microsoft, the AI
+ * providers) is loaded on first use instead of at app startup. Measured: this
+ * cut ~200ms off cold launch, since requiring `openai` and friends eagerly
+ * was pure dead weight until the user actually opens that feature. Each
+ * loader is called once and cached.
+ */
+function lazy<T>(loader: () => Promise<T>): () => Promise<T> {
+  let mod: T | undefined
+  return async () => (mod ??= await loader())
+}
+const getClaude = lazy(() => import('./services/claude'))
+const getClaudeCli = lazy(() => import('./services/claudeCli'))
+const getCodexCli = lazy(() => import('./services/codexCli'))
+const getAgent = lazy(() => import('./services/agent'))
+const getSeqta = lazy(() => import('./services/seqta'))
+const getNotebooks = lazy(() => import('./services/notebooks'))
+const getFlashcards = lazy(() => import('./services/flashcards'))
+const getGraph = lazy(() => import('./services/graph'))
+const getMsElectron = lazy(() => import('./services/msElectron'))
 
 export function registerIpc(getWindow: () => BrowserWindow | null) {
   // ---- window controls ----
@@ -42,20 +53,20 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
   handle(CH.settingsSet, (_e, patch) => store.setSettings(patch))
 
   // ---- claude ----
-  handle(CH.claudePing, () => claude.ping())
+  handle(CH.claudePing, async () => (await getClaude()).ping())
   // Connect flows target whichever AI provider is selected.
-  const provider = () => (getSettings().claude.mode === 'codex' ? codexCli : claudeCli)
-  handle(CH.claudeStatus, () => provider().status())
-  handle(CH.claudeInstall, (e) => provider().install((line) => e.sender.send(CH.claudeSetupLog, line)))
-  handle(CH.claudeLogin, (e) =>
-    provider().login(
+  const provider = async () => (store.getSettings().claude.mode === 'codex' ? getCodexCli() : getClaudeCli())
+  handle(CH.claudeStatus, async () => (await provider()).status())
+  handle(CH.claudeInstall, async (e) => (await provider()).install((line) => e.sender.send(CH.claudeSetupLog, line)))
+  handle(CH.claudeLogin, async (e) =>
+    (await provider()).login(
       (line) => e.sender.send(CH.claudeSetupLog, line),
       (url) => e.sender.send(CH.claudeLoginUrl, url)
     )
   )
-  handle(CH.claudeChat, (_e, messages, model) => claude.chat(messages, model))
+  handle(CH.claudeChat, async (_e, messages, model) => (await getClaude()).chat(messages, model))
   handle(CH.claudeChatStream, async (e, messages, model) => {
-    return claude.chatStream(
+    return (await getClaude()).chatStream(
       messages,
       (delta) => e.sender.send(CH.claudeStreamChunk, delta),
       model
@@ -65,6 +76,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
   // Tool-using assistant: can read the student's real SEQTA data and drive the app.
   handle(CH.agentChat, async (e, messages) => {
     const before = JSON.stringify(store.getSettings())
+    const [{ runAgent }, claude] = await Promise.all([getAgent(), getClaude()])
     const result = await runAgent(
       messages,
       (msgs) => claude.chat(msgs),
@@ -79,28 +91,29 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
   })
 
   // ---- seqta ----
-  handle(CH.seqtaLogin, (_e, url, user, pass) => seqta.login(url, user, pass))
-  handle(CH.seqtaTestMcp, () => seqta.testMcp())
-  handle(CH.seqtaConnectSso, () => seqta.connectSso())
-  handle(CH.seqtaMe, () => seqta.me())
-  handle(CH.seqtaPhoto, () => seqta.photo())
-  handle(CH.seqtaLogout, () => seqta.logout())
-  handle(CH.seqtaTimetable, (_e, from, until) => seqta.timetable(from, until))
-  handle(CH.seqtaTimetableWeek, () => seqta.timetableWeek())
-  handle(CH.seqtaAssessments, () => seqta.assessments())
-  handle(CH.seqtaNotices, (_e, date) => seqta.notices(date))
-  handle(CH.seqtaHomework, () => seqta.homework())
-  handle(CH.seqtaGrades, () => seqta.grades())
-  handle(CH.seqtaMessages, () => seqta.messages())
-  handle(CH.seqtaReports, () => seqta.reports())
-  handle(CH.seqtaOpenReport, (_e, uuid) => seqta.openReport(uuid))
+  handle(CH.seqtaLogin, async (_e, url, user, pass) => (await getSeqta()).login(url, user, pass))
+  handle(CH.seqtaTestMcp, async () => (await getSeqta()).testMcp())
+  handle(CH.seqtaConnectSso, async () => (await getSeqta()).connectSso())
+  handle(CH.seqtaMe, async () => (await getSeqta()).me())
+  handle(CH.seqtaPhoto, async () => (await getSeqta()).photo())
+  handle(CH.seqtaLogout, async () => (await getSeqta()).logout())
+  handle(CH.seqtaTimetable, async (_e, from, until) => (await getSeqta()).timetable(from, until))
+  handle(CH.seqtaTimetableWeek, async () => (await getSeqta()).timetableWeek())
+  handle(CH.seqtaAssessments, async () => (await getSeqta()).assessments())
+  handle(CH.seqtaNotices, async (_e, date) => (await getSeqta()).notices(date))
+  handle(CH.seqtaHomework, async () => (await getSeqta()).homework())
+  handle(CH.seqtaGrades, async () => (await getSeqta()).grades())
+  handle(CH.seqtaMessages, async () => (await getSeqta()).messages())
+  handle(CH.seqtaReports, async () => (await getSeqta()).reports())
+  handle(CH.seqtaOpenReport, async (_e, uuid) => (await getSeqta()).openReport(uuid))
 
   // ---- notebooks ----
-  handle(CH.nbList, () => notebooks.list())
-  handle(CH.nbCreate, (_e, title) => notebooks.create(title))
-  handle(CH.nbDelete, (_e, id) => notebooks.remove(id))
-  handle(CH.nbAddSourceText, (_e, id, name, text) => notebooks.addSourceText(id, name, text))
+  handle(CH.nbList, async () => (await getNotebooks()).list())
+  handle(CH.nbCreate, async (_e, title) => (await getNotebooks()).create(title))
+  handle(CH.nbDelete, async (_e, id) => (await getNotebooks()).remove(id))
+  handle(CH.nbAddSourceText, async (_e, id, name, text) => (await getNotebooks()).addSourceText(id, name, text))
   handle(CH.nbAddSourceFiles, async (_e, id) => {
+    const notebooks = await getNotebooks()
     const win = getWindow()
     const result = await dialog.showOpenDialog(win!, {
       title: 'Add sources to notebook',
@@ -113,32 +126,34 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
     if (result.canceled || !result.filePaths.length) return notebooks.list().find((n) => n.id === id)
     return notebooks.addSourceFiles(id, result.filePaths)
   })
-  handle(CH.nbRemoveSource, (_e, id, sourceId) => notebooks.removeSource(id, sourceId))
-  handle(CH.nbAsk, (_e, id, q) => notebooks.ask(id, q))
-  handle(CH.nbSummarise, (_e, id) => notebooks.summarise(id))
-  handle(CH.nbStudyGuide, (_e, id) => notebooks.studyGuide(id))
-  handle(CH.nbSaveChat, (_e, id, chat) => notebooks.saveChat(id, chat))
+  handle(CH.nbRemoveSource, async (_e, id, sourceId) => (await getNotebooks()).removeSource(id, sourceId))
+  handle(CH.nbAsk, async (_e, id, q) => (await getNotebooks()).ask(id, q))
+  handle(CH.nbSummarise, async (_e, id) => (await getNotebooks()).summarise(id))
+  handle(CH.nbStudyGuide, async (_e, id) => (await getNotebooks()).studyGuide(id))
+  handle(CH.nbSaveChat, async (_e, id, chat) => (await getNotebooks()).saveChat(id, chat))
 
   // ---- flashcards ----
-  handle(CH.deckList, () => flashcards.list())
-  handle(CH.deckCreate, (_e, title, desc) => flashcards.create(title, desc))
-  handle(CH.deckDelete, (_e, id) => flashcards.remove(id))
-  handle(CH.deckGenerate, (_e, id, source, count) => flashcards.generate(id, source, count))
-  handle(CH.deckAddCard, (_e, id, front, back, hint) => flashcards.addCard(id, front, back, hint))
-  handle(CH.deckReview, (_e, id, cardId, grade) => flashcards.review(id, cardId, grade))
+  handle(CH.deckList, async () => (await getFlashcards()).list())
+  handle(CH.deckCreate, async (_e, title, desc) => (await getFlashcards()).create(title, desc))
+  handle(CH.deckDelete, async (_e, id) => (await getFlashcards()).remove(id))
+  handle(CH.deckGenerate, async (_e, id, source, count) => (await getFlashcards()).generate(id, source, count))
+  handle(CH.deckAddCard, async (_e, id, front, back, hint) => (await getFlashcards()).addCard(id, front, back, hint))
+  handle(CH.deckReview, async (_e, id, cardId, grade) => (await getFlashcards()).review(id, cardId, grade))
 
   // ---- microsoft ----
   handle(CH.msDeviceLogin, async (e) => {
+    const graph = await getGraph()
     return graph.startDeviceLogin((result) => e.sender.send('ms:loginDone', result))
   })
-  handle(CH.msGraph, (_e, method, path, body) => graph.graph(method, path, body))
+  handle(CH.msGraph, async (_e, method, path, body) => (await getGraph()).graph(method, path, body))
   // Quick connect: signs in via Electron's browser — no Azure app registration.
-  handle(CH.msQuickConnect, () => msElectron.connect())
-  handle(CH.msRecentFiles, () => msElectron.recentFiles())
-  handle(CH.msOneNote, () => msElectron.oneNoteNotebooks())
-  handle(CH.msReadNotebook, (_e, nameOrUrl) => msElectron.readNotebook(nameOrUrl))
-  handle(CH.msGetNotebookUrl, (_e, nameOrUrl) => msElectron.getNotebookUrl(nameOrUrl))
-  handle(CH.msOpenApp, (_e, appKey) => {
+  handle(CH.msQuickConnect, async () => (await getMsElectron()).connect())
+  handle(CH.msRecentFiles, async () => (await getMsElectron()).recentFiles())
+  handle(CH.msOneNote, async () => (await getMsElectron()).oneNoteNotebooks())
+  handle(CH.msReadNotebook, async (_e, nameOrUrl) => (await getMsElectron()).readNotebook(nameOrUrl))
+  handle(CH.msGetNotebookUrl, async (_e, nameOrUrl) => (await getMsElectron()).getNotebookUrl(nameOrUrl))
+  handle(CH.msOpenApp, async (_e, appKey) => {
+    const graph = await getGraph()
     const url = graph.APP_URLS[appKey] || appKey
     return shell.openExternal(url)
   })

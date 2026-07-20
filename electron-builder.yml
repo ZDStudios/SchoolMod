@@ -36,6 +36,11 @@ nsis:
   artifactName: ${productName}-${version}-Setup.${ext}
 portable:
   artifactName: ${productName}-${version}-Portable.${ext}
+  # Fixed name (not the default per-build uuid) so the extracted app is reused
+  # across launches instead of self-extracting all ~100MB again every time —
+  # measured: first launch takes several seconds to extract, an installed or
+  # already-extracted app shows its window in well under a second.
+  unpackDirName: SchoolMod-portable-cache
 mac:
   icon: build/icon.png
   category: public.app-category.education

@@ -2,13 +2,22 @@ import { app, shell, BrowserWindow, nativeTheme, session } from 'electron'
 import { join } from 'path'
 import { initStores, getSettings } from './store'
 import { registerIpc } from './ipc'
-import * as seqta from './services/seqta'
-import * as ai from './services/claude'
 import { findExecutable } from './services/proc'
+
+// process.uptime() is measured from actual process start, so it's a reliable
+// baseline regardless of how the compiler orders/hoists these imports.
+const __mark = (label: string) => {
+  if (process.env.SCHOOLMOD_PERF) console.log(`[PERF] +${Math.round(process.uptime() * 1000)}ms  ${label}`)
+}
+__mark('module graph loaded (all top-level requires done)')
 
 /** Run with SCHOOLMOD_DIAG=1 to print a full SEQTA connectivity report to stdout. */
 async function runDiagnostics() {
   const log = (...a: unknown[]) => console.log('[DIAG]', ...a)
+  // Loaded here, not at module top, so a normal (non-diagnostic) launch never
+  // pays for requiring these services.
+  const seqta = await import('./services/seqta')
+  const ai = await import('./services/claude')
   const s = getSettings().seqta
   log(`mode=${s.mode} connected=${s.connected} base=${s.baseUrl} cookieLen=${s.sessionCookie.length} name="${s.displayName}"`)
   const step = async (label: string, fn: () => Promise<unknown>) => {
@@ -151,7 +160,11 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.on('ready-to-show', () => mainWindow?.show())
+  __mark('BrowserWindow constructed')
+  mainWindow.on('ready-to-show', () => {
+    __mark('ready-to-show (first paint) -> showing window')
+    mainWindow?.show()
+  })
 
   // Surface renderer warnings/errors and crashes to the main log (useful for support).
   mainWindow.webContents.on('console-message', (_e, level, message) => {
@@ -160,7 +173,10 @@ function createWindow(): void {
   mainWindow.webContents.on('render-process-gone', (_e, details) => {
     console.log('[render-process-gone]', JSON.stringify(details))
   })
-  mainWindow.webContents.on('did-finish-load', () => console.log('[renderer] did-finish-load'))
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('[renderer] did-finish-load')
+    __mark('renderer did-finish-load')
+  })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -175,8 +191,11 @@ function createWindow(): void {
   }
 }
 
+__mark('app.whenReady() registered, awaiting...')
 app.whenReady().then(() => {
+  __mark('app ready (Electron/Chromium engine init done)')
   initStores()
+  __mark('initStores done')
 
   // Renderer makes no direct network calls (all external I/O is via IPC in main),
   // so a tight CSP is safe in packaged builds. Skipped in dev where Vite needs eval.
@@ -223,7 +242,9 @@ app.whenReady().then(() => {
   })
 
   registerIpc(() => mainWindow)
+  __mark('registerIpc done')
   createWindow()
+  __mark('createWindow() returned')
 
   if (process.env.SCHOOLMOD_DIAG) runDiagnostics()
 

@@ -41,7 +41,7 @@ The predecessor's quiz auto-answer scripts (AutoBOT, Kahoot/Blooket, `hw-bot.htm
 
 Grab the latest build from the [Releases page](https://github.com/ZDStudios/SchoolMod/releases):
 
-- **Windows** — `SchoolMod-2.0.0-Setup.exe` (installer) or `SchoolMod-2.0.0-Portable.exe` (no install)
+- **Windows** — `SchoolMod-2.0.0-Setup.exe` **(recommended — launches in well under a second)** or `SchoolMod-2.0.0-Portable.exe` (no install, but self-extracts ~100MB on every launch — expect several seconds each time, even after the first run)
 - **macOS** — `SchoolMod-2.0.0-arm64.dmg` (Apple Silicon) / `-x64.dmg` (Intel)
 - **Linux** — `SchoolMod-2.0.0.AppImage`
 
