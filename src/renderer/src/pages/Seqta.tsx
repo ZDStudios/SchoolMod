@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CalendarDays, Clock, MapPin, User, FileText, Megaphone, RefreshCw, ClipboardList, Mail, FileBadge2, GraduationCap, ChevronLeft, Search, Paperclip } from 'lucide-react'
+import { CalendarDays, Clock, MapPin, User, FileText, Megaphone, RefreshCw, ClipboardList, Mail, FileBadge2, GraduationCap, ChevronLeft, Search, Paperclip, History } from 'lucide-react'
 import { PageHeader, Empty, Spinner, ErrorBanner } from '../components/ui'
 import { useApp } from '../store/app'
 import { call, fmtDate, daysUntil } from '../lib/utils'
@@ -290,8 +290,12 @@ function Notices({ items }: { items: SeqtaNotice[] }) {
 function Courses() {
   const [subjects, setSubjects] = useState<SeqtaSubject[]>([])
   const [q, setQ] = useState('')
+  // SEQTA returns every period ever enrolled in, so default to the current one
+  // (this year) and let the student opt into seeing past years.
+  const [showPast, setShowPast] = useState(false)
   const [active, setActive] = useState<SeqtaSubject | null>(null)
   const [content, setContent] = useState<SeqtaCourseContent[] | null>(null)
+  const [lessonIdx, setLessonIdx] = useState(0)
   const [loading, setLoading] = useState(true)
   const [loadingContent, setLoadingContent] = useState(false)
   const [err, setErr] = useState('')
@@ -306,6 +310,7 @@ function Courses() {
   const open = async (s: SeqtaSubject) => {
     setActive(s)
     setContent(null)
+    setLessonIdx(0)
     setLoadingContent(true)
     setErr('')
     try {
@@ -318,53 +323,119 @@ function Courses() {
   }
 
   if (active) {
+    const course = content?.[0]
+    const lessons = course?.lessons || []
+    const lesson = lessons[lessonIdx]
     return (
       <div>
         <button className="btn btn-ghost mb-3 px-2" onClick={() => setActive(null)}>
           <ChevronLeft size={15} /> All subjects
         </button>
         <ErrorBanner message={err} />
-        <div className="card p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <GraduationCap size={18} style={{ color: 'var(--accent)' }} />
-            <h2 className="font-semibold">{active.title}</h2>
-            <span className="chip">{active.code}</span>
-          </div>
-          {loadingContent ? (
-            <div className="py-8"><Spinner size={20} /></div>
-          ) : content && content.length ? (
-            content.map((c, i) => (
-              <div key={i} className={i > 0 ? 'mt-5 border-t pt-5' : ''} style={{ borderColor: 'var(--border)' }}>
-                {c.files.length > 0 && (
-                  <div className="mb-3">
-                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-dim)' }}>Files</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {c.files.map((f, j) => (
-                        <span key={j} className="chip"><Paperclip size={11} /> {f}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-dim)' }}>Lesson content</p>
-                <p className="whitespace-pre-wrap text-sm" style={{ color: 'var(--text-dim)' }}>{c.text}</p>
-              </div>
-            ))
-          ) : (
-            <p className="py-6 text-center text-sm" style={{ color: 'var(--text-dim)' }}>No course content published yet for this subject.</p>
+
+        <div className="mb-3 flex items-center gap-2">
+          <GraduationCap size={18} style={{ color: 'var(--accent)' }} />
+          <h2 className="font-semibold">{active.title}</h2>
+          <span className="chip">{active.code}</span>
+          {!active.current && (
+            <span className="chip" style={{ background: 'var(--border)', color: 'var(--text-dim)' }}>{active.period}</span>
           )}
         </div>
+
+        {loadingContent ? (
+          <div className="card grid place-items-center py-16"><Spinner size={22} /></div>
+        ) : !course ? (
+          <Empty icon={<GraduationCap size={36} />} title="No course content" hint="Nothing has been published for this subject yet." />
+        ) : (
+          <>
+            {course.files.length > 0 && (
+              <div className="card mb-3 p-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-dim)' }}>Course files</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {course.files.map((f, j) => (
+                    <span key={j} className="chip"><Paperclip size={11} /> {f}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {lessons.length === 0 ? (
+              <Empty icon={<ClipboardList size={36} />} title="No lessons published" hint="Your teacher hasn't added a lesson plan for this subject yet." />
+            ) : (
+              <div className="grid grid-cols-[260px_1fr] gap-4">
+                {/* Lesson list */}
+                <div className="card flex max-h-[60vh] flex-col p-3">
+                  <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-dim)' }}>
+                    {lessons.length} lesson{lessons.length === 1 ? '' : 's'}
+                  </p>
+                  <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+                    {lessons.map((l, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setLessonIdx(i)}
+                        className="w-full rounded-lg px-2.5 py-2 text-left text-xs transition"
+                        style={{
+                          background: i === lessonIdx ? 'var(--accent-soft)' : 'transparent',
+                          color: i === lessonIdx ? 'var(--accent)' : 'var(--text)'
+                        }}
+                      >
+                        <p className="font-medium" style={{ color: 'var(--text-dim)' }}>T{l.term} W{l.week}</p>
+                        <p className="line-clamp-2">{l.title || '(untitled lesson)'}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Selected lesson */}
+                <div className="card max-h-[60vh] overflow-y-auto p-5">
+                  {lesson ? (
+                    <>
+                      <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--accent)' }}>
+                        Term {lesson.term} · Week {lesson.week}
+                      </p>
+                      <h3 className="mt-1 text-lg font-bold">{lesson.title || '(untitled lesson)'}</h3>
+                      {lesson.files.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {lesson.files.map((f, j) => (
+                            <span key={j} className="chip"><Paperclip size={11} /> {f}</span>
+                          ))}
+                        </div>
+                      )}
+                      {lesson.notes ? (
+                        <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed">{lesson.notes}</p>
+                      ) : (
+                        <p className="mt-4 text-sm" style={{ color: 'var(--text-dim)' }}>No notes for this lesson.</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Select a lesson.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     )
   }
 
-  const filtered = subjects.filter((s) => s.title.toLowerCase().includes(q.toLowerCase()) || s.code.toLowerCase().includes(q.toLowerCase()))
+  const pool = subjects.filter((s) => (showPast ? true : s.current))
+  const filtered = pool.filter((s) => s.title.toLowerCase().includes(q.toLowerCase()) || s.code.toLowerCase().includes(q.toLowerCase()))
+  const pastCount = subjects.filter((s) => !s.current).length
 
   return (
     <div>
       <ErrorBanner message={err} />
-      <div className="relative mb-3">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} />
-        <input className="input pl-8" placeholder="Search your subjects…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="mb-3 flex gap-2">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} />
+          <input className="input pl-8" placeholder="Search your subjects…" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        {pastCount > 0 && (
+          <button className={`btn shrink-0 text-xs ${showPast ? 'btn-primary' : ''}`} onClick={() => setShowPast((v) => !v)}>
+            <History size={14} /> {showPast ? 'This year only' : `Past years (${pastCount})`}
+          </button>
+        )}
       </div>
       {loading ? (
         <div className="grid place-items-center py-16"><Spinner size={22} /></div>
@@ -383,7 +454,10 @@ function Courses() {
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{s.title}</p>
-                <p className="text-[11px]" style={{ color: 'var(--text-dim)' }}>{s.code}</p>
+                <p className="text-[11px]" style={{ color: 'var(--text-dim)' }}>
+                  {s.code}
+                  {!s.current && ` · ${s.period}`}
+                </p>
               </div>
             </button>
           ))}

@@ -314,6 +314,91 @@ export interface NotebookContent {
 }
 
 /**
+ * Read a notebook's real structure from SharePoint's REST API rather than the
+ * embedded editor's DOM.
+ *
+ * Why: the WAC editor iframe (onenoteframe.aspx?edit=0) only ever renders its
+ * toolbar — verified stuck at 397 chars ("File/Home/Insert/Draw…") for 30s
+ * straight, with zero contenteditable nodes and no page canvas. It's a
+ * read-only viewer that never loads the body, so no amount of waiting or
+ * selector-hunting would have worked.
+ *
+ * A OneNote notebook is really a FOLDER in the site's SiteAssets library;
+ * sections are .one files inside it. Class Notebooks additionally nest their
+ * sections one level down, inside section-group folders (_Content Library,
+ * _Collaboration Space, and each student's own name). Confirmed against a real
+ * class notebook: Homework.one (2.3MB) under "Zayn de Lobel", plus the two
+ * standard group sections.
+ */
+async function readNotebookViaSharePoint(
+  win: BrowserWindow,
+  editUrl: string,
+  notebookName: string
+): Promise<{ sections: string[]; groups: { group: string; sections: string[] }[] } | null> {
+  const site = editUrl.match(/^(https:\/\/[^/]+\/sites\/[^/]+)/)?.[1]
+  if (!site) return null
+
+  // Must run from the SharePoint origin for cookies/CORS to apply.
+  await win.loadURL(site).catch(() => {})
+  await sleep(2500)
+
+  const result = await win.webContents
+    .executeJavaScript(
+      `(async function(){
+         var base = ${JSON.stringify(site)};
+         var wanted = ${JSON.stringify(notebookName)};
+         async function json(url) {
+           try {
+             var r = await fetch(url, { credentials: 'include', headers: { Accept: 'application/json;odata=nometadata' } });
+             return r.status === 200 ? await r.json() : null;
+           } catch (e) { return null; }
+         }
+         function folderUrl(path, what) {
+           return base + "/_api/web/GetFolderByServerRelativeUrl('" + encodeURIComponent(path) + "')/" + what;
+         }
+
+         // Locate the notebook folder across the site's document libraries.
+         var libs = await json(base + "/_api/web/lists?$filter=BaseTemplate eq 101&$select=Title,RootFolder/ServerRelativeUrl&$expand=RootFolder");
+         var nbPath = null;
+         var roots = (libs && libs.value || []).map(function (l) { return l.RootFolder && l.RootFolder.ServerRelativeUrl; }).filter(Boolean);
+         for (var i = 0; i < roots.length && !nbPath; i++) {
+           var f = await json(folderUrl(roots[i], "Folders?$select=Name,ServerRelativeUrl"));
+           (f && f.value || []).forEach(function (x) {
+             if (!nbPath && (x.Name === wanted || x.Name.indexOf(wanted) === 0 || wanted.indexOf(x.Name) === 0)) nbPath = x.ServerRelativeUrl;
+           });
+         }
+         if (!nbPath) return null;
+
+         function sectionName(fileName) { return fileName.replace(/\\.one$/i, ''); }
+         var out = { sections: [], groups: [] };
+
+         // Sections directly in the notebook folder.
+         var top = await json(folderUrl(nbPath, "Files?$select=Name"));
+         (top && top.value || []).forEach(function (x) {
+           if (/\\.one$/i.test(x.Name)) out.sections.push(sectionName(x.Name));
+         });
+
+         // Section groups (Class Notebook layout).
+         var subs = await json(folderUrl(nbPath, "Folders?$select=Name,ServerRelativeUrl"));
+         var groupFolders = (subs && subs.value || []).filter(function (x) { return x.Name !== 'OneNote_RecycleBin' && x.Name !== 'Forms'; });
+         for (var g = 0; g < groupFolders.length; g++) {
+           var gf = await json(folderUrl(groupFolders[g].ServerRelativeUrl, "Files?$select=Name"));
+           var names = (gf && gf.value || []).filter(function (x) { return /\\.one$/i.test(x.Name); }).map(function (x) { return sectionName(x.Name); });
+           if (names.length) {
+             out.groups.push({ group: groupFolders[g].Name, sections: names });
+             names.forEach(function (n) { out.sections.push(n); });
+           }
+         }
+         return out;
+       })()`,
+      true
+    )
+    .catch(() => null)
+
+  return result
+}
+
+/**
  * Open a specific notebook (by name or direct URL, as returned by
  * oneNoteNotebooks) and read what's visible: section names, page titles, and
  * the text of whichever page is showing. OneNote Online's editor is a rich
@@ -419,7 +504,10 @@ export async function readNotebook(nameOrUrl: string): Promise<NotebookContent> 
     let sections: string[] = []
     let pages: string[] = []
     let text = ''
-    const deadline = Date.now() + 20000
+    // Give the WAC viewer a short window to render. It usually only produces
+    // its toolbar (see readNotebookViaSharePoint), so don't wait long here —
+    // SharePoint below is the reliable source for structure.
+    const deadline = Date.now() + 8000
     while (Date.now() < deadline) {
       await sleep(1500)
       const frames = win.webContents.mainFrame.framesInSubtree
@@ -435,14 +523,30 @@ export async function readNotebook(nameOrUrl: string): Promise<NotebookContent> 
           text = r.text || ''
         }
       }
-      if (text.trim().length > 200 || (sections.length && pages.length)) break
+      if (text.trim().length > 400) break
     }
 
     const notebook = await win.webContents
       .executeJavaScript(`document.title.replace(/\\s*[-|].*$/, '').trim()`, true)
       .catch(() => nameOrUrl)
+    const notebookName = String(notebook || nameOrUrl)
 
-    return { notebook: String(notebook || nameOrUrl), sections, pages, text: text.trim() }
+    // Authoritative structure from SharePoint's REST API — the editor DOM
+    // reliably yields only its toolbar, so this is what actually populates
+    // sections/pages for the user.
+    const sp = await readNotebookViaSharePoint(win, editUrl, nameOrUrl.replace(/^https?:\/\/.*$/, notebookName))
+    if (sp && sp.sections.length) {
+      sections = sp.sections
+      if (!pages.length) pages = sp.sections
+      const summary = sp.groups.length
+        ? sp.groups.map((g) => `${g.group}:\n  - ${g.sections.join('\n  - ')}`).join('\n\n')
+        : sp.sections.map((s) => `- ${s}`).join('\n')
+      text = [`Notebook: ${notebookName}`, '', 'Sections:', summary, text.trim() ? `\n---\n${text.trim()}` : '']
+        .filter(Boolean)
+        .join('\n')
+    }
+
+    return { notebook: notebookName, sections, pages, text: text.trim() }
   } finally {
     if (!win.isDestroyed()) win.destroy()
   }

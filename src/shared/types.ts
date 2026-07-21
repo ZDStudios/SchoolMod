@@ -176,12 +176,27 @@ export interface SeqtaReport {
 export interface SeqtaSubject {
   code: string
   title: string
+  /** SEQTA's own enrolment period, e.g. "2026S1". */
+  period: string
+  /** True if this is the most recent period across all the student's subjects — i.e. this year. */
+  current: boolean
+}
+
+export interface SeqtaLessonContent {
+  term: string
+  week: string
+  title: string
+  notes: string
+  files: string[]
 }
 
 export interface SeqtaCourseContent {
   subject: string
   code: string
   files: string[]
+  /** Individually selectable lessons, in schedule order. */
+  lessons: SeqtaLessonContent[]
+  /** All lessons flattened to one block — kept for import-as-notebook-source / agent use. */
   text: string
 }
 

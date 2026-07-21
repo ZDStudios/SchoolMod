@@ -97,10 +97,15 @@ async function runDiagnostics() {
   }
   if (process.env.SCHOOLMOD_DIAG === 'course') {
     const seqta = await import('./services/seqta')
-    await step('subjectsList', async () => (await seqta.subjectsList()).map((s: any) => s.title))
-    await step('courseContent("humanities")', async () => {
-      const r = await seqta.courseContent('humanities')
-      return r.map((c: any) => ({ subject: c.subject, files: c.files.length, textLen: c.text.length, sample: c.text.slice(0, 150) }))
+    const subs = await seqta.subjectsList()
+    const current = subs.filter((s: any) => s.current)
+    const other = subs.filter((s: any) => !s.current)
+    log('current-period subjects:', JSON.stringify(current.map((s: any) => s.title)))
+    log('other-period subjects:', other.length, JSON.stringify(other.slice(0, 3).map((s: any) => s.title)))
+    await step('courseContent(current[0])', async () => {
+      const r = await seqta.courseContent(current[0].title)
+      const c = r[0]
+      return { subject: c.subject, files: c.files, lessonCount: c.lessons.length, firstLesson: c.lessons[0] }
     })
     log('DONE')
     return

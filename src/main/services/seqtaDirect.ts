@@ -249,13 +249,18 @@ interface Subject {
   title: string
   metaclass: number
   programme: number
-}
-/** Public listing for UI pickers ("import from this subject"). */
-export async function subjectsList(): Promise<{ code: string; title: string }[]> {
-  await ensure()
-  return (await subjects()).map((s) => ({ code: s.code, title: s.title }))
+  /** SEQTA's own enrolment period, e.g. "2026S1". Used to tell current-year subjects from past years. */
+  period: string
 }
 
+/**
+ * SEQTA's /load/subjects returns EVERY period the student has ever been
+ * enrolled in, not just the current one — confirmed against a real account:
+ * 20 Year 7 subjects (period 2025S*) alongside just 3 Year 8 subjects
+ * (2026S1). A "most common code prefix" guess would have picked the wrong
+ * year. The period string sorts chronologically as plain text (YYYY then S
+ * then term number), so the latest one is reliably "this year".
+ */
 async function subjects(): Promise<Subject[]> {
   const data = await payload('/seqta/student/load/subjects')
   const out: Subject[] = []
@@ -264,11 +269,23 @@ async function subjects(): Promise<Subject[]> {
     for (const s of period.subjects || []) {
       if (!seen.has(s.metaclass)) {
         seen.add(s.metaclass)
-        out.push({ code: s.code, title: s.title, metaclass: s.metaclass, programme: s.programme })
+        out.push({ code: s.code, title: s.title, metaclass: s.metaclass, programme: s.programme, period: period.code || '' })
       }
     }
   }
   return out
+}
+
+export function currentPeriod(subs: { period: string }[]): string {
+  return subs.reduce((max, s) => (s.period > max ? s.period : max), '')
+}
+
+/** Public listing for UI pickers ("import from this subject", the Courses tab). */
+export async function subjectsList(): Promise<{ code: string; title: string; period: string; current: boolean }[]> {
+  await ensure()
+  const subs = await subjects()
+  const latest = currentPeriod(subs)
+  return subs.map((s) => ({ code: s.code, title: s.title, period: s.period, current: s.period === latest }))
 }
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10)
@@ -432,17 +449,27 @@ export async function openReport(uuid: string): Promise<void> {
   await shell.openPath(file)
 }
 
+export interface LessonContent {
+  term: string
+  week: string
+  title: string
+  notes: string
+  files: string[]
+}
+
 export interface CourseContent {
   subject: string
   code: string
   files: string[]
+  lessons: LessonContent[]
   text: string
 }
 
 /**
  * Course/lesson content for a subject — used to import directly into a
- * Notebook or a Flashcards deck without leaving SchoolMod. Matches by
- * code/title substring so "humanities" or "8HU23" both work.
+ * Notebook or a Flashcards deck without leaving SchoolMod, and to browse
+ * lesson-by-lesson in the Courses tab. Matches by code/title substring so
+ * "humanities" or "8HU23" both work.
  */
 export async function courseContent(subjectKeyword: string): Promise<CourseContent[]> {
   await ensure()
@@ -463,24 +490,23 @@ export async function courseContent(subjectKeyword: string): Promise<CourseConte
     const files: string[] = (data.cf || []).map((f: any) => f.filename).filter(Boolean)
     const dWeeks: any[] = data.d || []
     const wWeeks: any[] = data.w || []
-    const lines: string[] = []
+    const lessons: LessonContent[] = []
     for (let i = 0; i < dWeeks.length; i++) {
       const week = dWeeks[i]
       const content = wWeeks[i]
       const items = Array.isArray(content) ? content : content ? [content] : []
       for (const item of items) {
-        const title = item?.t
-        if (title) lines.push(`Term ${week?.t ?? '?'} Week ${week?.w ?? '?'}: ${title}`)
-        const notes = item?.n
-        if (notes) lines.push(String(notes).replace(/<[^>]+>/g, ' ').trim())
+        const title = item?.t || ''
+        const notes = item?.n ? String(item.n).replace(/<[^>]+>/g, ' ').trim() : ''
+        const lessonFiles: string[] = (item?.r || []).map((f: any) => f.filename).filter(Boolean)
+        if (!title && !notes && !lessonFiles.length) continue
+        lessons.push({ term: String(week?.t ?? '?'), week: String(week?.w ?? '?'), title, notes, files: lessonFiles })
       }
     }
-    results.push({
-      subject: s.title,
-      code: s.code,
-      files,
-      text: lines.filter(Boolean).join('\n\n') || '(No lesson plan content published yet for this subject.)'
-    })
+    const text =
+      lessons.map((l) => [`Term ${l.term} Week ${l.week}: ${l.title}`, l.notes].filter(Boolean).join('\n')).join('\n\n') ||
+      '(No lesson plan content published yet for this subject.)'
+    results.push({ subject: s.title, code: s.code, files, lessons, text })
   }
   if (!results.length) throw new Error(`Found the subject but could not load its course content.`)
   return results
