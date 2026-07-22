@@ -68,7 +68,7 @@ const STOP = new Set(
   )
 )
 function tokenize(s: string): string[] {
-  return (s.toLowerCase().match(/[a-z0-9]+/g) || []).filter((t) => t.length > 1 && !STOP.has(t))
+  return ((s.toLowerCase().match(/[a-z0-9]+/g) || []) as string[]).filter((t) => t.length > 1 && !STOP.has(t))
 }
 
 /** BM25 ranking over a notebook's chunks. Returns the top-k chunks with scores. */

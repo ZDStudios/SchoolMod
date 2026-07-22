@@ -14,6 +14,78 @@ const gradeColor = (p: number | null) => {
   return '#ef4444'
 }
 
+/**
+ * "What do I need on the next one?" — the question every student actually asks
+ * about their marks. Works backwards from the running average: if you've done
+ * `count` assessments averaging `average`, then to land on `target` across
+ * `count + n` assessments you need `((count+n)*target - count*average) / n`.
+ */
+function TargetCalculator({ averages }: { averages: SeqtaSubjectAverage[] }) {
+  const [subject, setSubject] = useState('')
+  const [target, setTarget] = useState(80)
+  const [remaining, setRemaining] = useState(1)
+
+  const pick = averages.find((a) => a.subject === subject) || averages[0]
+  if (!pick || pick.average == null) return null
+
+  const n = Math.max(1, remaining)
+  const needed = ((pick.count + n) * target - pick.count * pick.average) / n
+  const impossible = needed > 100
+  const alreadyThere = needed <= 0
+
+  return (
+    <div className="card mb-6 p-5">
+      <h2 className="mb-1 font-semibold">What do I need?</h2>
+      <p className="mb-4 text-xs" style={{ color: 'var(--text-dim)' }}>
+        Work out the mark you need on what's left to hit the average you're aiming for.
+      </p>
+
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <label className="min-w-[180px] flex-1">
+          <span className="mb-1.5 block text-xs font-medium" style={{ color: 'var(--text-dim)' }}>Subject</span>
+          <select className="input" value={pick.subject} onChange={(e) => setSubject(e.target.value)}>
+            {averages.map((a) => (
+              <option key={a.subject} value={a.subject}>
+                {a.subject} — currently {a.average}%
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="w-32">
+          <span className="mb-1.5 block text-xs font-medium" style={{ color: 'var(--text-dim)' }}>Target average</span>
+          <input className="input" type="number" min={0} max={100} value={target} onChange={(e) => setTarget(Number(e.target.value) || 0)} />
+        </label>
+        <label className="w-40">
+          <span className="mb-1.5 block text-xs font-medium" style={{ color: 'var(--text-dim)' }}>Assessments left</span>
+          <input className="input" type="number" min={1} max={20} value={remaining} onChange={(e) => setRemaining(Number(e.target.value) || 1)} />
+        </label>
+      </div>
+
+      <div className="rounded-xl px-4 py-3" style={{ background: 'var(--bg)' }}>
+        {alreadyThere ? (
+          <p className="text-sm">
+            You're already above {target}% in <strong>{pick.subject}</strong> — anything reasonable keeps you there.
+          </p>
+        ) : impossible ? (
+          <p className="text-sm">
+            {target}% isn't reachable in {n === 1 ? 'one more assessment' : `${n} more assessments`} — you'd need{' '}
+            <strong>{needed.toFixed(1)}%</strong>. Try a lower target, or spread it over more assessments.
+          </p>
+        ) : (
+          <p className="text-sm">
+            Average{' '}
+            <strong className="text-base" style={{ color: gradeColor(needed) }}>
+              {needed.toFixed(1)}%
+            </strong>{' '}
+            across your next {n === 1 ? 'assessment' : `${n} assessments`} to reach {target}% in{' '}
+            <strong>{pick.subject}</strong>.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Grades() {
   const connected = !!useApp((s) => s.settings?.seqta.connected)
   const [data, setData] = useState<{ grades: SeqtaGrade[]; averages: SeqtaSubjectAverage[]; overall: number | null } | null>(null)
@@ -87,6 +159,8 @@ export default function Grades() {
               </div>
             )}
           </div>
+
+          <TargetCalculator averages={averages} />
 
           <div className="card p-5">
             <h2 className="mb-3 font-semibold">Recent results</h2>

@@ -76,6 +76,15 @@ export const CH = {
   msReadNotebook: 'ms:readNotebook',
   msGetNotebookUrl: 'ms:getNotebookUrl',
 
+  // desktop / notifications / backup
+  notifyTest: 'desktop:notifyTest',
+  desktopRefresh: 'desktop:refresh',
+  backupExport: 'backup:export',
+  backupImport: 'backup:import',
+  icsExport: 'app:icsExport',
+  /** main -> renderer: clipboard text captured by the global quick-explain hotkey. */
+  quickExplain: 'desktop:quickExplain',
+
   // misc
   openExternal: 'app:openExternal',
   saveFile: 'app:saveFile'

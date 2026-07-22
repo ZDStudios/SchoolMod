@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import TitleBar from './components/TitleBar'
 import Sidebar from './components/Sidebar'
 import CommandPalette from './components/CommandPalette'
 import { useApp } from './store/app'
+import { useChat } from './store/chat'
 import { Spinner } from './components/ui'
 
 import Dashboard from './pages/Dashboard'
@@ -20,6 +21,7 @@ import Settings from './pages/Settings'
 
 export default function App() {
   const { loaded, load } = useApp()
+  const navigate = useNavigate()
 
   useEffect(() => {
     load().then(() => useApp.getState().refreshIdentity())
@@ -28,6 +30,18 @@ export default function App() {
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [])
+
+  // Global quick-explain hotkey: the main process hands us the clipboard text,
+  // and we open a fresh chat so it never interrupts a conversation in progress.
+  useEffect(() => {
+    return window.api.desktop.onQuickExplain((text) => {
+      const chat = useChat.getState()
+      if (chat.streaming) return
+      chat.createChat()
+      navigate('/assistant')
+      chat.send(`Explain this in a way a Year 8 student would get:\n\n${text}`)
+    })
+  }, [navigate])
 
   return (
     <div className="flex h-full flex-col">

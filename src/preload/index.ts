@@ -136,6 +136,25 @@ const api = {
       invoke<{ notebook: string; sections: string[]; pages: string[]; text: string }>(CH.msReadNotebook, nameOrUrl),
     getNotebookUrl: (nameOrUrl: string) => invoke<string>(CH.msGetNotebookUrl, nameOrUrl)
   },
+  desktop: {
+    notifyTest: () => invoke<{ ok: boolean }>(CH.notifyTest),
+    refresh: () => invoke<{ tray: boolean; shortcutOk: boolean }>(CH.desktopRefresh),
+    /** Fires when the global quick-explain hotkey grabs the clipboard. */
+    onQuickExplain: (cb: (text: string) => void) => {
+      const listener = (_e: any, text: string) => cb(text)
+      ipcRenderer.on(CH.quickExplain, listener)
+      return () => {
+        ipcRenderer.removeListener(CH.quickExplain, listener)
+      }
+    }
+  },
+  backup: {
+    export: () =>
+      invoke<{ saved: boolean; path?: string; notebooks?: number; decks?: number }>(CH.backupExport),
+    import: () =>
+      invoke<{ imported: boolean; notebooks?: number; decks?: number }>(CH.backupImport)
+  },
+  exportIcs: () => invoke<{ saved: boolean; path?: string; events?: number }>(CH.icsExport),
   openExternal: (url: string) => invoke(CH.openExternal, url),
   saveFile: (defaultName: string, content: string) =>
     invoke<{ saved: boolean; path?: string }>(CH.saveFile, defaultName, content)

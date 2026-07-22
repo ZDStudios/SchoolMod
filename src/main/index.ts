@@ -3,6 +3,14 @@ import { join } from 'path'
 import { initStores, getSettings } from './store'
 import { registerIpc } from './ipc'
 import { findExecutable } from './services/proc'
+import {
+  setupTray,
+  applyAutoLaunch,
+  setupQuickExplain,
+  unregisterShortcuts,
+  isQuitting,
+  markQuitting
+} from './services/desktop'
 
 // process.uptime() is measured from actual process start, so it's a reliable
 // baseline regardless of how the compiler orders/hoists these imports.
@@ -60,7 +68,7 @@ async function runDiagnostics() {
       nbId = nb.id
       return nb.title
     })
-    await step('notebook.addSourceText', () =>
+    await step('notebook.addSourceText', async () =>
       nbs.addSourceText(nbId, 'diag.txt', 'Photosynthesis converts light energy into glucose in chloroplasts. The Calvin cycle fixes carbon dioxide.')
     )
     await step('notebook.ask', async () => (await nbs.ask(nbId, 'Where does photosynthesis happen?')).answer.slice(0, 120))
@@ -151,6 +159,52 @@ async function runDiagnostics() {
     log('DONE')
     return
   }
+  if (process.env.SCHOOLMOD_DIAG === 'desktop') {
+    const { Notification, globalShortcut } = await import('electron')
+    const fs = await import('fs')
+    const d = getSettings().desktop
+    log('notifications supported?', Notification.isSupported())
+
+    // The tray silently no-ops if the icon can't be found at runtime, so prove
+    // the packaged-and-dev paths actually resolve to a real file.
+    const { iconCandidates } = await import('./services/desktop')
+    const paths = iconCandidates()
+    paths.forEach((p) => log('icon candidate', fs.existsSync(p) ? 'FOUND  ' : 'missing', p))
+    log('icon resolved?', paths.some((p) => fs.existsSync(p)))
+
+    log('shortcut accelerator =', d.quickExplainShortcut)
+    log('shortcut registered? ', globalShortcut.isRegistered(d.quickExplainShortcut))
+
+    // Build a real .ics from the real timetable and check it against the spec's
+    // hard requirements (CRLF, matching BEGIN/END counts) rather than eyeballing it.
+    const seqta = await import('./services/seqta')
+    const { buildIcs } = await import('./services/ics')
+    let [lessons, assessments]: any[][] = await Promise.all([
+      seqta.timetableWeek().catch(() => []),
+      seqta.assessments().catch(() => [])
+    ])
+    // This harness runs under Electron's own userData, so a real session may not
+    // be present. Fall back to fixtures that exercise the tricky bits — a comma
+    // and a semicolon that must be escaped, and a title long enough to fold.
+    if (!lessons.length && !assessments.length) {
+      log('(no SEQTA session in this harness — using fixtures)')
+      lessons = [
+        { description: 'Science, Year 8', staff: 'Mr Smith; Ms Jones', room: 'S12', from: '09:05', until: '10:00', code: '8SCI', day: '2026-07-22' }
+      ]
+      assessments = [
+        { id: 1, title: 'Extended response on photosynthesis and cellular respiration in plants', subject: 'Science', code: '8SCI', due: '2026-07-31', status: 'PENDING' }
+      ]
+    }
+    const ics = buildIcs(lessons as any, assessments as any)
+    const begins = (ics.match(/BEGIN:VEVENT/g) || []).length
+    const ends = (ics.match(/END:VEVENT/g) || []).length
+    log(`ics: ${lessons.length} lessons + ${assessments.length} assessments -> ${begins} VEVENTs (END count ${ends})`)
+    log('ics: CRLF line endings?', ics.includes('\r\n') && !/[^\r]\n/.test(ics))
+    log('ics: no over-length lines?', ics.split('\r\n').every((l) => l.length <= 75))
+    log('ics sample:\n' + ics.split('\r\n').slice(0, 16).join('\n'))
+    log('DONE')
+    return
+  }
   if (process.env.SCHOOLMOD_DIAG === 'ai') {
     log('PATH has APPDATA/npm?', (process.env.PATH || '').toLowerCase().includes('roaming\\npm'))
     log('findExecutable(claude) ->', findExecutable('claude'))
@@ -219,7 +273,18 @@ function createWindow(): void {
   __mark('BrowserWindow constructed')
   mainWindow.on('ready-to-show', () => {
     __mark('ready-to-show (first paint) -> showing window')
-    mainWindow?.show()
+    // --hidden is passed by the start-on-login registration: boot with the app
+    // resident in the tray rather than stealing focus at every sign-in.
+    if (!process.argv.includes('--hidden')) mainWindow?.show()
+  })
+
+  // With the tray enabled, closing the window hides it so bell/assessment
+  // reminders keep firing. Quit explicitly from the tray menu.
+  mainWindow.on('close', (e) => {
+    if (getSettings().desktop.tray && !isQuitting()) {
+      e.preventDefault()
+      mainWindow?.hide()
+    }
   })
 
   // Surface renderer warnings/errors and crashes to the main log (useful for support).
@@ -302,13 +367,33 @@ app.whenReady().then(() => {
   createWindow()
   __mark('createWindow() returned')
 
+  setupTray(() => mainWindow)
+  applyAutoLaunch()
+  setupQuickExplain(() => mainWindow)
+  __mark('desktop integrations ready')
+
+  // Deferred so nothing about reminders is on the cold-start critical path.
+  setTimeout(async () => {
+    const { startNotifications } = await import('./services/notifications')
+    startNotifications(() => mainWindow)
+  }, 4000)
+
   if (process.env.SCHOOLMOD_DIAG) runDiagnostics()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    else {
+      mainWindow?.show()
+      mainWindow?.focus()
+    }
   })
 })
 
+app.on('before-quit', () => markQuitting())
+app.on('will-quit', () => unregisterShortcuts())
+
 app.on('window-all-closed', () => {
+  // With the tray on, the window is hidden rather than destroyed, so this only
+  // fires on a real quit.
   if (process.platform !== 'darwin') app.quit()
 })

@@ -2,8 +2,10 @@ import { existsSync } from 'fs'
 import { join, isAbsolute } from 'path'
 import { SeqtaMcpConfig } from '../../shared/types'
 
-// Command resolution lives in proc.ts; re-exported here for existing importers.
-export { resolveCommand } from './proc'
+// Command resolution lives in proc.ts. Imported for local use AND re-exported
+// for existing importers — a bare `export ... from` would not bind it here.
+import { resolveCommand } from './proc'
+export { resolveCommand }
 
 /**
  * Minimal MCP host: SchoolMod spawns an MCP server (the user's Seqta-MCP-Server)

@@ -61,6 +61,25 @@ export interface MicrosoftSettings {
   account: string
 }
 
+export interface NotificationSettings {
+  enabled: boolean
+  /** "Next period starts in 5 minutes" desktop alerts. */
+  bells: boolean
+  /** "X is due tomorrow" alerts for upcoming assessments. */
+  assessments: boolean
+  /** How many minutes before a period starts to warn. */
+  bellLeadMinutes: number
+}
+
+export interface DesktopSettings {
+  /** Keep running in the system tray when the window is closed. */
+  tray: boolean
+  /** Launch SchoolMod when you log in to your computer. */
+  autoLaunch: boolean
+  /** Global hotkey: copy anything, press this, and the assistant explains it. */
+  quickExplainShortcut: string
+}
+
 export interface Settings {
   theme: ThemeMode
   accent: string
@@ -68,8 +87,10 @@ export interface Settings {
   codex: CodexSettings
   seqta: SeqtaSettings
   microsoft: MicrosoftSettings
-  /** Off by default. When on, the AI assistant can browse/read files on this device (read-only — never write, delete or run anything). */
+  /** Off by default. When on, the AI assistant can browse/read/write files on this device (never delete or run anything). */
   computerAccess: boolean
+  notifications: NotificationSettings
+  desktop: DesktopSettings
   onboardingDone: boolean
 }
 
@@ -98,6 +119,8 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   microsoft: { clientId: '', tenant: 'common', account: '' },
   computerAccess: false,
+  notifications: { enabled: true, bells: true, assessments: true, bellLeadMinutes: 5 },
+  desktop: { tray: true, autoLaunch: false, quickExplainShortcut: 'CommandOrControl+Shift+E' },
   onboardingDone: false
 }
 

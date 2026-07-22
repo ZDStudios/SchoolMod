@@ -73,7 +73,9 @@ export const getSettings = (): Settings => {
       ...s.seqta,
       mcp: { ...DEFAULT_SETTINGS.seqta.mcp, ...(s.seqta as any)?.mcp }
     },
-    microsoft: { ...DEFAULT_SETTINGS.microsoft, ...s.microsoft }
+    microsoft: { ...DEFAULT_SETTINGS.microsoft, ...s.microsoft },
+    notifications: { ...DEFAULT_SETTINGS.notifications, ...(s as any).notifications },
+    desktop: { ...DEFAULT_SETTINGS.desktop, ...(s as any).desktop }
   }
 }
 export const setSettings = (patch: Partial<Settings>): Settings => {

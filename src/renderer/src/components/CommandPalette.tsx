@@ -18,6 +18,7 @@ import {
   Moon
 } from 'lucide-react'
 import { useApp } from '../store/app'
+import { call } from '../lib/utils'
 
 interface Cmd {
   id: string
@@ -33,6 +34,12 @@ export default function CommandPalette() {
   const [sel, setSel] = useState(0)
   const nav = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
+  const [content, setContent] = useState<{
+    notebooks: any[]
+    decks: any[]
+    subjects: any[]
+    assessments: any[]
+  }>({ notebooks: [], decks: [], subjects: [], assessments: [] })
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -52,6 +59,32 @@ export default function CommandPalette() {
       setQ('')
       setSel(0)
       setTimeout(() => inputRef.current?.focus(), 30)
+    }
+  }, [open])
+
+  // Your own content — notebooks, decks, subjects, assessments — so the palette
+  // searches what you've actually got, not just the app's fixed pages. Fetched
+  // when the palette opens rather than on mount, to keep startup lean.
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    const connected = !!useApp.getState().settings?.seqta.connected
+    Promise.all([
+      call(window.api.notebooks.list()).catch(() => []),
+      call(window.api.decks.list()).catch(() => []),
+      connected ? call(window.api.seqta.subjectsList()).catch(() => []) : Promise.resolve([]),
+      connected ? call(window.api.seqta.assessments()).catch(() => []) : Promise.resolve([])
+    ]).then(([notebooks, decks, subjects, assessments]) => {
+      if (cancelled) return
+      setContent({
+        notebooks: notebooks as any[],
+        decks: decks as any[],
+        subjects: (subjects as any[]).filter((s) => s.current),
+        assessments: assessments as any[]
+      })
+    })
+    return () => {
+      cancelled = true
     }
   }, [open])
 
@@ -80,16 +113,50 @@ export default function CommandPalette() {
         group: 'Actions',
         icon: Moon,
         run: () => {
-          const s = useApp.getState().settings
           const isDark = document.documentElement.classList.contains('dark')
           useApp.getState().save({ theme: isDark ? 'light' : 'dark' })
           setOpen(false)
         }
-      }
+      },
+      ...content.notebooks.map((n: any) => ({
+        id: `nb-${n.id}`,
+        label: `${n.emoji || '📓'} ${n.title}`,
+        group: 'Notebooks',
+        icon: BookOpen,
+        run: go('/notebooks')
+      })),
+      ...content.decks.map((d: any) => ({
+        id: `dk-${d.id}`,
+        label: `${d.emoji || '🃏'} ${d.title} · ${d.cards?.length || 0} cards`,
+        group: 'Flashcards',
+        icon: Layers,
+        run: go('/flashcards')
+      })),
+      ...content.subjects.map((s: any) => ({
+        id: `sub-${s.code}`,
+        label: s.title,
+        group: 'Subjects',
+        icon: GraduationCap,
+        run: go('/seqta')
+      })),
+      ...content.assessments.map((a: any) => ({
+        id: `as-${a.id}`,
+        label: `${a.title} — ${a.subject}${a.due ? ` · due ${a.due}` : ''}`,
+        group: 'Assessments',
+        icon: CalendarRange,
+        run: go('/seqta')
+      }))
     ]
-  }, [nav])
+  }, [nav, content])
 
-  const filtered = commands.filter((c) => c.label.toLowerCase().includes(q.toLowerCase()))
+  // Only surface your own content once you've actually typed something —
+  // otherwise the palette opens as a wall of every notebook and assessment.
+  const query = q.trim().toLowerCase()
+  const filtered = commands.filter(
+    (c) =>
+      c.label.toLowerCase().includes(query) &&
+      (query.length > 0 || c.group === 'Go to' || c.group === 'Actions')
+  )
   const groups = [...new Set(filtered.map((c) => c.group))]
 
   if (!open) return null
@@ -102,7 +169,7 @@ export default function CommandPalette() {
           <input
             ref={inputRef}
             className="flex-1 bg-transparent text-sm outline-none"
-            placeholder="Search pages and actions…"
+            placeholder="Search pages, notebooks, decks, subjects, assessments…"
             value={q}
             onChange={(e) => { setQ(e.target.value); setSel(0) }}
             onKeyDown={(e) => {

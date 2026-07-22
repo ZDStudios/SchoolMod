@@ -12,7 +12,11 @@ import {
   Rocket,
   Copy,
   HardDrive,
-  ShieldAlert
+  ShieldAlert,
+  Bell,
+  Monitor,
+  Archive,
+  Upload
 } from 'lucide-react'
 import { useApp } from '../store/app'
 import { PageHeader, ErrorBanner } from '../components/ui'
@@ -63,6 +67,9 @@ export default function Settings() {
       <ComputerAccessSection />
       <SeqtaSection />
       <MicrosoftSection />
+      <RemindersSection />
+      <DesktopSection />
+      <BackupSection />
 
       <p className="mt-8 text-center text-xs" style={{ color: 'var(--text-dim)' }}>
         SchoolMod 2.0 · Your data stays on this device. Built for students, by ZDStudios.
@@ -244,6 +251,202 @@ function ClaudeSection() {
           </div>
         </>
       )}
+    </Section>
+  )
+}
+
+/** A labelled on/off row — the shape every boolean setting on this page uses. */
+function Toggle({
+  label,
+  desc,
+  on,
+  onChange
+}: {
+  label: string
+  desc: string
+  on: boolean
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: 'var(--bg)' }}>
+      <div className="pr-4">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-dim)' }}>
+          {desc}
+        </p>
+      </div>
+      <button
+        role="switch"
+        aria-checked={on}
+        onClick={() => onChange(!on)}
+        className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+        style={{ background: on ? 'var(--accent)' : 'var(--border)' }}
+      >
+        <span
+          className="absolute top-1 h-5 w-5 rounded-full bg-white transition-transform"
+          style={{ transform: on ? 'translateX(22px)' : 'translateX(4px)' }}
+        />
+      </button>
+    </div>
+  )
+}
+
+function RemindersSection() {
+  const { settings, save } = useApp()
+  const n = settings!.notifications
+  const [tested, setTested] = useState(false)
+  const set = (patch: Partial<typeof n>) => save({ notifications: { ...n, ...patch } })
+
+  return (
+    <Section icon={<Bell size={18} />} title="Reminders" desc="Desktop alerts before class and when work is due.">
+      <div className="space-y-2">
+        <Toggle
+          label="Enable reminders"
+          desc="The master switch for every desktop notification below."
+          on={n.enabled}
+          onChange={(v) => set({ enabled: v })}
+        />
+        <Toggle
+          label="Before each period"
+          desc="A heads-up so you're not sprinting across campus after the bell."
+          on={n.bells}
+          onChange={(v) => set({ bells: v })}
+        />
+        <Toggle
+          label="Assessments due"
+          desc="Alerts the day before and the morning something is due."
+          on={n.assessments}
+          onChange={(v) => set({ assessments: v })}
+        />
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <Field label="Warn me this many minutes early">
+          <input
+            type="number"
+            min={1}
+            max={30}
+            className="input w-24"
+            value={n.bellLeadMinutes}
+            onChange={(e) => set({ bellLeadMinutes: Math.max(1, Math.min(30, Number(e.target.value) || 5)) })}
+          />
+        </Field>
+      </div>
+      <button
+        className="btn mt-3"
+        onClick={async () => {
+          await call(window.api.desktop.notifyTest())
+          setTested(true)
+        }}
+      >
+        {tested ? <Check size={15} /> : <Bell size={15} />}
+        {tested ? 'Sent — check your notifications' : 'Send a test notification'}
+      </button>
+    </Section>
+  )
+}
+
+function DesktopSection() {
+  const { settings, save } = useApp()
+  const d = settings!.desktop
+  const [msg, setMsg] = useState('')
+  // Every desktop setting needs the main process to re-register tray/hotkey/login item.
+  const set = async (patch: Partial<typeof d>) => {
+    await save({ desktop: { ...d, ...patch } })
+    const r = await call(window.api.desktop.refresh())
+    if (patch.quickExplainShortcut !== undefined) {
+      setMsg(r?.shortcutOk ? 'Shortcut registered.' : 'That shortcut is taken by another app — try a different one.')
+    }
+  }
+
+  return (
+    <Section icon={<Monitor size={18} />} title="Desktop" desc="Tray, startup and the global quick-explain hotkey.">
+      <div className="space-y-2">
+        <Toggle
+          label="Keep running in the tray"
+          desc="Closing the window tucks SchoolMod into the system tray so reminders keep working. Quit from the tray menu."
+          on={d.tray}
+          onChange={(v) => set({ tray: v })}
+        />
+        <Toggle
+          label="Start when I log in"
+          desc="Launches quietly into the tray when your computer starts."
+          on={d.autoLaunch}
+          onChange={(v) => set({ autoLaunch: v })}
+        />
+      </div>
+      <div className="mt-3">
+        <Field label="Quick-explain hotkey">
+          <input
+            className="input"
+            value={d.quickExplainShortcut}
+            onChange={(e) => save({ desktop: { ...d, quickExplainShortcut: e.target.value } })}
+            onBlur={(e) => set({ quickExplainShortcut: e.target.value })}
+            placeholder="CommandOrControl+Shift+E"
+          />
+        </Field>
+        <p className="mt-1.5 text-xs" style={{ color: 'var(--text-dim)' }}>
+          Copy anything anywhere on your computer, press this, and SchoolMod pops up with the assistant explaining it.
+        </p>
+        {msg && (
+          <p className="mt-1.5 text-xs" style={{ color: 'var(--text-dim)' }}>
+            {msg}
+          </p>
+        )}
+      </div>
+    </Section>
+  )
+}
+
+function BackupSection() {
+  const [busy, setBusy] = useState('')
+  const [msg, setMsg] = useState('')
+  const [err, setErr] = useState('')
+
+  const run = async (kind: 'export' | 'import') => {
+    setBusy(kind)
+    setErr('')
+    setMsg('')
+    try {
+      if (kind === 'export') {
+        const r = await call(window.api.backup.export())
+        setMsg(r?.saved ? `Saved ${r.notebooks} notebooks and ${r.decks} decks.` : '')
+      } else {
+        const r = await call(window.api.backup.import())
+        setMsg(r?.imported ? `Restored — you now have ${r.notebooks} notebooks and ${r.decks} decks.` : '')
+      }
+    } catch (e: any) {
+      setErr(e?.message || String(e))
+    } finally {
+      setBusy('')
+    }
+  }
+
+  return (
+    <Section icon={<Archive size={18} />} title="Backup" desc="Move to a new computer, or keep a safety copy.">
+      <ErrorBanner message={err} />
+      <div className="flex gap-2">
+        <button className="btn flex-1" disabled={!!busy} onClick={() => run('export')}>
+          {busy === 'export' ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+          Export backup
+        </button>
+        <button className="btn flex-1" disabled={!!busy} onClick={() => run('import')}>
+          {busy === 'import' ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
+          Restore backup
+        </button>
+      </div>
+      {msg && (
+        <p className="mt-2 text-xs" style={{ color: 'var(--text-dim)' }}>
+          {msg}
+        </p>
+      )}
+      <div className="mt-3 flex gap-2 rounded-xl border px-3.5 py-2.5 text-xs" style={{ borderColor: 'var(--border)', color: 'var(--text-dim)' }}>
+        <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+        <span>
+          Backups include your notebooks, decks and preferences — but <strong>never your passwords</strong>, so a
+          backup file is safe to email or keep in cloud storage. You'll just reconnect SEQTA and Microsoft once.
+          Restoring merges rather than overwrites, so nothing on this machine gets wiped.
+        </span>
+      </div>
     </Section>
   )
 }

@@ -34,6 +34,10 @@ const getNotebooks = lazy(() => import('./services/notebooks'))
 const getFlashcards = lazy(() => import('./services/flashcards'))
 const getGraph = lazy(() => import('./services/graph'))
 const getMsElectron = lazy(() => import('./services/msElectron'))
+const getNotifications = lazy(() => import('./services/notifications'))
+const getDesktop = lazy(() => import('./services/desktop'))
+const getBackup = lazy(() => import('./services/backup'))
+const getIcs = lazy(() => import('./services/ics'))
 
 export function registerIpc(getWindow: () => BrowserWindow | null) {
   // ---- window controls ----
@@ -158,6 +162,31 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
     const graph = await getGraph()
     const url = graph.APP_URLS[appKey] || appKey
     return shell.openExternal(url)
+  })
+
+  // ---- desktop / notifications / backup ----
+  handle(CH.notifyTest, async () => (await getNotifications()).testNotification(getWindow))
+  handle(CH.desktopRefresh, async () => (await getDesktop()).refreshDesktop(getWindow))
+  handle(CH.backupExport, async () => (await getBackup()).exportAll(getWindow()))
+  handle(CH.backupImport, async () => (await getBackup()).importAll(getWindow()))
+  handle(CH.icsExport, async () => {
+    const seqta = await getSeqta()
+    // Pull both in parallel — they're independent SEQTA endpoints.
+    const [lessons, assessments] = await Promise.all([
+      seqta.timetableWeek().catch(() => []),
+      seqta.assessments().catch(() => [])
+    ])
+    const { buildIcs } = await getIcs()
+    const ics = buildIcs(lessons as any, assessments as any)
+    const win = getWindow()
+    const res = await dialog.showSaveDialog(win!, {
+      title: 'Export timetable to calendar',
+      defaultPath: 'schoolmod.ics',
+      filters: [{ name: 'Calendar', extensions: ['ics'] }]
+    })
+    if (res.canceled || !res.filePath) return { saved: false }
+    require('fs').writeFileSync(res.filePath, ics, 'utf-8')
+    return { saved: true, path: res.filePath, events: (lessons as any[]).length + (assessments as any[]).length }
   })
 
   // ---- misc ----

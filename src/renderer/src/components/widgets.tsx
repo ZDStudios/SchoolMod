@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Timer, Play, Pause, RotateCcw, Plus, Check, Trash2, Sparkles, StickyNote, Bell } from 'lucide-react'
+import { Timer, Play, Pause, RotateCcw, Plus, Check, Trash2, Sparkles, StickyNote, Bell, Flame } from 'lucide-react'
 import { useLocalState } from '../lib/hooks'
 import { bellState } from '../../../shared/bells'
 import { Markdown } from '../lib/md'
@@ -246,6 +246,96 @@ export function QuoteCard() {
     <div className="card p-5" style={{ background: 'var(--accent)', borderColor: 'transparent' }}>
       <p className="text-sm font-medium leading-relaxed text-white">“{q}”</p>
       <p className="mt-2 text-xs text-white/80">— {who}</p>
+    </div>
+  )
+}
+
+/* ---------------- Study streak & history ---------------- */
+
+/**
+ * Turns the focus timer's log into the thing that actually keeps people
+ * studying: a streak, plus a glance-able 12-week heatmap.
+ *
+ * The streak tolerates *today* being empty — you haven't necessarily failed
+ * at 9am — so it counts back from yesterday and adds today only if it counts.
+ */
+export function StudyStats() {
+  const [log] = useLocalState<Record<string, number>>('sm.focus.log', {})
+
+  const dayKey = (offset: number) => {
+    const d = new Date()
+    d.setDate(d.getDate() - offset)
+    return d.toISOString().slice(0, 10)
+  }
+
+  let streak = log[todayKey()] ? 1 : 0
+  for (let back = 1; back < 400; back++) {
+    if (!log[dayKey(back)]) break
+    streak++
+  }
+
+  const totalMins = Object.values(log).reduce((a, b) => a + b, 0)
+  const last7 = Array.from({ length: 7 }, (_, i) => log[dayKey(i)] || 0).reduce((a, b) => a + b, 0)
+  // 12 weeks, oldest first, so the grid reads left-to-right like a calendar.
+  const days = Array.from({ length: 84 }, (_, i) => dayKey(83 - i))
+  const busiest = Math.max(1, ...days.map((d) => log[d] || 0))
+
+  const shade = (mins: number) => {
+    if (!mins) return 'var(--bg)'
+    // Four steps rather than a continuous ramp — easier to read at 10px.
+    const step = Math.ceil((mins / busiest) * 4)
+    return `color-mix(in srgb, var(--accent) ${step * 25}%, var(--bg))`
+  }
+
+  const hrs = (m: number) => (m >= 60 ? `${(m / 60).toFixed(1)}h` : `${m}m`)
+
+  return (
+    <div className="card p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <Flame size={16} style={{ color: 'var(--accent)' }} />
+        <h3 className="font-semibold">Study streak</h3>
+      </div>
+
+      <div className="mb-4 flex items-end gap-5">
+        <div>
+          <p className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>
+            {streak}
+          </p>
+          <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+            {streak === 1 ? 'day' : 'days'} in a row
+          </p>
+        </div>
+        <div>
+          <p className="text-2xl font-bold">{hrs(last7)}</p>
+          <p className="text-xs" style={{ color: 'var(--text-dim)' }}>this week</p>
+        </div>
+        <div>
+          <p className="text-2xl font-bold">{hrs(totalMins)}</p>
+          <p className="text-xs" style={{ color: 'var(--text-dim)' }}>all time</p>
+        </div>
+      </div>
+
+      {totalMins === 0 ? (
+        <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+          Finish a session on the focus timer and your streak starts here.
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-flow-col grid-rows-7 gap-[3px]">
+            {days.map((d) => (
+              <div
+                key={d}
+                title={`${d} — ${log[d] ? hrs(log[d]) : 'nothing logged'}`}
+                className="h-[10px] w-[10px] rounded-[2px]"
+                style={{ background: shade(log[d] || 0), boxShadow: 'inset 0 0 0 1px var(--border)' }}
+              />
+            ))}
+          </div>
+          <p className="mt-2 text-[10px]" style={{ color: 'var(--text-dim)' }}>
+            Last 12 weeks
+          </p>
+        </>
+      )}
     </div>
   )
 }

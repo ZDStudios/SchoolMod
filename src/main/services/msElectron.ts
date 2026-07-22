@@ -516,7 +516,7 @@ export async function readNotebook(nameOrUrl: string): Promise<NotebookContent> 
         // JS source rendered as text/plain — it out-scored real content because
         // it's large, so it's excluded explicitly rather than by size.
         if (/TokenFactoryIframe/i.test(frame.url)) continue
-        const r = await frame.executeJavaScript(EXTRACT_SCRIPT, true).catch(() => null)
+        const r: any = await frame.executeJavaScript(EXTRACT_SCRIPT, true).catch(() => null)
         if (r && (r.text || '').length > text.length) {
           sections = r.sections || []
           pages = r.pages || []
