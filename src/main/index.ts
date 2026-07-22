@@ -257,6 +257,26 @@ async function runDiagnostics() {
     log('DONE')
     return
   }
+  if (process.env.SCHOOLMOD_DIAG === 'reports') {
+    const direct = await import('./services/seqtaDirect')
+    const id = await (direct as any).ensure()
+    const list = await seqta.reports()
+    log('reports =', list.length)
+    let allPdf = true
+    for (const r of list) {
+      const cfg = await seqta.reportUrl(r.uuid)
+      const res = await fetch(cfg.url, { headers: { Cookie: `JSESSIONID=${id.cookie}` }, redirect: 'follow' })
+      const buf = Buffer.from(await res.arrayBuffer())
+      const isPdf = buf.subarray(0, 4).toString('latin1') === '%PDF'
+      if (!isPdf) allPdf = false
+      log(`  ${String(r.types).padEnd(24)} ${r.terms} ${String(r.year).padEnd(4)} -> status=${res.status} bytes=${buf.length} PDF=${isPdf}`)
+    }
+    log('ALL REPORTS ARE REAL PDFs?', allPdf)
+    const cfg0 = await seqta.reportUrl(list[0].uuid)
+    log('viewer url =', cfg0.url.replace(id.base, ''), '| partition =', cfg0.partition)
+    log('DONE')
+    return
+  }
   if (process.env.SCHOOLMOD_DIAG === 'webview') {
     // Prove the embedded SEQTA browser opens ALREADY SIGNED IN. Seeding the
     // cookie is not enough on its own — the real test is loading the page in a

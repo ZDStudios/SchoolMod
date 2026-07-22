@@ -81,7 +81,8 @@ export default function WebFrame({ src, partition, title, onClose, embedded }: W
       </div>
       <div className="relative min-h-0 flex-1">
         {/* @ts-ignore -- <webview> is enabled via webviewTag in main window webPreferences */}
-        <webview ref={ref} src={src} partition={partition} style={{ width: '100%', height: '100%' }} allowpopups="true" />
+        {/* `plugins` is what enables Chromium's built-in PDF viewer — report cards stream in as PDFs. */}
+        <webview ref={ref} src={src} partition={partition} style={{ width: '100%', height: '100%' }} {...({ allowpopups: 'true', plugins: 'true' } as any)} />
       </div>
     </div>
   )

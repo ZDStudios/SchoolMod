@@ -438,9 +438,19 @@ export async function reports(): Promise<SeqtaReport[]> {
   }))
 }
 
+/**
+ * Report PDFs are NOT served by /files/stream — that returns HTTP 500 for
+ * every report uuid, which the old code wrote to a .pdf and handed to the
+ * system viewer as a broken file. The real route, read off the anchors on
+ * SEQTA's own reports page, is /load/file?type=report&file=<uuid>.
+ */
+function reportHref(base: string, uuid: string): string {
+  return `${base}/seqta/student/load/file?type=report&file=${encodeURIComponent(uuid)}`
+}
+
 export async function openReport(uuid: string): Promise<void> {
   const id = await ensure()
-  const res = await fetch(`${id.base}/seqta/student/files/stream?uuid=${uuid}`, {
+  const res = await fetch(reportHref(id.base, uuid), {
     headers: { Cookie: `JSESSIONID=${id.cookie}` }
   })
   if (!res.ok) throw new Error('Could not download report.')
@@ -576,21 +586,58 @@ export const WEBVIEW_PARTITION = 'persist:seqta-web'
  * JSESSIONID that ensure() has already validated and plant it in a persistent
  * partition. That skips a second interactive Microsoft login entirely.
  */
-export async function prepareWebview(): Promise<{ url: string; partition: string }> {
+async function seedWebSession(): Promise<Identity> {
   const id = await ensure()
   const { session } = await import('electron')
   const ses = session.fromPartition(WEBVIEW_PARTITION)
-  const host = new URL(id.base).hostname
 
   await ses.cookies.set({
     url: id.base,
     name: 'JSESSIONID',
     value: id.cookie,
-    domain: host,
+    domain: new URL(id.base).hostname,
     path: '/',
     httpOnly: true,
     secure: id.base.startsWith('https')
   })
+  return id
+}
 
+export async function prepareWebview(): Promise<{ url: string; partition: string }> {
+  const id = await seedWebSession()
   return { url: `${id.base}/#?page=/home`, partition: WEBVIEW_PARTITION }
+}
+
+/**
+ * URL for viewing a report PDF inside the app.
+ *
+ * Streams straight from SEQTA rather than downloading to a temp file: the
+ * webview partition already carries the session cookie, and Chromium renders
+ * PDFs natively. That avoids leaving report cards lying around in the temp
+ * directory, and the host is already covered by the navigation allowlist.
+ */
+export async function reportUrl(uuid: string): Promise<{ url: string; partition: string }> {
+  const id = await seedWebSession()
+  return { url: reportHref(id.base, uuid), partition: WEBVIEW_PARTITION }
+}
+
+/** Save a report PDF wherever the student chooses. */
+export async function saveReport(uuid: string, suggestedName: string): Promise<{ saved: boolean; path?: string }> {
+  const id = await ensure()
+  const res = await fetch(reportHref(id.base, uuid), {
+    headers: { Cookie: `JSESSIONID=${id.cookie}` }
+  })
+  if (!res.ok) throw new Error('Could not download report.')
+  const buf = Buffer.from(await res.arrayBuffer())
+
+  const { dialog } = await import('electron')
+  const safe = suggestedName.replace(/[\\/:*?"<>|]/g, '-').trim() || 'report'
+  const out = await dialog.showSaveDialog({
+    title: 'Save report',
+    defaultPath: `${safe}.pdf`,
+    filters: [{ name: 'PDF', extensions: ['pdf'] }]
+  })
+  if (out.canceled || !out.filePath) return { saved: false }
+  writeFileSync(out.filePath, buf)
+  return { saved: true, path: out.filePath }
 }

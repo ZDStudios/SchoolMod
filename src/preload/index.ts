@@ -92,6 +92,10 @@ const api = {
     subjectsList: () => invoke<SeqtaSubject[]>(CH.seqtaSubjectsList),
     /** Signed-in URL + partition for the embedded SEQTA browser. */
     webview: () => invoke<{ url: string; partition: string }>(CH.seqtaWebview),
+    /** Signed-in URL + partition for viewing a report PDF in-app. */
+    reportUrl: (uuid: string) => invoke<{ url: string; partition: string }>(CH.seqtaReportUrl, uuid),
+    saveReport: (uuid: string, name: string) =>
+      invoke<{ saved: boolean; path?: string }>(CH.seqtaSaveReport, uuid, name),
     courseContent: (subjectKeyword: string) => invoke<SeqtaCourseContent[]>(CH.seqtaCourseContent, subjectKeyword)
   },
   notebooks: {

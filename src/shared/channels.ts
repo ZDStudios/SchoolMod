@@ -45,6 +45,8 @@ export const CH = {
   seqtaCourseContent: 'seqta:courseContent',
   seqtaLogout: 'seqta:logout',
   seqtaWebview: 'seqta:webview',
+  seqtaReportUrl: 'seqta:reportUrl',
+  seqtaSaveReport: 'seqta:saveReport',
 
   // notebooks
   nbList: 'nb:list',

@@ -280,3 +280,6 @@ export const subjectsList = () => direct.subjectsList()
 export const courseContent = (subjectKeyword: string) => direct.courseContent(subjectKeyword)
 /** Signed-in URL + session partition for the embedded SEQTA browser. */
 export const prepareWebview = () => direct.prepareWebview()
+/** Signed-in URL + partition for viewing a report PDF in-app. */
+export const reportUrl = (uuid: string) => direct.reportUrl(uuid)
+export const saveReport = (uuid: string, name: string) => direct.saveReport(uuid, name)

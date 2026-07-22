@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Globe, CalendarDays, Clock, MapPin, User, FileText, Megaphone, RefreshCw, ClipboardList, Mail, FileBadge2, GraduationCap, ChevronLeft, Search, Paperclip, History } from 'lucide-react'
+import { Download, ExternalLink, Globe, CalendarDays, Clock, MapPin, User, FileText, Megaphone, RefreshCw, ClipboardList, Mail, FileBadge2, GraduationCap, ChevronLeft, Search, Paperclip, History } from 'lucide-react'
 import { PageHeader, Empty, Spinner, ErrorBanner } from '../components/ui'
 import WebFrame from '../components/WebFrame'
 import { useApp } from '../store/app'
@@ -206,19 +206,95 @@ function Messages({ items }: { items: SeqtaMessage[] }) {
 }
 
 function Reports({ items }: { items: SeqtaReport[] }) {
+  const [open, setOpen] = useState<SeqtaReport | null>(null)
+  const [cfg, setCfg] = useState<{ url: string; partition: string } | null>(null)
+  const [err, setErr] = useState('')
+  const [saved, setSaved] = useState('')
+  const [height, setHeight] = useState(0)
+  const boxRef = useRef<HTMLDivElement>(null)
+
+  const label = (r: SeqtaReport) => `${r.types} ${r.terms} ${r.year}`.replace(/\s+/g, ' ').trim()
+
+  const view = async (r: SeqtaReport) => {
+    setOpen(r)
+    setCfg(null)
+    setErr('')
+    setSaved('')
+    try {
+      setCfg(await call(window.api.seqta.reportUrl(r.uuid)))
+    } catch (e: any) {
+      setErr(e.message)
+    }
+  }
+
+  // Same self-measuring trick as the Browse panel: a fixed vh would push the
+  // bottom of the PDF off the screen on shorter windows.
+  useEffect(() => {
+    const fit = () => {
+      const el = boxRef.current
+      if (!el) return
+      setHeight(Math.max(360, window.innerHeight - el.getBoundingClientRect().top - 24))
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [cfg])
+
+  if (open) {
+    return (
+      <div>
+        <div className="mb-3 flex items-center gap-2">
+          <button className="btn btn-ghost px-2" onClick={() => setOpen(null)}>
+            <ChevronLeft size={15} /> All reports
+          </button>
+          <span className="font-semibold">{open.types}</span>
+          <span className="chip">{open.terms} · {open.year}</span>
+          <button
+            className="btn ml-auto"
+            onClick={async () => {
+              try {
+                const r = await call(window.api.seqta.saveReport(open.uuid, label(open)))
+                if (r?.saved) setSaved(`Saved to ${r.path}`)
+              } catch (e: any) {
+                setErr(e.message)
+              }
+            }}
+          >
+            <Download size={15} /> Save PDF
+          </button>
+        </div>
+        <ErrorBanner message={err} />
+        {saved && <p className="mb-2 text-xs" style={{ color: 'var(--text-dim)' }}>{saved}</p>}
+        {!cfg ? (
+          <div className="card grid place-items-center py-16"><Spinner size={22} /></div>
+        ) : (
+          <div ref={boxRef} className="card overflow-hidden" style={{ height: height ? `${height}px` : '60vh' }}>
+            <WebFrame src={cfg.url} partition={cfg.partition} title={label(open)} embedded />
+          </div>
+        )}
+      </div>
+    )
+  }
+
   if (!items.length) return <Empty icon={<FileBadge2 size={36} />} title="No reports yet" hint="Report cards appear here when released." />
   return (
     <div className="space-y-2">
+      <ErrorBanner message={err} />
       {items.map((r) => (
-        <button key={r.uuid} onClick={() => window.api.seqta.openReport(r.uuid)} className="card flex w-full items-center justify-between p-4 text-left transition hover:border-[var(--accent)]">
-          <div>
+        <div key={r.uuid} className="card flex w-full items-center justify-between p-4 text-left transition hover:border-[var(--accent)]">
+          <button className="min-w-0 flex-1 text-left" onClick={() => view(r)}>
             <p className="font-semibold">{r.types}</p>
             <p className="text-xs" style={{ color: 'var(--text-dim)' }}>{r.terms} · {r.year}</p>
+          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button className="btn" onClick={() => view(r)}>
+              <FileBadge2 size={15} /> View
+            </button>
+            <button className="btn btn-ghost px-2" title="Open in your PDF app" onClick={() => window.api.seqta.openReport(r.uuid)}>
+              <ExternalLink size={15} />
+            </button>
           </div>
-          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--accent)' }}>
-            <FileBadge2 size={16} /> Open PDF
-          </div>
-        </button>
+        </div>
       ))}
     </div>
   )
