@@ -159,6 +159,45 @@ async function runDiagnostics() {
     log('DONE')
     return
   }
+  if (process.env.SCHOOLMOD_DIAG === 'webview') {
+    // Prove the embedded SEQTA browser opens ALREADY SIGNED IN. Seeding the
+    // cookie is not enough on its own — the real test is loading the page in a
+    // webview-equivalent window and checking it isn't the SSO login screen.
+    const { session, BrowserWindow: BW } = await import('electron')
+    const cfg = await seqta.prepareWebview()
+    log('url =', cfg.url, '| partition =', cfg.partition)
+
+    const ses = session.fromPartition(cfg.partition)
+    const cookies = await ses.cookies.get({ name: 'JSESSIONID' })
+    log('cookies in partition:', cookies.map((c) => `${c.name}@${c.domain} len=${c.value.length}`).join(', ') || '(none)')
+
+    const w = new BW({
+      show: false,
+      webPreferences: { partition: cfg.partition, sandbox: true, contextIsolation: true, nodeIntegration: false }
+    })
+    await w.loadURL(cfg.url).catch((e: any) => log('load error:', e?.message))
+    // SEQTA is a SPA — give it a moment to render past the initial shell.
+    await new Promise((r) => setTimeout(r, 6000))
+    const probe = await w.webContents
+      .executeJavaScript(
+        `({ url: location.href, title: document.title,
+            len: (document.body.innerText || '').length,
+            sample: (document.body.innerText || '').replace(/\\s+/g, ' ').slice(0, 200) })`,
+        true
+      )
+      .catch((e: any) => ({ error: e?.message }))
+    log('final url  =', (probe as any).url)
+    log('title      =', (probe as any).title)
+    log('text length=', (probe as any).len)
+    log('sample     =', (probe as any).sample)
+
+    const u = String((probe as any).url || '')
+    const signedIn = !/login\.microsoftonline\.com|\/login/i.test(u) && (probe as any).len > 200
+    log('SIGNED IN? ', signedIn)
+    w.destroy()
+    log('DONE')
+    return
+  }
   if (process.env.SCHOOLMOD_DIAG === 'toggle') {
     // Ground truth for every boolean setting: flip it through the same
     // setSettings() the UI calls, then read settings.json back off disk and
@@ -379,12 +418,28 @@ app.whenReady().then(() => {
   // to the school-relevant domains we actually embed.
   const ALLOWED_WEBVIEW_HOSTS =
     /(\.|^)(onenote\.com|onenote\.cloud\.microsoft|sharepoint\.com|officeapps\.live\.com|office\.com|cloud\.microsoft|live\.com|microsoftonline\.com|microsoft\.com|mathspace\.co|educationperfect\.com)$/i
+
+  /**
+   * The school's SEQTA host can't be hardcoded — every school runs its own
+   * (Trinity's is students.trinity.wa.edu.au, nothing to do with seqta.com.au),
+   * so it's read from the configured base URL at check time.
+   */
+  const seqtaHostAllowed = (host: string): boolean => {
+    const base = getSettings().seqta.baseUrl
+    if (!base) return false
+    try {
+      const seqtaHost = new URL(base).hostname
+      return host === seqtaHost || host.endsWith('.' + seqtaHost)
+    } catch {
+      return false
+    }
+  }
   app.on('web-contents-created', (_e, contents) => {
     if (contents.getType() !== 'webview') return
     contents.setWindowOpenHandler((details) => {
       try {
         const host = new URL(details.url).hostname
-        if (ALLOWED_WEBVIEW_HOSTS.test(host)) return { action: 'allow' }
+        if (ALLOWED_WEBVIEW_HOSTS.test(host) || seqtaHostAllowed(host)) return { action: 'allow' }
       } catch {
         /* fall through to deny */
       }
@@ -393,7 +448,8 @@ app.whenReady().then(() => {
     })
     contents.on('will-navigate', (e, url) => {
       try {
-        if (!ALLOWED_WEBVIEW_HOSTS.test(new URL(url).hostname)) e.preventDefault()
+        const h = new URL(url).hostname
+        if (!ALLOWED_WEBVIEW_HOSTS.test(h) && !seqtaHostAllowed(h)) e.preventDefault()
       } catch {
         e.preventDefault()
       }

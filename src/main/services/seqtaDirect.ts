@@ -511,3 +511,33 @@ export async function courseContent(subjectKeyword: string): Promise<CourseConte
   if (!results.length) throw new Error(`Found the subject but could not load its course content.`)
   return results
 }
+
+/** Persistent partition backing the in-app SEQTA browser. */
+export const WEBVIEW_PARTITION = 'persist:seqta-web'
+
+/**
+ * Prepare the embedded SEQTA browser so it opens already signed in.
+ *
+ * The SSO partition ('seqta-sso') is deliberately in-memory and is wiped when
+ * the app quits, so the webview can't just reuse it. Instead we take the
+ * JSESSIONID that ensure() has already validated and plant it in a persistent
+ * partition. That skips a second interactive Microsoft login entirely.
+ */
+export async function prepareWebview(): Promise<{ url: string; partition: string }> {
+  const id = await ensure()
+  const { session } = await import('electron')
+  const ses = session.fromPartition(WEBVIEW_PARTITION)
+  const host = new URL(id.base).hostname
+
+  await ses.cookies.set({
+    url: id.base,
+    name: 'JSESSIONID',
+    value: id.cookie,
+    domain: host,
+    path: '/',
+    httpOnly: true,
+    secure: id.base.startsWith('https')
+  })
+
+  return { url: `${id.base}/#?page=/home`, partition: WEBVIEW_PARTITION }
+}

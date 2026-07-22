@@ -90,6 +90,8 @@ const api = {
     reports: () => invoke<SeqtaReport[]>(CH.seqtaReports),
     openReport: (uuid: string) => invoke(CH.seqtaOpenReport, uuid),
     subjectsList: () => invoke<SeqtaSubject[]>(CH.seqtaSubjectsList),
+    /** Signed-in URL + partition for the embedded SEQTA browser. */
+    webview: () => invoke<{ url: string; partition: string }>(CH.seqtaWebview),
     courseContent: (subjectKeyword: string) => invoke<SeqtaCourseContent[]>(CH.seqtaCourseContent, subjectKeyword)
   },
   notebooks: {

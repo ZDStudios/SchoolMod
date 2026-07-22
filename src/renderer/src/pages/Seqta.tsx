@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CalendarDays, Clock, MapPin, User, FileText, Megaphone, RefreshCw, ClipboardList, Mail, FileBadge2, GraduationCap, ChevronLeft, Search, Paperclip, History } from 'lucide-react'
+import { Globe, CalendarDays, Clock, MapPin, User, FileText, Megaphone, RefreshCw, ClipboardList, Mail, FileBadge2, GraduationCap, ChevronLeft, Search, Paperclip, History } from 'lucide-react'
 import { PageHeader, Empty, Spinner, ErrorBanner } from '../components/ui'
+import WebFrame from '../components/WebFrame'
 import { useApp } from '../store/app'
 import { call, fmtDate, daysUntil } from '../lib/utils'
 import type { SeqtaLesson, SeqtaAssessment, SeqtaNotice, SeqtaHomeworkGroup, SeqtaMessage, SeqtaReport, SeqtaSubject, SeqtaCourseContent } from '../../../shared/types'
 
 export default function Seqta() {
   const connected = !!useApp((s) => s.settings?.seqta.connected)
-  const [tab, setTab] = useState<'timetable' | 'assessments' | 'homework' | 'notices' | 'messages' | 'reports' | 'courses'>('timetable')
+  const [tab, setTab] = useState<'timetable' | 'assessments' | 'homework' | 'notices' | 'messages' | 'reports' | 'courses' | 'browse'>('timetable')
   const [week, setWeek] = useState(false)
   const [lessons, setLessons] = useState<SeqtaLesson[]>([])
   const [assessments, setAssessments] = useState<SeqtaAssessment[]>([])
@@ -72,7 +73,8 @@ export default function Seqta() {
     { id: 'notices', label: 'Notices', icon: Megaphone, count: notices.length },
     { id: 'messages', label: 'Messages', icon: Mail, count: messages.length },
     { id: 'reports', label: 'Reports', icon: FileBadge2, count: reports.length },
-    { id: 'courses', label: 'Courses', icon: GraduationCap, count: null }
+    { id: 'courses', label: 'Courses', icon: GraduationCap, count: null },
+    { id: 'browse', label: 'Browse', icon: Globe, count: null }
   ] as const
 
   return (
@@ -128,8 +130,10 @@ export default function Seqta() {
         <Messages items={messages} />
       ) : tab === 'reports' ? (
         <Reports items={reports} />
-      ) : (
+      ) : tab === 'courses' ? (
         <Courses />
+      ) : (
+        <BrowseSeqta />
       )}
     </div>
   )
@@ -463,6 +467,34 @@ function Courses() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+
+/**
+ * The real SEQTA site, embedded.
+ *
+ * The main process plants the already-validated JSESSIONID into a persistent
+ * partition first, so this opens straight onto the portal instead of bouncing
+ * through a second Microsoft login.
+ */
+function BrowseSeqta() {
+  const [cfg, setCfg] = useState<{ url: string; partition: string } | null>(null)
+  const [err, setErr] = useState('')
+
+  useEffect(() => {
+    call(window.api.seqta.webview())
+      .then(setCfg)
+      .catch((e) => setErr(e.message))
+  }, [])
+
+  if (err) return <ErrorBanner message={err} />
+  if (!cfg) return <div className="card grid place-items-center py-16"><Spinner size={22} /></div>
+
+  return (
+    <div className="card overflow-hidden" style={{ height: '70vh' }}>
+      <WebFrame src={cfg.url} partition={cfg.partition} title="SEQTA Learn" embedded />
     </div>
   )
 }

@@ -7,7 +7,10 @@ interface WebFrameProps {
   /** Electron session partition — reuse 'persist:ms365' to share the signed-in Microsoft session. */
   partition: string
   title: string
-  onClose: () => void
+  /** Omit to render without a close button (for a panel that lives inside a tab). */
+  onClose?: () => void
+  /** Fill the parent instead of covering the screen as a fullscreen overlay. */
+  embedded?: boolean
 }
 
 /**
@@ -15,7 +18,7 @@ interface WebFrameProps {
  * <webview>) for viewing real school web apps — OneNote, Mathspace, Education
  * Perfect — inside SchoolMod instead of switching to an external browser.
  */
-export default function WebFrame({ src, partition, title, onClose }: WebFrameProps) {
+export default function WebFrame({ src, partition, title, onClose, embedded }: WebFrameProps) {
   const ref = useRef<any>(null)
   const [loading, setLoading] = useState(true)
   const [canGoBack, setCanGoBack] = useState(false)
@@ -45,12 +48,19 @@ export default function WebFrame({ src, partition, title, onClose }: WebFramePro
   }, [])
 
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col" style={{ background: 'var(--bg)' }}>
+    <div
+      className={embedded ? 'flex h-full flex-col' : 'fixed inset-0 z-[80] flex flex-col'}
+      style={{ background: 'var(--bg)' }}
+    >
       <div className="flex h-12 shrink-0 items-center gap-1.5 border-b px-3" style={{ borderColor: 'var(--border)', background: 'var(--bg-sidebar)' }}>
-        <button className="btn btn-ghost px-2 py-1.5" onClick={onClose}>
-          <X size={16} />
-        </button>
-        <div className="mx-1 h-5 w-px" style={{ background: 'var(--border)' }} />
+        {onClose && (
+          <>
+            <button className="btn btn-ghost px-2 py-1.5" onClick={onClose}>
+              <X size={16} />
+            </button>
+            <div className="mx-1 h-5 w-px" style={{ background: 'var(--border)' }} />
+          </>
+        )}
         <button className="btn btn-ghost px-2 py-1.5" disabled={!canGoBack} onClick={() => ref.current?.goBack()}>
           <ArrowLeft size={15} />
         </button>

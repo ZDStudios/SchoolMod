@@ -278,3 +278,5 @@ export const reports = () => direct.reports()
 export const openReport = (uuid: string) => direct.openReport(uuid)
 export const subjectsList = () => direct.subjectsList()
 export const courseContent = (subjectKeyword: string) => direct.courseContent(subjectKeyword)
+/** Signed-in URL + session partition for the embedded SEQTA browser. */
+export const prepareWebview = () => direct.prepareWebview()
