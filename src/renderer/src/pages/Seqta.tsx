@@ -91,12 +91,17 @@ export default function Seqta() {
       />
       <ErrorBanner message={err} />
 
-      <div className="mb-5 flex gap-1 rounded-xl p-1" style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
+      {/*
+        * Wrap rather than squeeze: with 8 tabs, `flex-1` forced every tab to
+        * share one row and pushed the last one off the right edge. Letting them
+        * wrap keeps every tab reachable at any window width.
+        */}
+      <div className="mb-5 flex flex-wrap gap-1 rounded-xl p-1" style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition ${tab === t.id ? 'text-white' : ''}`}
+            className={`flex flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${tab === t.id ? 'text-white' : ''}`}
             style={{ background: tab === t.id ? 'var(--accent)' : 'transparent' }}
           >
             <t.icon size={15} /> {t.label}

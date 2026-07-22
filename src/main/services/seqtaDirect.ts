@@ -89,7 +89,7 @@ async function runHelperWithAutoDeps(args: string[]): Promise<any> {
   return info
 }
 
-async function apiRaw(path: string, body: unknown = {}, method = 'POST'): Promise<any> {
+export async function apiRaw(path: string, body: unknown = {}, method = 'POST'): Promise<any> {
   const res = await fetch(`${identity!.base}${path}`, {
     method,
     headers: {
@@ -475,6 +475,30 @@ export interface CourseContent {
  * lesson-by-lesson in the Courses tab. Matches by code/title substring so
  * "humanities" or "8HU23" both work.
  */
+/**
+ * Pull a lesson's body out of whichever place SEQTA put it.
+ *
+ * Two editors are in play across the same course. Older lessons carry rendered
+ * HTML in `o`. Newer ones leave `o` as an empty string and store the body in
+ * the Lexical editor's module tree, at document.contents -> modules[].content.html
+ * (NOT .content.value, which only ever holds file attachments — that's the key
+ * that made these lessons look empty).
+ */
+function lessonBody(item: any): string {
+  const legacy = String(item?.o || '').trim()
+  if (legacy) return legacy
+  try {
+    const doc = JSON.parse(item?.document?.contents || '{}')
+    return (doc?.document?.modules || [])
+      .map((m: any) => String(m?.content?.html || '').trim())
+      .filter(Boolean)
+      .join('\n')
+  } catch {
+    // A lesson with no document at all is genuinely empty.
+    return ''
+  }
+}
+
 export async function courseContent(subjectKeyword: string): Promise<CourseContent[]> {
   await ensure()
   const kw = subjectKeyword.trim().toLowerCase()
@@ -517,8 +541,9 @@ export async function courseContent(subjectKeyword: string): Promise<CourseConte
       const items = Array.isArray(bucket) ? bucket : bucket ? [bucket] : []
       for (const item of items) {
         const title = String(item?.t || '').trim()
-        const html = sanitizeHtml(item?.o || '')
-        const notes = htmlToText(item?.o || '')
+        const raw = lessonBody(item)
+        const html = sanitizeHtml(raw)
+        const notes = htmlToText(raw)
         const lessonFiles: string[] = (item?.r || []).map((f: any) => f.filename).filter(Boolean)
         if (!title && !notes && !lessonFiles.length) continue
         lessons.push({

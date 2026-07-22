@@ -105,29 +105,24 @@ async function runDiagnostics() {
   }
   if (process.env.SCHOOLMOD_DIAG === 'course') {
     const seqta = await import('./services/seqta')
-    const subs = await seqta.subjectsList()
-    const current = subs.filter((s: any) => s.current)
-    log('current-period subjects:', JSON.stringify(current.map((s: any) => s.title)))
     const r = await seqta.courseContent('Science')
     const c = r[0]
-    log(`subject=${c.subject} files=${c.files.length} lessons=${c.lessons.length}`)
-    const withHtml = c.lessons.filter((l: any) => l.html)
-    log(`lessons with html body = ${withHtml.length} / ${c.lessons.length}`)
-    // The bug rendered a lesson as the bare number "1". Prove that's gone.
+    const withBody = c.lessons.filter((l: any) => l.html)
+    log(`subject=${c.subject} lessons=${c.lessons.length} withBody=${withBody.length} empty=${c.lessons.length - withBody.length}`)
     const numeric = c.lessons.filter((l: any) => /^\d+$/.test((l.notes || '').trim()))
-    log('lessons whose entire body is just a number =', numeric.length, '(was the bug)')
-    const sample = withHtml.find((l: any) => l.notes.length > 200) || withHtml[0]
-    if (sample) {
-      log('--- sample lesson ---')
-      log('term/week :', sample.term, '/', sample.week)
-      log('title     :', sample.title)
-      log('files     :', JSON.stringify(sample.files))
-      log('html len  :', sample.html.length)
-      log('text len  :', sample.notes.length)
-      log('text      :', sample.notes.replace(/\s+/g, ' ').slice(0, 400))
-      log('html has <script>?', /<script/i.test(sample.html), '| has on* handler?', /\son[a-z]+\s*=/i.test(sample.html))
-      log('html head :', sample.html.replace(/\s+/g, ' ').slice(0, 220))
-    }
+    log('lessons whose body is a bare number =', numeric.length)
+
+    // The exact lesson the user reported as blank.
+    const kin = c.lessons.find((l: any) => /kinetic energy/i.test(l.title))
+    log('--- reported-blank lesson ---')
+    log('title    :', kin?.title)
+    log('html len :', kin?.html?.length ?? 0)
+    log('text len :', kin?.notes?.length ?? 0)
+    log('text     :', (kin?.notes || '').replace(/\s+/g, ' ').slice(0, 320))
+
+    // Which lessons are STILL empty, and are they legitimately empty?
+    const empties = c.lessons.filter((l: any) => !l.html)
+    log('still-empty titles =', JSON.stringify(empties.map((l: any) => l.title).slice(0, 12)))
     log('DONE')
     return
   }
@@ -173,58 +168,92 @@ async function runDiagnostics() {
     return
   }
   if (process.env.SCHOOLMOD_DIAG === 'raw') {
-    // Dump the real /load/courses payload. The lesson parser was written
-    // against guessed field names and renders "1" for a whole lesson, so the
-    // only way forward is to look at what SEQTA actually returns.
     const direct = await import('./services/seqtaDirect')
     await (direct as any).ensure()
     const subs = await (direct as any).subjects()
     const target = subs.find((s: any) => /science/i.test(s.title)) || subs[0]
-    log('subject =', target.title, '| programme =', target.programme, '| metaclass =', target.metaclass)
     const data = await (direct as any).payload('/seqta/student/load/courses', {
       programme: String(target.programme),
       metaclass: String(target.metaclass)
     })
-    log('top-level keys =', JSON.stringify(Object.keys(data)))
-    for (const k of Object.keys(data)) {
-      const v = (data as any)[k]
-      log(`  ${k}: ${Array.isArray(v) ? `array[${v.length}]` : typeof v}`)
-    }
     const d: any[] = data.d || []
-    log('d.length =', d.length)
-    log('d[0] keys =', JSON.stringify(Object.keys(d[0] || {})))
-    log('d[0] =', JSON.stringify(d[0])?.slice(0, 900))
-    log('d[1] =', JSON.stringify(d[1])?.slice(0, 900))
-    // `d[i].n` is an INDEX into `w` — that's the real content array.
     const w: any[] = data.w || []
-    log('w.length =', w.length)
-    log('w[0] keys =', JSON.stringify(Object.keys(w[0] || {})))
-    log('w[0] =', JSON.stringify(w[0])?.slice(0, 1200))
-    const richest = w.slice().sort((a, b) => JSON.stringify(b).length - JSON.stringify(a).length)[0]
-    log('richest w entry =', JSON.stringify(richest)?.slice(0, 2000))
-    // Does `o` (rendered HTML) cover everything, or does document.contents
-    // carry body text that `o` omits? Decides whether the parser needs to walk
-    // the module tree as well.
-    let withO = 0, withoutO = 0, oTotal = 0
-    const moduleTypes = new Map<string, number>()
-    const contentKeys = new Set<string>()
-    for (const wk of w) {
-      for (const item of (Array.isArray(wk) ? wk : [wk])) {
-        if (item?.o) { withO++; oTotal += String(item.o).length } else withoutO++
-        try {
-          const doc = JSON.parse(item?.document?.contents || '{}')
-          for (const m of doc?.document?.modules || []) {
-            moduleTypes.set(m.type, (moduleTypes.get(m.type) || 0) + 1)
-            if (m.content?.value) Object.keys(m.content.value).forEach((k) => contentKeys.add(k))
-          }
-        } catch { /* not all lessons have a document */ }
+    log(`d.length=${d.length}  w.length=${w.length}`)
+    log('all d[i].n values =', JSON.stringify(d.map((x) => x.n)))
+    const missing = d.filter((x) => w[x.n] === undefined)
+    log('weeks whose w[n] is UNDEFINED =', missing.length, JSON.stringify(missing.map((x) => `T${x.t}W${x.w} n=${x.n}`)))
+
+    // Every distinct key seen on a lesson object, with how often it appears.
+    const keyCount = new Map<string, number>()
+    const all: any[] = []
+    for (const bucket of w) for (const it of (Array.isArray(bucket) ? bucket : [bucket])) {
+      all.push(it)
+      Object.keys(it || {}).forEach((k) => keyCount.set(k, (keyCount.get(k) || 0) + 1))
+    }
+    log('total lesson objects =', all.length)
+    log('key frequency =', JSON.stringify([...keyCount.entries()].sort((a, b) => b[1] - a[1])))
+
+    // Focus on the lesson the user reported as empty.
+    const kin = all.find((x) => /kinetic energy/i.test(x?.t || ''))
+    log('--- "Kinetic Energy" lesson ---')
+    log('keys =', JSON.stringify(Object.keys(kin || {})))
+    log('o length =', (kin?.o || '').length, '| l =', JSON.stringify(kin?.l), '| h =', JSON.stringify(kin?.h))
+    log('full (minus document) =', JSON.stringify({ ...kin, document: undefined })?.slice(0, 800))
+    try {
+      const doc = JSON.parse(kin?.document?.contents || '{}')
+      const mods = doc?.document?.modules || []
+      log('document modules =', mods.length)
+      mods.forEach((m: any, i: number) =>
+        log(`  mod[${i}] type=${m.type} contentNull=${m.content == null} keys=${JSON.stringify(Object.keys(m.content?.value || {}))} sample=${JSON.stringify(m.content?.value)?.slice(0, 200)}`)
+      )
+      log('document id =', kin?.document?.id)
+    } catch (e: any) { log('document parse failed:', e?.message) }
+
+    // Do any lessons carry prose inside a module rather than in `o`?
+    let modProse = 0
+    for (const it of all) {
+      if (it?.o) continue
+      try {
+        const doc = JSON.parse(it?.document?.contents || '{}')
+        for (const m of doc?.document?.modules || []) {
+          const v = JSON.stringify(m?.content?.value || '')
+          if (v.length > 80 && !v.includes('resources')) { modProse++; log('  prose-in-module sample:', v.slice(0, 300)) }
+        }
+      } catch { /* ignore */ }
+    }
+    log('lessons WITHOUT o that have prose inside a module =', modProse)
+
+    // The body must live behind the document id. Probe plausible endpoints and
+    // report which one returns something real.
+    try {
+      const doc = JSON.parse(kin?.document?.contents || '{}')
+      const mods = doc?.document?.modules || []
+      log('mod[1].content FULL =', JSON.stringify(mods[1]?.content)?.slice(0, 600))
+      log('mod[1] FULL =', JSON.stringify(mods[1])?.slice(0, 600))
+    } catch { /* ignore */ }
+
+    const docId = kin?.document?.id
+    const lessonId = kin?.i
+    const probes: [string, any][] = [
+      ['/seqta/student/load/document', { id: docId }],
+      ['/seqta/student/load/document', { document: docId }],
+      ['/seqta/student/load/lesson', { id: lessonId }],
+      ['/seqta/student/load/lessons', { lesson: lessonId }],
+      ['/seqta/student/load/courses/document', { id: docId }],
+      ['/seqta/student/coneqt/document', { id: docId }],
+      ['/seqta/student/load/coneqt', { id: docId }],
+      ['/seqta/student/load/documents', { id: docId }]
+    ]
+    for (const [path, body] of probes) {
+      try {
+        const r = await (direct as any).apiRaw(path, body)
+        const keys = r && typeof r === 'object' ? Object.keys(r) : []
+        const size = JSON.stringify(r)?.length || 0
+        log(`probe ${path} ${JSON.stringify(body)} -> keys=${JSON.stringify(keys)} size=${size} sample=${JSON.stringify(r)?.slice(0, 200)}`)
+      } catch (e: any) {
+        log(`probe ${path} -> FAILED ${e?.message}`)
       }
     }
-    log('lessons with `o` html =', withO, '| without =', withoutO, '| avg o length =', withO ? Math.round(oTotal / withO) : 0)
-    log('module types =', JSON.stringify([...moduleTypes.entries()]))
-    log('module content.value keys =', JSON.stringify([...contentKeys]))
-    const noO = w.flat().find((x: any) => !x?.o && x?.document)
-    log('a lesson WITHOUT o =', JSON.stringify(noO)?.slice(0, 700))
     log('DONE')
     return
   }
