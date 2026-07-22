@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { spawn } from 'child_process'
 import { join } from 'path'
 import { getSettings, setSettings } from '../store'
+import { sanitizeHtml, htmlToText } from './html'
 import { resolveCommand } from './mcpClient'
 import { puppeteerLogin } from './seqtaPuppeteer'
 import { electronSsoLogin } from './seqtaElectron'
@@ -102,7 +103,7 @@ async function apiRaw(path: string, body: unknown = {}, method = 'POST'): Promis
   const json = await res.json()
   return json
 }
-const payload = async (path: string, body?: unknown) => (await apiRaw(path, body)).payload
+export const payload = async (path: string, body?: unknown) => (await apiRaw(path, body)).payload
 
 /** Validate a cookie by hitting /login; returns identity fields or null. */
 async function validate(cookie: string): Promise<Identity | null> {
@@ -261,7 +262,7 @@ interface Subject {
  * year. The period string sorts chronologically as plain text (YYYY then S
  * then term number), so the latest one is reliably "this year".
  */
-async function subjects(): Promise<Subject[]> {
+export async function subjects(): Promise<Subject[]> {
   const data = await payload('/seqta/student/load/subjects')
   const out: Subject[] = []
   const seen = new Set<number>()
@@ -453,7 +454,10 @@ export interface LessonContent {
   term: string
   week: string
   title: string
+  /** Plain-text body — for search, the agent, and notebook import. */
   notes: string
+  /** Sanitised HTML body as the teacher authored it. */
+  html: string
   files: string[]
 }
 
@@ -488,19 +492,43 @@ export async function courseContent(subjectKeyword: string): Promise<CourseConte
     if (!data) continue
 
     const files: string[] = (data.cf || []).map((f: any) => f.filename).filter(Boolean)
+
+    /*
+     * Payload shape, confirmed by dumping a real course (SCHOOLMOD_DIAG=raw):
+     *
+     *   data.d  — one entry per teaching week: { t: term, w: week, l: [slots], n }
+     *   data.w  — the lesson CONTENT, as an array of arrays
+     *
+     * `d[i].n` is an INDEX INTO `data.w`, not a note. The previous parser
+     * paired d[i] with w[i] positionally and rendered `item.n` as the lesson
+     * body, which is why a lesson displayed as the bare number "1".
+     *
+     * Within a lesson: `t` is the title, `o` is the rendered HTML body (avg
+     * ~61k chars on a real subject), and `r` is the attachment list. The
+     * document.contents module tree only ever carries resources/mode — no
+     * prose — so `o` is the complete body and lessons without it are
+     * genuinely empty (e.g. "No Lesson- PCG and Assembly").
+     */
     const dWeeks: any[] = data.d || []
-    const wWeeks: any[] = data.w || []
+    const wContent: any[] = data.w || []
     const lessons: LessonContent[] = []
-    for (let i = 0; i < dWeeks.length; i++) {
-      const week = dWeeks[i]
-      const content = wWeeks[i]
-      const items = Array.isArray(content) ? content : content ? [content] : []
+    for (const week of dWeeks) {
+      const bucket = wContent[week?.n]
+      const items = Array.isArray(bucket) ? bucket : bucket ? [bucket] : []
       for (const item of items) {
-        const title = item?.t || ''
-        const notes = item?.n ? String(item.n).replace(/<[^>]+>/g, ' ').trim() : ''
+        const title = String(item?.t || '').trim()
+        const html = sanitizeHtml(item?.o || '')
+        const notes = htmlToText(item?.o || '')
         const lessonFiles: string[] = (item?.r || []).map((f: any) => f.filename).filter(Boolean)
         if (!title && !notes && !lessonFiles.length) continue
-        lessons.push({ term: String(week?.t ?? '?'), week: String(week?.w ?? '?'), title, notes, files: lessonFiles })
+        lessons.push({
+          term: String(week?.t ?? '?'),
+          week: String(week?.w ?? '?'),
+          title,
+          notes,
+          html,
+          files: lessonFiles
+        })
       }
     }
     const text =

@@ -209,7 +209,10 @@ export interface SeqtaLessonContent {
   term: string
   week: string
   title: string
+  /** Plain-text body — used for search, the agent, and notebook import. */
   notes: string
+  /** Sanitised HTML body as the teacher authored it (tables, headings, colour). */
+  html: string
   files: string[]
 }
 

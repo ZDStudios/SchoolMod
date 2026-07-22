@@ -107,14 +107,27 @@ async function runDiagnostics() {
     const seqta = await import('./services/seqta')
     const subs = await seqta.subjectsList()
     const current = subs.filter((s: any) => s.current)
-    const other = subs.filter((s: any) => !s.current)
     log('current-period subjects:', JSON.stringify(current.map((s: any) => s.title)))
-    log('other-period subjects:', other.length, JSON.stringify(other.slice(0, 3).map((s: any) => s.title)))
-    await step('courseContent(current[0])', async () => {
-      const r = await seqta.courseContent(current[0].title)
-      const c = r[0]
-      return { subject: c.subject, files: c.files, lessonCount: c.lessons.length, firstLesson: c.lessons[0] }
-    })
+    const r = await seqta.courseContent('Science')
+    const c = r[0]
+    log(`subject=${c.subject} files=${c.files.length} lessons=${c.lessons.length}`)
+    const withHtml = c.lessons.filter((l: any) => l.html)
+    log(`lessons with html body = ${withHtml.length} / ${c.lessons.length}`)
+    // The bug rendered a lesson as the bare number "1". Prove that's gone.
+    const numeric = c.lessons.filter((l: any) => /^\d+$/.test((l.notes || '').trim()))
+    log('lessons whose entire body is just a number =', numeric.length, '(was the bug)')
+    const sample = withHtml.find((l: any) => l.notes.length > 200) || withHtml[0]
+    if (sample) {
+      log('--- sample lesson ---')
+      log('term/week :', sample.term, '/', sample.week)
+      log('title     :', sample.title)
+      log('files     :', JSON.stringify(sample.files))
+      log('html len  :', sample.html.length)
+      log('text len  :', sample.notes.length)
+      log('text      :', sample.notes.replace(/\s+/g, ' ').slice(0, 400))
+      log('html has <script>?', /<script/i.test(sample.html), '| has on* handler?', /\son[a-z]+\s*=/i.test(sample.html))
+      log('html head :', sample.html.replace(/\s+/g, ' ').slice(0, 220))
+    }
     log('DONE')
     return
   }
@@ -156,6 +169,62 @@ async function runDiagnostics() {
     if (exists) fs.unlinkSync(testFile)
 
     s.setSettings({ computerAccess: false })
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'raw') {
+    // Dump the real /load/courses payload. The lesson parser was written
+    // against guessed field names and renders "1" for a whole lesson, so the
+    // only way forward is to look at what SEQTA actually returns.
+    const direct = await import('./services/seqtaDirect')
+    await (direct as any).ensure()
+    const subs = await (direct as any).subjects()
+    const target = subs.find((s: any) => /science/i.test(s.title)) || subs[0]
+    log('subject =', target.title, '| programme =', target.programme, '| metaclass =', target.metaclass)
+    const data = await (direct as any).payload('/seqta/student/load/courses', {
+      programme: String(target.programme),
+      metaclass: String(target.metaclass)
+    })
+    log('top-level keys =', JSON.stringify(Object.keys(data)))
+    for (const k of Object.keys(data)) {
+      const v = (data as any)[k]
+      log(`  ${k}: ${Array.isArray(v) ? `array[${v.length}]` : typeof v}`)
+    }
+    const d: any[] = data.d || []
+    log('d.length =', d.length)
+    log('d[0] keys =', JSON.stringify(Object.keys(d[0] || {})))
+    log('d[0] =', JSON.stringify(d[0])?.slice(0, 900))
+    log('d[1] =', JSON.stringify(d[1])?.slice(0, 900))
+    // `d[i].n` is an INDEX into `w` — that's the real content array.
+    const w: any[] = data.w || []
+    log('w.length =', w.length)
+    log('w[0] keys =', JSON.stringify(Object.keys(w[0] || {})))
+    log('w[0] =', JSON.stringify(w[0])?.slice(0, 1200))
+    const richest = w.slice().sort((a, b) => JSON.stringify(b).length - JSON.stringify(a).length)[0]
+    log('richest w entry =', JSON.stringify(richest)?.slice(0, 2000))
+    // Does `o` (rendered HTML) cover everything, or does document.contents
+    // carry body text that `o` omits? Decides whether the parser needs to walk
+    // the module tree as well.
+    let withO = 0, withoutO = 0, oTotal = 0
+    const moduleTypes = new Map<string, number>()
+    const contentKeys = new Set<string>()
+    for (const wk of w) {
+      for (const item of (Array.isArray(wk) ? wk : [wk])) {
+        if (item?.o) { withO++; oTotal += String(item.o).length } else withoutO++
+        try {
+          const doc = JSON.parse(item?.document?.contents || '{}')
+          for (const m of doc?.document?.modules || []) {
+            moduleTypes.set(m.type, (moduleTypes.get(m.type) || 0) + 1)
+            if (m.content?.value) Object.keys(m.content.value).forEach((k) => contentKeys.add(k))
+          }
+        } catch { /* not all lessons have a document */ }
+      }
+    }
+    log('lessons with `o` html =', withO, '| without =', withoutO, '| avg o length =', withO ? Math.round(oTotal / withO) : 0)
+    log('module types =', JSON.stringify([...moduleTypes.entries()]))
+    log('module content.value keys =', JSON.stringify([...contentKeys]))
+    const noO = w.flat().find((x: any) => !x?.o && x?.document)
+    log('a lesson WITHOUT o =', JSON.stringify(noO)?.slice(0, 700))
     log('DONE')
     return
   }

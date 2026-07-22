@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Globe, CalendarDays, Clock, MapPin, User, FileText, Megaphone, RefreshCw, ClipboardList, Mail, FileBadge2, GraduationCap, ChevronLeft, Search, Paperclip, History } from 'lucide-react'
 import { PageHeader, Empty, Spinner, ErrorBanner } from '../components/ui'
@@ -405,7 +405,22 @@ function Courses() {
                           ))}
                         </div>
                       )}
-                      {lesson.notes ? (
+                      {lesson.html ? (
+                        /*
+                         * Teachers author these in a rich-text editor, so the
+                         * markup carries the meaning — colour-coded outcome
+                         * boxes, tables, headings. It's rendered on a light
+                         * "page" surface because SEQTA's inline styles assume a
+                         * white background; on the dark theme its own
+                         * unstyled text would come out white-on-yellow.
+                         * Sanitised in the main process before it gets here.
+                         */
+                        <div
+                          className="seqta-lesson mt-4 overflow-x-auto rounded-xl p-4"
+                          style={{ background: '#fff', color: '#1a1a1a' }}
+                          dangerouslySetInnerHTML={{ __html: lesson.html }}
+                        />
+                      ) : lesson.notes ? (
                         <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed">{lesson.notes}</p>
                       ) : (
                         <p className="mt-4 text-sm" style={{ color: 'var(--text-dim)' }}>No notes for this lesson.</p>
@@ -482,6 +497,8 @@ function Courses() {
 function BrowseSeqta() {
   const [cfg, setCfg] = useState<{ url: string; partition: string } | null>(null)
   const [err, setErr] = useState('')
+  const [height, setHeight] = useState(0)
+  const boxRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     call(window.api.seqta.webview())
@@ -489,11 +506,29 @@ function BrowseSeqta() {
       .catch((e) => setErr(e.message))
   }, [])
 
+  /*
+   * Size the panel from its own measured position rather than a fixed vh.
+   * A hardcoded height (70vh) sat below the page header and tab bar, so the
+   * bottom — and on shorter windows the toolbar itself — ran off the screen.
+   * Measuring means it always fits whatever is above it.
+   */
+  useEffect(() => {
+    const fit = () => {
+      const el = boxRef.current
+      if (!el) return
+      const top = el.getBoundingClientRect().top
+      setHeight(Math.max(360, window.innerHeight - top - 24))
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [cfg])
+
   if (err) return <ErrorBanner message={err} />
   if (!cfg) return <div className="card grid place-items-center py-16"><Spinner size={22} /></div>
 
   return (
-    <div className="card overflow-hidden" style={{ height: '70vh' }}>
+    <div ref={boxRef} className="card overflow-hidden" style={{ height: height ? `${height}px` : '60vh' }}>
       <WebFrame src={cfg.url} partition={cfg.partition} title="SEQTA Learn" embedded />
     </div>
   )

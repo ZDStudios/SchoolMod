@@ -194,3 +194,21 @@ body {
   color: var(--accent);
   text-decoration: underline;
 }
+
+/*
+ * SEQTA lesson bodies are teacher-authored HTML with inline styles that assume
+ * a white page. They're rendered on a light surface, so only the structural
+ * bits need help: keep wide tables from bursting the panel, and stop images
+ * overflowing.
+ */
+.seqta-lesson table { max-width: 100%; border-collapse: collapse; }
+.seqta-lesson td,
+.seqta-lesson th { padding: 6px 8px; vertical-align: top; }
+.seqta-lesson img { max-width: 100%; height: auto; }
+.seqta-lesson a { color: #1a4fd6; text-decoration: underline; }
+.seqta-lesson p { margin: 0 0 0.6em; }
+.seqta-lesson ul,
+.seqta-lesson ol { margin: 0 0 0.6em 1.25em; list-style: revert; }
+.seqta-lesson h1,
+.seqta-lesson h2,
+.seqta-lesson h3 { font-weight: 700; margin: 0.8em 0 0.4em; }
