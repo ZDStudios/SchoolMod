@@ -283,8 +283,8 @@ function Toggle({
         style={{ background: on ? 'var(--accent)' : 'var(--border)' }}
       >
         <span
-          className="absolute top-1 h-5 w-5 rounded-full bg-white transition-transform"
-          style={{ transform: on ? 'translateX(22px)' : 'translateX(4px)' }}
+          className="absolute left-1 top-1 h-5 w-5 rounded-full bg-white transition-transform"
+          style={{ transform: on ? 'translateX(20px)' : 'translateX(0)' }}
         />
       </button>
     </div>
@@ -472,8 +472,8 @@ function ComputerAccessSection() {
           style={{ background: on ? 'var(--accent)' : 'var(--border)' }}
         >
           <span
-            className="absolute top-1 h-5 w-5 rounded-full bg-white transition-transform"
-            style={{ transform: on ? 'translateX(22px)' : 'translateX(4px)' }}
+            className="absolute left-1 top-1 h-5 w-5 rounded-full bg-white transition-transform"
+            style={{ transform: on ? 'translateX(20px)' : 'translateX(0)' }}
           />
         </button>
       </div>

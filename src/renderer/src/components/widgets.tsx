@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Timer, Play, Pause, RotateCcw, Plus, Check, Trash2, Sparkles, StickyNote, Bell, Flame } from 'lucide-react'
 import { useLocalState } from '../lib/hooks'
-import { bellState } from '../../../shared/bells'
+import { bellState, mmss, formatTime } from '../../../shared/bells'
 import { Markdown } from '../lib/md'
 import { call } from '../lib/utils'
 import type { ChatMessage } from '../../../shared/types'
@@ -174,42 +174,63 @@ export function DailyBrief({ context }: { context: () => string }) {
 /* ---------------- Bell times (ported from the original SchoolMod repo) ---------------- */
 export function BellTimes({ schoolId = 'trinity' }: { schoolId?: string }) {
   const [, tick] = useState(0)
+  const [ringing, setRinging] = useState(false)
+  const rang = useRef('')
+
+  // One tick per second — the countdown is the whole point of the bell page.
   useEffect(() => {
-    const t = setInterval(() => tick((n) => n + 1), 1000 * 15)
+    const t = setInterval(() => tick((n) => n + 1), 1000)
     return () => clearInterval(t)
   }, [])
+
   const s = bellState(schoolId)
+
+  // Ring when a period actually rolls over. Keyed by period end so it fires
+  // once per bell, not on every re-render inside that final second.
+  useEffect(() => {
+    if (s.phase !== 'during' || s.secondsLeft == null || s.secondsLeft > 0) return
+    const key = `${s.current?.name}@${s.current?.end}`
+    if (rang.current === key) return
+    rang.current = key
+    setRinging(true)
+    // Matches the bell page's double-ring: 1.8s shake, 1s gap, 1.8s again.
+    const t = setTimeout(() => setRinging(false), 1800 * 2 + 1000)
+    return () => clearTimeout(t)
+  }, [s.phase, s.secondsLeft, s.current?.end])
 
   return (
     <div className="card p-5">
       <div className="mb-3 flex items-center gap-2">
-        <Bell size={17} style={{ color: 'var(--accent)' }} />
+        <Bell size={17} className={ringing ? 'animate-bell-ring' : ''} style={{ color: 'var(--accent)' }} />
         <h3 className="font-semibold">Bell times</h3>
-        {!s.dayOff && s.minutesLeft != null && (
+        {!s.dayOff && (
           <span className="chip ml-auto">
-            {s.current ? `${s.minutesLeft} min left` : `starts in ${s.minutesLeft} min`}
+            {new Date().toLocaleDateString(undefined, { weekday: 'long' })} schedule
           </span>
         )}
       </div>
 
+      {/* Headline block, mirroring the bell page: status, time range, countdown, next up. */}
+      <div className="mb-3 rounded-xl px-4 py-3 text-center" style={{ background: 'var(--bg)' }}>
+        <p className="text-sm font-semibold">{s.status}</p>
+        <p className="mb-1 text-xs" style={{ color: 'var(--text-dim)' }}>{s.rangeLabel}</p>
+        <p className="text-3xl font-bold tabular-nums" style={{ color: 'var(--accent)' }}>
+          {s.secondsLeft == null ? '--:--' : mmss(s.secondsLeft)}
+        </p>
+        <p className="mt-1 text-xs" style={{ color: 'var(--text-dim)' }}>
+          Next: {s.nextLabel}
+        </p>
+      </div>
+
       {s.dayOff ? (
-        <p className="py-4 text-center text-sm" style={{ color: 'var(--text-dim)' }}>No bells today — enjoy it 🎉</p>
+        <p className="py-2 text-center text-sm" style={{ color: 'var(--text-dim)' }}>No bells today — enjoy it 🎉</p>
       ) : (
         <>
-          <div className="mb-3">
-            <p className="text-lg font-bold">{s.current ? s.current.name : s.next ? `Up next: ${s.next.name}` : 'School day finished'}</p>
-            {s.current && (
-              <>
-                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                  {s.current.start} – {s.current.end}
-                  {s.next && ` · then ${s.next.name}`}
-                </p>
-                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full" style={{ background: 'var(--border)' }}>
-                  <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, s.progress * 100)}%`, background: 'var(--accent)' }} />
-                </div>
-              </>
-            )}
-          </div>
+          {s.current && (
+            <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full" style={{ background: 'var(--border)' }}>
+              <div className="h-full rounded-full" style={{ width: `${Math.min(100, s.progress * 100)}%`, background: 'var(--accent)' }} />
+            </div>
+          )}
           <div className="max-h-40 space-y-1 overflow-y-auto">
             {s.schedule.map((p, i) => {
               const isNow = s.current?.name === p.name && s.current?.start === p.start
@@ -217,7 +238,7 @@ export function BellTimes({ schoolId = 'trinity' }: { schoolId?: string }) {
                 <div key={i} className="flex items-center justify-between rounded-lg px-2 py-1 text-xs"
                   style={{ background: isNow ? 'var(--accent-soft)' : 'transparent', color: isNow ? 'var(--accent)' : 'var(--text-dim)' }}>
                   <span className={isNow ? 'font-semibold' : ''}>{p.name}</span>
-                  <span className="tabular-nums">{p.start}–{p.end}</span>
+                  <span className="tabular-nums">{formatTime(p.start)} – {formatTime(p.end)}</span>
                 </div>
               )
             })}

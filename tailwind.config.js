@@ -48,11 +48,18 @@ module.exports = {
         },
         shimmer: {
           '100%': { transform: 'translateX(100%)' }
+        },
+        // The bell page's ring: a fast side-to-side shake of the clapper.
+        'bell-ring': {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '10%, 30%, 50%, 70%': { transform: 'rotate(14deg)' },
+          '20%, 40%, 60%, 80%': { transform: 'rotate(-14deg)' }
         }
       },
       animation: {
         'fade-in': 'fade-in 0.35s ease both',
-        shimmer: 'shimmer 1.5s infinite'
+        shimmer: 'shimmer 1.5s infinite',
+        'bell-ring': 'bell-ring 1.8s ease-in-out'
       }
     }
   },

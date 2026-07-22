@@ -159,6 +159,44 @@ async function runDiagnostics() {
     log('DONE')
     return
   }
+  if (process.env.SCHOOLMOD_DIAG === 'toggle') {
+    // Ground truth for every boolean setting: flip it through the same
+    // setSettings() the UI calls, then read settings.json back off disk and
+    // confirm the value actually landed — not just what getSettings() returns
+    // from its in-memory cache.
+    const st = await import('./store')
+    const fs = await import('fs')
+    const file = join(app.getPath('userData'), 'store', 'settings.json')
+    const onDisk = () => JSON.parse(fs.readFileSync(file, 'utf-8').replace(/^﻿/, ''))
+
+    const cases: { name: string; get: (s: any) => boolean; set: (v: boolean) => void; read: (d: any) => any }[] = [
+      { name: 'computerAccess', get: (s) => s.computerAccess, set: (v) => st.setSettings({ computerAccess: v }), read: (d) => d.computerAccess },
+      { name: 'notifications.enabled', get: (s) => s.notifications.enabled, set: (v) => st.setSettings({ notifications: { ...st.getSettings().notifications, enabled: v } }), read: (d) => d.notifications?.enabled },
+      { name: 'notifications.bells', get: (s) => s.notifications.bells, set: (v) => st.setSettings({ notifications: { ...st.getSettings().notifications, bells: v } }), read: (d) => d.notifications?.bells },
+      { name: 'notifications.assessments', get: (s) => s.notifications.assessments, set: (v) => st.setSettings({ notifications: { ...st.getSettings().notifications, assessments: v } }), read: (d) => d.notifications?.assessments },
+      { name: 'desktop.tray', get: (s) => s.desktop.tray, set: (v) => st.setSettings({ desktop: { ...st.getSettings().desktop, tray: v } }), read: (d) => d.desktop?.tray },
+      { name: 'desktop.autoLaunch', get: (s) => s.desktop.autoLaunch, set: (v) => st.setSettings({ desktop: { ...st.getSettings().desktop, autoLaunch: v } }), read: (d) => d.desktop?.autoLaunch }
+    ]
+
+    for (const c of cases) {
+      const original = c.get(st.getSettings())
+      let ok = true
+      // Toggling to false is the interesting direction: a merge bug that drops
+      // falsy values would still look fine when everything defaults to true.
+      for (const target of [!original, original]) {
+        c.set(target)
+        const mem = c.get(st.getSettings())
+        const disk = c.read(onDisk())
+        if (mem !== target || disk !== target) {
+          ok = false
+          log(`${c.name}: set ${target} -> memory=${mem} disk=${disk}  MISMATCH`)
+        }
+      }
+      log(`${c.name}: ${ok ? 'OK (both directions persisted to disk)' : 'BROKEN'} — restored to ${c.get(st.getSettings())}`)
+    }
+    log('DONE')
+    return
+  }
   if (process.env.SCHOOLMOD_DIAG === 'desktop') {
     const { Notification, globalShortcut } = await import('electron')
     const fs = await import('fs')
