@@ -39,6 +39,20 @@ const getDesktop = lazy(() => import('./services/desktop'))
 const getBackup = lazy(() => import('./services/backup'))
 const getIcs = lazy(() => import('./services/ics'))
 
+/**
+ * Guard for every channel that would reach a model.
+ *
+ * Enforced here rather than only hiding buttons: "fully disable" has to mean
+ * no request can leave, even if something in the renderer still calls through.
+ * The AI provider modules are behind lazy() imports, so a blocked call also
+ * never loads or spawns the CLI.
+ */
+function requireAi() {
+  if (!store.getSettings().aiEnabled) {
+    throw new Error('AI features are turned off. Turn them back on in Settings → AI features.')
+  }
+}
+
 export function registerIpc(getWindow: () => BrowserWindow | null) {
   // ---- window controls ----
   handle(CH.winMinimize, () => getWindow()?.minimize())
@@ -57,19 +71,33 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
   handle(CH.settingsSet, (_e, patch) => store.setSettings(patch))
 
   // ---- claude ----
-  handle(CH.claudePing, async () => (await getClaude()).ping())
+  handle(CH.claudePing, async () => {
+    requireAi()
+    return (await getClaude()).ping()
+  })
   // Connect flows target whichever AI provider is selected.
   const provider = async () => (store.getSettings().claude.mode === 'codex' ? getCodexCli() : getClaudeCli())
-  handle(CH.claudeStatus, async () => (await provider()).status())
-  handle(CH.claudeInstall, async (e) => (await provider()).install((line) => e.sender.send(CH.claudeSetupLog, line)))
-  handle(CH.claudeLogin, async (e) =>
-    (await provider()).login(
+  handle(CH.claudeStatus, async () => {
+    requireAi()
+    return (await provider()).status()
+  })
+  handle(CH.claudeInstall, async (e) => {
+    requireAi()
+    return (await provider()).install((line) => e.sender.send(CH.claudeSetupLog, line))
+  })
+  handle(CH.claudeLogin, async (e) => {
+    requireAi()
+    return (await provider()).login(
       (line) => e.sender.send(CH.claudeSetupLog, line),
       (url) => e.sender.send(CH.claudeLoginUrl, url)
     )
-  )
-  handle(CH.claudeChat, async (_e, messages, model) => (await getClaude()).chat(messages, model))
+  })
+  handle(CH.claudeChat, async (_e, messages, model) => {
+    requireAi()
+    return (await getClaude()).chat(messages, model)
+  })
   handle(CH.claudeChatStream, async (e, messages, model) => {
+    requireAi()
     return (await getClaude()).chatStream(
       messages,
       (delta) => e.sender.send(CH.claudeStreamChunk, delta),
@@ -79,6 +107,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
 
   // Tool-using assistant: can read the student's real SEQTA data and drive the app.
   handle(CH.agentChat, async (e, messages) => {
+    requireAi()
     const before = JSON.stringify(store.getSettings())
     const [{ runAgent }, claude] = await Promise.all([getAgent(), getClaude()])
     const result = await runAgent(
@@ -136,16 +165,28 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
     return notebooks.addSourceFiles(id, result.filePaths)
   })
   handle(CH.nbRemoveSource, async (_e, id, sourceId) => (await getNotebooks()).removeSource(id, sourceId))
-  handle(CH.nbAsk, async (_e, id, q) => (await getNotebooks()).ask(id, q))
-  handle(CH.nbSummarise, async (_e, id) => (await getNotebooks()).summarise(id))
-  handle(CH.nbStudyGuide, async (_e, id) => (await getNotebooks()).studyGuide(id))
+  handle(CH.nbAsk, async (_e, id, q) => {
+    requireAi()
+    return (await getNotebooks()).ask(id, q)
+  })
+  handle(CH.nbSummarise, async (_e, id) => {
+    requireAi()
+    return (await getNotebooks()).summarise(id)
+  })
+  handle(CH.nbStudyGuide, async (_e, id) => {
+    requireAi()
+    return (await getNotebooks()).studyGuide(id)
+  })
   handle(CH.nbSaveChat, async (_e, id, chat) => (await getNotebooks()).saveChat(id, chat))
 
   // ---- flashcards ----
   handle(CH.deckList, async () => (await getFlashcards()).list())
   handle(CH.deckCreate, async (_e, title, desc) => (await getFlashcards()).create(title, desc))
   handle(CH.deckDelete, async (_e, id) => (await getFlashcards()).remove(id))
-  handle(CH.deckGenerate, async (_e, id, source, count) => (await getFlashcards()).generate(id, source, count))
+  handle(CH.deckGenerate, async (_e, id, source, count) => {
+    requireAi()
+    return (await getFlashcards()).generate(id, source, count)
+  })
   handle(CH.deckAddCard, async (_e, id, front, back, hint) => (await getFlashcards()).addCard(id, front, back, hint))
   handle(CH.deckReview, async (_e, id, cardId, grade) => (await getFlashcards()).review(id, cardId, grade))
 

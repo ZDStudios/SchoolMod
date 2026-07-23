@@ -89,6 +89,8 @@ export interface Settings {
   microsoft: MicrosoftSettings
   /** Off by default. When on, the AI assistant can browse/read/write files on this device (never delete or run anything). */
   computerAccess: boolean
+  /** Master switch. When false every AI feature is off and no request is ever sent to a model. */
+  aiEnabled: boolean
   notifications: NotificationSettings
   desktop: DesktopSettings
   onboardingDone: boolean
@@ -119,6 +121,7 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   microsoft: { clientId: '', tenant: 'common', account: '' },
   computerAccess: false,
+  aiEnabled: true,
   notifications: { enabled: true, bells: true, assessments: true, bellLeadMinutes: 5 },
   desktop: { tray: true, autoLaunch: false, quickExplainShortcut: 'CommandOrControl+Shift+E' },
   onboardingDone: false

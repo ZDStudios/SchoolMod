@@ -257,6 +257,65 @@ async function runDiagnostics() {
     log('DONE')
     return
   }
+  if (process.env.SCHOOLMOD_DIAG === 'aioff') {
+    // Ground truth for "fully disable": with aiEnabled=false, every AI channel
+    // must refuse, and nothing may reach a model. Tested through the real IPC
+    // handlers, not by calling the services directly.
+    const st = await import('./store')
+    const { ipcMain } = await import('electron')
+    const { CH } = await import('../shared/channels')
+
+    const AI_CHANNELS: [string, any[]][] = [
+      [CH.claudePing, []],
+      [CH.claudeStatus, []],
+      [CH.claudeChat, [[{ role: 'user', content: 'hi' }]]],
+      [CH.claudeChatStream, [[{ role: 'user', content: 'hi' }]]],
+      [CH.agentChat, [[{ role: 'user', content: 'hi' }]]],
+      [CH.nbAsk, ['nope', 'q']],
+      [CH.nbSummarise, ['nope']],
+      [CH.nbStudyGuide, ['nope']],
+      [CH.deckGenerate, ['nope', 'topic', 2]]
+    ]
+
+    // Invoke a channel exactly as the renderer would.
+    const fakeEvent: any = { sender: { send: () => {} } }
+    const invoke = async (ch: string, args: any[]) => {
+      const handler = (ipcMain as any)._invokeHandlers?.get(ch)
+      if (!handler) return { ok: false, error: 'NO HANDLER REGISTERED' }
+      return handler(fakeEvent, ...args)
+    }
+
+    for (const enabled of [false, true]) {
+      st.setSettings({ aiEnabled: enabled })
+      log(`--- aiEnabled = ${enabled} ---`)
+      for (const [ch, args] of AI_CHANNELS) {
+        const r: any = await invoke(ch, args)
+        const blocked = !r.ok && /AI features are turned off/.test(r.error || '')
+        log(`  ${ch.padEnd(22)} ok=${String(r.ok).padEnd(5)} blocked=${blocked} ${(r.error || '').slice(0, 60)}`)
+      }
+    }
+
+    // And the global hotkey must be released while AI is off.
+    const { globalShortcut } = await import('electron')
+    const { refreshDesktop } = await import('./services/desktop')
+    const accel = st.getSettings().desktop.quickExplainShortcut
+    st.setSettings({ aiEnabled: false })
+    refreshDesktop(() => null)
+    log('AI off  -> quick-explain hotkey registered?', globalShortcut.isRegistered(accel))
+    st.setSettings({ aiEnabled: true })
+    refreshDesktop(() => null)
+    log('AI on   -> quick-explain hotkey registered?', globalShortcut.isRegistered(accel))
+    // setupQuickExplain returns the registration result directly, which
+    // distinguishes "refused because AI is off" from "the OS refused it".
+    const { setupQuickExplain } = await import('./services/desktop')
+    st.setSettings({ aiEnabled: false })
+    log('setupQuickExplain() with AI off ->', setupQuickExplain(() => null))
+    st.setSettings({ aiEnabled: true })
+    log('setupQuickExplain() with AI on  ->', setupQuickExplain(() => null))
+    log('accel string =', JSON.stringify(accel))
+    log('DONE')
+    return
+  }
   if (process.env.SCHOOLMOD_DIAG === 'reports') {
     const direct = await import('./services/seqtaDirect')
     const id = await (direct as any).ensure()

@@ -15,12 +15,14 @@ import {
   Download
 } from 'lucide-react'
 import { PageHeader, Empty, Spinner, PromptModal } from '../components/ui'
+import { useApp } from '../store/app'
 import ImportSourceModal from '../components/ImportSourceModal'
 import { Markdown } from '../lib/md'
 import { call, timeAgo } from '../lib/utils'
 import type { Notebook, ChatMessage, Citation } from '../../../shared/types'
 
 export default function Notebooks() {
+  const aiEnabled = useApp((s) => s.settings?.aiEnabled) !== false
   const [notebooks, setNotebooks] = useState<Notebook[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [naming, setNaming] = useState(false)
@@ -101,6 +103,7 @@ export default function Notebooks() {
 }
 
 function NotebookDetail({ notebook, onBack, onChange }: { notebook: Notebook; onBack: () => void; onChange: () => Promise<void> }) {
+  const aiEnabled = useApp((s) => s.settings?.aiEnabled) !== false
   const [nb, setNb] = useState(notebook)
   const [messages, setMessages] = useState<ChatMessage[]>(notebook.chat || [])
   const [citations, setCitations] = useState<Record<number, Citation[]>>({})
@@ -209,15 +212,20 @@ function NotebookDetail({ notebook, onBack, onChange }: { notebook: Notebook; on
         <span className="text-2xl">{nb.emoji}</span>
         <h1 className="text-xl font-bold">{nb.title}</h1>
         <div className="ml-auto flex gap-2">
-          <button className="btn" onClick={() => runPanel('summary')} disabled={!hasSources}>
-            <Sparkles size={15} /> Summarise
-          </button>
-          <button className="btn" onClick={() => runPanel('guide')} disabled={!hasSources}>
-            <ScrollText size={15} /> Study guide
-          </button>
-          <button className="btn" onClick={makeDeck} disabled={!hasSources || makingDeck}>
-            {makingDeck ? <Spinner size={15} /> : <Layers size={15} />} To flashcards
-          </button>
+          {/* Summarise / study guide / deck-generation all call a model. */}
+          {aiEnabled && (
+            <>
+              <button className="btn" onClick={() => runPanel('summary')} disabled={!hasSources}>
+                <Sparkles size={15} /> Summarise
+              </button>
+              <button className="btn" onClick={() => runPanel('guide')} disabled={!hasSources}>
+                <ScrollText size={15} /> Study guide
+              </button>
+              <button className="btn" onClick={makeDeck} disabled={!hasSources || makingDeck}>
+                {makingDeck ? <Spinner size={15} /> : <Layers size={15} />} To flashcards
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -300,13 +308,15 @@ function NotebookDetail({ notebook, onBack, onChange }: { notebook: Notebook; on
             {busy && <div className="ml-10"><Spinner size={16} /></div>}
           </div>
           <div className="border-t p-3" style={{ borderColor: 'var(--border)' }}>
+            {/* Q&A over sources is a model call. Sources themselves stay
+                readable with AI off — only asking about them is disabled. */}
             <div className="flex items-end gap-2">
               <textarea
                 className="input max-h-32 min-h-[44px] flex-1 resize-none"
                 rows={1}
-                placeholder={hasSources ? 'Ask about your sources…' : 'Add a source first…'}
+                placeholder={!aiEnabled ? 'AI features are off — turn them on in Settings' : hasSources ? 'Ask about your sources…' : 'Add a source first…'}
                 value={input}
-                disabled={!hasSources}
+                disabled={!hasSources || !aiEnabled}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -315,7 +325,7 @@ function NotebookDetail({ notebook, onBack, onChange }: { notebook: Notebook; on
                   }
                 }}
               />
-              <button className="btn btn-primary h-[44px]" onClick={ask} disabled={busy || !input.trim()}>
+              <button className="btn btn-primary h-[44px]" onClick={ask} disabled={busy || !input.trim() || !aiEnabled}>
                 <Send size={16} />
               </button>
             </div>

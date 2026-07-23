@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { GraduationCap, ExternalLink, Sparkles, Send, Languages, FlaskConical, Calculator } from 'lucide-react'
 import { PageHeader, Spinner } from '../components/ui'
+import { useApp } from '../store/app'
 import WebFrame from '../components/WebFrame'
 import { Markdown } from '../lib/md'
 import { call } from '../lib/utils'
@@ -13,6 +14,7 @@ const TOPICS = [
 ]
 
 export default function EducationPerfect() {
+  const aiEnabled = useApp((s) => s.settings?.aiEnabled) !== false
   const [topic, setTopic] = useState('')
   const [answer, setAnswer] = useState('')
   const [busy, setBusy] = useState(false)
@@ -46,7 +48,7 @@ export default function EducationPerfect() {
     <div className="p-8">
       <PageHeader
         title="Education Perfect"
-        subtitle="Launch EP and prep for your tasks with an AI study coach"
+        subtitle={aiEnabled ? 'Launch EP and prep for your tasks with an AI study coach' : 'Launch Education Perfect'}
         icon={<GraduationCap size={20} />}
         actions={
           <button className="btn btn-primary" onClick={() => setShowFrame(true)}>
@@ -72,6 +74,7 @@ export default function EducationPerfect() {
         ))}
       </div>
 
+      {aiEnabled && (
       <div className="card p-5">
         <h2 className="mb-1 flex items-center gap-2 font-semibold">
           <Sparkles size={17} style={{ color: 'var(--accent)' }} /> AI study coach
@@ -98,8 +101,9 @@ export default function EducationPerfect() {
           </button>
         </div>
       </div>
+      )}
 
-      {(busy || answer) && (
+      {aiEnabled && (busy || answer) && (
         <div className="card mt-4 p-5">
           {busy && !answer ? (
             <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-dim)' }}>

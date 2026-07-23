@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from 'react'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, Sparkles } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 /**
  * Electron does not implement window.prompt() — it throws, which silently broke
@@ -167,6 +168,29 @@ export function StatCard({
         {icon && <span style={{ color: tone === 'accent' ? 'var(--accent)' : 'var(--text-dim)' }}>{icon}</span>}
       </div>
       <div className="mt-1.5 text-2xl font-bold tracking-tight">{value}</div>
+    </div>
+  )
+}
+
+/**
+ * Shown in place of any AI-powered feature while the master switch is off.
+ * A single component so every disabled surface says the same thing and points
+ * at the same setting.
+ */
+export function AiDisabled({ feature = 'This feature' }: { feature?: string }) {
+  return (
+    <div className="card mx-auto my-10 max-w-md p-8 text-center">
+      <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl" style={{ background: 'var(--bg)' }}>
+        <Sparkles size={22} style={{ color: 'var(--text-dim)' }} />
+      </div>
+      <h2 className="font-semibold">AI features are off</h2>
+      <p className="mt-1.5 text-sm" style={{ color: 'var(--text-dim)' }}>
+        {feature} needs the AI assistant. Everything else — SEQTA, timetable, grades, reports, notebooks and
+        flashcards — keeps working without it.
+      </p>
+      <Link to="/settings" className="btn btn-primary mt-4">
+        Open Settings
+      </Link>
     </div>
   )
 }

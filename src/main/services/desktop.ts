@@ -105,7 +105,11 @@ export function applyAutoLaunch() {
 
 export function setupQuickExplain(getWindow: () => BrowserWindow | null) {
   globalShortcut.unregisterAll()
-  const accel = getSettings().desktop.quickExplainShortcut
+  const s = getSettings()
+  // Quick-explain sends the clipboard to a model, so it's an AI feature and
+  // must not hold a system-wide hotkey while AI is disabled.
+  if (!s.aiEnabled) return false
+  const accel = s.desktop.quickExplainShortcut
   if (!accel) return false
   try {
     return globalShortcut.register(accel, () => {

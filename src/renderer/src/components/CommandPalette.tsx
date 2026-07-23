@@ -88,6 +88,8 @@ export default function CommandPalette() {
     }
   }, [open])
 
+  const aiEnabled = useApp((s) => s.settings?.aiEnabled) !== false
+
   const commands: Cmd[] = useMemo(() => {
     const go = (to: string) => () => { nav(to); setOpen(false) }
     const app = (k: string) => () => { window.api.microsoft.openApp(k); setOpen(false) }
@@ -148,6 +150,9 @@ export default function CommandPalette() {
       }))
     ]
   }, [nav, content])
+    // Drop AI-powered entries when AI is off, so the palette can't route to a
+    // disabled feature.
+    .filter((c) => aiEnabled || !['assistant', 'planner'].includes(c.id))
 
   // Only surface your own content once you've actually typed something —
   // otherwise the palette opens as a wall of every notebook and assessment.

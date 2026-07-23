@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CalendarRange, Sparkles, Save, CalendarPlus, ChevronLeft, ChevronRight } from 'lucide-react'
-import { PageHeader, Empty, Spinner, ErrorBanner } from '../components/ui'
+import { PageHeader, Empty, Spinner, ErrorBanner, AiDisabled } from '../components/ui'
 import { Markdown } from '../lib/md'
 import { useApp } from '../store/app'
 import { call, fmtDate, daysUntil } from '../lib/utils'
@@ -102,6 +102,7 @@ function MonthView({ items }: { items: SeqtaAssessment[] }) {
 }
 
 export default function Planner() {
+  const aiEnabled = useApp((s) => s.settings?.aiEnabled) !== false
   const connected = !!useApp((s) => s.settings?.seqta.connected)
   const [items, setItems] = useState<SeqtaAssessment[]>([])
   const [picked, setPicked] = useState<Set<number>>(new Set())
@@ -166,6 +167,8 @@ export default function Planner() {
       setExporting(false)
     }
   }
+
+  if (!aiEnabled) return <AiDisabled feature="The study planner" />
 
   if (!connected)
     return (

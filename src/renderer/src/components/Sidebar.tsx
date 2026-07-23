@@ -36,6 +36,10 @@ export default function Sidebar() {
   const connected = settings?.seqta.connected
   const ssoMode = settings?.seqta.mode === 'sso'
   const name = friendlyName(settings?.seqta.displayName, 'Student')
+  // With AI off, the Assistant entry is dropped entirely rather than left to
+  // lead to a dead page.
+  const aiEnabled = settings?.aiEnabled !== false
+  const study = studyNav.filter((n) => aiEnabled || n.to !== '/assistant')
   const [photo, setPhoto] = useState('')
 
   useEffect(() => {
@@ -55,7 +59,7 @@ export default function Sidebar() {
         <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
           Study
         </p>
-        {studyNav.map((n) => (
+        {study.map((n) => (
           <Item key={n.to} {...n} />
         ))}
         <p className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>

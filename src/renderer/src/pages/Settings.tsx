@@ -63,8 +63,9 @@ export default function Settings() {
         </div>
       </Section>
 
-      <ClaudeSection />
-      <ComputerAccessSection />
+      <AiFeaturesSection />
+      {settings.aiEnabled !== false && <ClaudeSection />}
+      {settings.aiEnabled !== false && <ComputerAccessSection />}
       <SeqtaSection />
       <MicrosoftSection />
       <RemindersSection />
@@ -113,6 +114,36 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       </span>
       {children}
     </label>
+  )
+}
+
+function AiFeaturesSection() {
+  const { settings, save } = useApp()
+  const on = settings!.aiEnabled !== false
+  return (
+    <Section icon={<Sparkles size={18} />} title="AI features" desc="The master switch for everything AI-powered.">
+      <Toggle
+        label="Enable AI features"
+        desc="Turn this off and SchoolMod stops using AI entirely — no request is ever sent to a model, and the assistant, study planner, notebook Q&A, summaries and flashcard generation all disappear."
+        on={on}
+        onChange={async (v) => {
+          await save({ aiEnabled: v })
+          // Re-register desktop bits: quick-explain is an AI feature, so its
+          // global hotkey must be released when AI is turned off.
+          await call(window.api.desktop.refresh())
+        }}
+      />
+      {!on && (
+        <div className="mt-3 flex gap-2 rounded-xl border px-3.5 py-2.5 text-xs" style={{ borderColor: 'var(--border)', color: 'var(--text-dim)' }}>
+          <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+          <span>
+            Everything that isn't AI keeps working: SEQTA, your timetable, assessments, courses and lesson content,
+            grades, reports, notebooks, and flashcard review with spaced repetition. Your notebooks and decks are kept —
+            turn AI back on any time and they're all still here.
+          </span>
+        </div>
+      )}
+    </Section>
   )
 }
 

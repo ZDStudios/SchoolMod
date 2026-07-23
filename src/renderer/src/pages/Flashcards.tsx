@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Layers, Plus, Sparkles, Trash2, Play, X, RotateCcw, Check, Download } from 'lucide-react'
 import { PageHeader, Empty, Spinner, PromptModal } from '../components/ui'
+import { useApp } from '../store/app'
 import ImportSourceModal from '../components/ImportSourceModal'
 import { call } from '../lib/utils'
 import type { Deck, Flashcard, ReviewGrade } from '../../../shared/types'
@@ -8,6 +9,7 @@ import type { Deck, Flashcard, ReviewGrade } from '../../../shared/types'
 const dueCount = (d: Deck) => d.cards.filter((c) => c.due <= Date.now() || c.repetitions === 0).length
 
 export default function Flashcards() {
+  const aiEnabled = useApp((s) => s.settings?.aiEnabled) !== false
   const [decks, setDecks] = useState<Deck[]>([])
   const [loading, setLoading] = useState(true)
   const [studying, setStudying] = useState<Deck | null>(null)
@@ -39,7 +41,7 @@ export default function Flashcards() {
     <div className="p-8">
       <PageHeader
         title="Flashcards"
-        subtitle="AI-generated cards with spaced repetition, like Gizmo"
+        subtitle={aiEnabled ? 'AI-generated cards with spaced repetition, like Gizmo' : 'Spaced repetition flashcards'}
         icon={<Layers size={20} />}
         actions={
           <button className="btn btn-primary" onClick={() => setNaming(true)}>
@@ -75,9 +77,11 @@ export default function Flashcards() {
                   <button className="btn btn-primary flex-1 px-2 text-xs" onClick={() => setStudying(d)} disabled={d.cards.length === 0}>
                     <Play size={14} /> Study
                   </button>
-                  <button className="btn flex-1 px-2 text-xs" onClick={() => setGenerating(d)}>
-                    <Sparkles size={14} /> Generate
-                  </button>
+                  {aiEnabled && (
+                    <button className="btn flex-1 px-2 text-xs" onClick={() => setGenerating(d)}>
+                      <Sparkles size={14} /> Generate
+                    </button>
+                  )}
                 </div>
               </div>
             )

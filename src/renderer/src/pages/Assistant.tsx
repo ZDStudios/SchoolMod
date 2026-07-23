@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Sparkles, Send, Trash2, Square, Plus, MessageSquare, Pencil, Check, X } from 'lucide-react'
 import { Markdown } from '../lib/md'
 import { useChat } from '../store/chat'
+import { useApp } from '../store/app'
+import { AiDisabled } from '../components/ui'
 import type { ChatMessage } from '../../../shared/types'
 
 const SUGGESTIONS = [
@@ -42,6 +44,7 @@ const TOOL_LABEL: Record<string, string> = {
 }
 
 export default function Assistant() {
+  const aiEnabled = useApp((s) => s.settings?.aiEnabled) !== false
   const { chats, activeId, streaming, streamingChatId, tool, createChat, deleteChat, renameChat, switchChat, clearActive, send } = useChat()
   const [input, setInput] = useState('')
   const [renaming, setRenaming] = useState<string | null>(null)
@@ -87,6 +90,8 @@ export default function Assistant() {
     setInput('')
     send(content)
   }
+
+  if (!aiEnabled) return <AiDisabled feature="The AI assistant" />
 
   return (
     <div className="flex min-h-0 flex-1">

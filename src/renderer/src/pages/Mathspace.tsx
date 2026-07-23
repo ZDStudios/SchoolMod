@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Calculator, ExternalLink, Sparkles, Send, Flame } from 'lucide-react'
 import { PageHeader, Spinner } from '../components/ui'
+import { useApp } from '../store/app'
 import WebFrame from '../components/WebFrame'
 import { Markdown } from '../lib/md'
 import { call } from '../lib/utils'
@@ -30,6 +31,7 @@ function streak(log: { date: string }[]): number {
 }
 
 export default function Mathspace() {
+  const aiEnabled = useApp((s) => s.settings?.aiEnabled) !== false
   const [problem, setProblem] = useState('')
   const [answer, setAnswer] = useState('')
   const [busy, setBusy] = useState(false)
@@ -67,7 +69,7 @@ export default function Mathspace() {
     <div className="p-8">
       <PageHeader
         title="Mathspace"
-        subtitle="Launch Mathspace and get step-by-step help from your AI tutor"
+        subtitle={aiEnabled ? 'Launch Mathspace and get step-by-step help from your AI tutor' : 'Launch Mathspace'}
         icon={<Calculator size={20} />}
         actions={
           <button className="btn btn-primary" onClick={() => setShowFrame(true)}>
@@ -81,6 +83,7 @@ export default function Mathspace() {
 
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2 space-y-4">
+          {aiEnabled && (
           <div className="card p-5">
             <h2 className="mb-1 flex items-center gap-2 font-semibold">
               <Sparkles size={17} style={{ color: 'var(--accent)' }} /> AI maths helper
@@ -107,8 +110,9 @@ export default function Mathspace() {
               </button>
             </div>
           </div>
+          )}
 
-          {(busy || answer) && (
+          {aiEnabled && (busy || answer) && (
             <div className="card p-5">
               {busy && !answer ? (
                 <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-dim)' }}>

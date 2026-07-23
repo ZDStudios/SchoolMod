@@ -28,6 +28,7 @@ function greeting() {
 }
 
 export default function Dashboard() {
+  const aiEnabled = useApp((s) => s.settings?.aiEnabled) !== false
   const settings = useApp((s) => s.settings)
   const nav = useNavigate()
   const [lessons, setLessons] = useState<SeqtaLesson[]>([])
@@ -109,10 +110,14 @@ export default function Dashboard() {
 
       {/* Brief + quote */}
       <div className="mb-4 grid grid-cols-3 gap-4">
-        <div className="col-span-2">
-          <DailyBrief context={briefContext} />
+        {aiEnabled && (
+          <div className="col-span-2">
+            <DailyBrief context={briefContext} />
+          </div>
+        )}
+        <div className={aiEnabled ? '' : 'col-span-3'}>
+          <QuoteCard />
         </div>
-        <QuoteCard />
       </div>
 
       {/* Interactive widgets */}
