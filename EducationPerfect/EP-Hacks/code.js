@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         EP Ultimate Automation Helper (v23.0)
+// @name         EP Ultimate Automation Helper (v24.0)
 // @namespace    http://tampermonkey.net/
-// @version      23.0
-// @description  Full auto-solver + Universal inline gap finder + Multi-mode cloze solver + EP-Blue Bypass.
+// @version      24.0
+// @description  Full auto-solver + Enhanced Cloze & Gap-Fill Engine + EP-Blue Bypass.
 // @match        https://app.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -41,7 +41,7 @@
         white-space: pre-wrap;
     `;
     document.body.appendChild(overlay);
-    overlay.innerText = 'Initializing Framework Sync (v23.0)...';
+    overlay.innerText = 'Initializing Framework Sync (v24.0)...';
 
     // ---- EP-Blue Disabled Timer Bypass Engine ----
     function resetButtons() {
@@ -50,23 +50,18 @@
 
     function triggerBypass() {
         if (bypassed) return;
-
         let didBypass = false;
 
         document.querySelectorAll('span, button, div, a').forEach(el => {
             el.childNodes.forEach(node => {
                 if (node.nodeType === Node.TEXT_NODE && /got\s*it[!.]?/i.test(node.textContent)) {
                     const btn = el.closest('button') || (el.tagName === 'BUTTON' ? el : null) || el;
-
                     if (btn && (btn.hasAttribute('disabled') || btn.getAttribute('ng-disabled'))) {
                         btn.removeAttribute('disabled');
                         btn.removeAttribute('ng-disabled');
                         node.textContent = node.textContent.replace(/Got\s*It[!.]?/gi, 'Bypass');
                         didBypass = true;
-
-                        btn.addEventListener('click', () => {
-                            setTimeout(resetButtons, 300);
-                        }, { once: true });
+                        btn.addEventListener('click', () => { setTimeout(resetButtons, 300); }, { once: true });
                     }
                 }
             });
@@ -83,18 +78,13 @@
 
     const bypassObserver = new MutationObserver(mutations => {
         for (const mutation of mutations) {
-            if (mutation.type === 'characterData') {
-                if (/got\s*it[!.]?/i.test(mutation.target.textContent)) {
-                    triggerBypass();
-                    return;
-                }
+            if (mutation.type === 'characterData' && /got\s*it[!.]?/i.test(mutation.target.textContent)) {
+                triggerBypass(); return;
             }
-
             if (mutation.type === 'childList') {
                 for (const node of mutation.addedNodes) {
                     if (/got\s*it[!.]?/i.test(node.textContent || '')) {
-                        triggerBypass();
-                        return;
+                        triggerBypass(); return;
                     }
                 }
             }
@@ -171,7 +161,7 @@
         return sortElementsByPosition(gaps);
     }
 
-    // ---- Unused Option Tile Locator ----
+    // ---- Universal Tile Locator ----
     function findUnusedTile(targetText, usedSet) {
         if (!targetText) return null;
 
@@ -182,23 +172,20 @@
             '.cloze-option', '.draggable-option', '.option-tile', '.token', '.drag-item',
             'ep-drag-item', '.cloze-item', '[class*="drag"]', '[class*="option"]', '[class*="tile"]',
             '[class*="token"]', '[ng-repeat*="option"]', '[ng-repeat*="item"]', '[ng-repeat*="token"]',
-            '.choice', '.item'
+            '.choice', '.item', 'button', 'span', 'div'
         ];
 
         let rawTiles = Array.from(document.querySelectorAll(tileSelectors.join(',')));
-        if (rawTiles.length === 0) {
-            rawTiles = Array.from(document.querySelectorAll('.options-bank *, .cloze-options *, .drag-container *, [class*="option-bank"] *, [class*="options"] *'));
-        }
 
         const candidateTiles = rawTiles.filter(el => {
             if (el.offsetParent === null) return false;
-            if (usedSet.has(el)) return false;
-            if (el.closest('.gap, .cloze-gap, .drop-target, .drop-zone, .blank, ep-gap, [class*="gap"]')) return false;
+            if (usedSet && usedSet.has(el)) return false;
+            if (el.closest('.gap, .cloze-gap, .drop-target, .drop-zone, .blank, ep-gap, [class*="gap"], [class*="blank"]')) return false;
             if (el.classList.contains('used') || el.classList.contains('placed') || el.classList.contains('disabled')) return false;
             return getTileText(el).length > 0;
         });
 
-        // 1. Exact cleaned match
+        // 1. Exact match
         let match = candidateTiles.find(el => getTileText(el) === targetExact);
         if (match) return match;
 
@@ -206,17 +193,10 @@
         match = candidateTiles.find(el => normalizeStr(getTileText(el)) === targetClean);
         if (match) return match;
 
-        // 3. Relaxed match
-        match = candidateTiles.find(el => {
-            const t = normalizeStr(getTileText(el));
-            return t === targetClean || (targetClean.length === 1 && t.includes(targetClean));
-        });
-        if (match) return match;
-
         return null;
     }
 
-    // ---- Interaction Emulation Pipelines ----
+    // ---- Multi-Event Simulation Pipeline ----
     function simulateComplexDrag(sourceEl, targetEl) {
         if (!sourceEl || !targetEl) return;
 
@@ -229,8 +209,8 @@
 
         const dataTransfer = new DataTransfer();
 
-        function fireMouse(type, x, y) {
-            sourceEl.dispatchEvent(new MouseEvent(type, {
+        function fireMouse(type, el, x, y) {
+            el.dispatchEvent(new MouseEvent(type, {
                 bubbles: true, cancelable: true, view: window,
                 clientX: x, clientY: y, screenX: x, screenY: y, buttons: 1
             }));
@@ -244,17 +224,15 @@
         }
 
         fireDrag('dragstart', sourceEl, srcX, srcY);
-        fireMouse('mousedown', srcX, srcY);
+        fireMouse('mousedown', sourceEl, srcX, srcY);
 
         setTimeout(() => {
             fireDrag('dragenter', targetEl, tgtX, tgtY);
             fireDrag('dragover', targetEl, tgtX, tgtY);
             fireDrag('drop', targetEl, tgtX, tgtY);
-            targetEl.dispatchEvent(new MouseEvent('mouseup', {
-                bubbles: true, cancelable: true, view: window, clientX: tgtX, clientY: tgtY
-            }));
+            fireMouse('mouseup', targetEl, tgtX, tgtY);
             fireDrag('dragend', sourceEl, tgtX, tgtY);
-        }, 40);
+        }, 30);
     }
 
     function simulatePreciseClick(el) {
@@ -265,8 +243,17 @@
 
         const props = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, screenX: x, screenY: y, which: 1, buttons: 1 };
 
-        ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach(evt => {
-            try { el.dispatchEvent(new MouseEvent(evt, props)); } catch (e) {}
+        try { el.focus(); } catch(e) {}
+
+        ['pointerdown', 'touchstart', 'mousedown', 'pointerup', 'touchend', 'mouseup', 'click'].forEach(evt => {
+            try {
+                if (evt.startsWith('touch')) {
+                    const touch = new Touch({ identifier: Date.now(), target: el, clientX: x, clientY: y });
+                    el.dispatchEvent(new TouchEvent(evt, { bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
+                } else {
+                    el.dispatchEvent(new MouseEvent(evt, props));
+                }
+            } catch (e) {}
         });
     }
 
@@ -357,47 +344,6 @@
             }
         }
 
-        try {
-            const ngEl = angular.element(el);
-            const scope = ngEl.scope() || ngEl.isolateScope();
-            if (scope) {
-                const opts = scope.options || scope.model?.options || scope.items || scope.component?.Options;
-                if (opts && Array.from(opts).length > 0) {
-                    const optArray = Array.from(opts);
-
-                    let matchObj = optArray.find(o => {
-                        if (!o) return false;
-                        const txt = (o.Description || o.Text || o.text || o.label || o.Label || (typeof o === 'string' ? o : '')).trim();
-                        return getTileText(txt) === targetExact;
-                    });
-
-                    if (!matchObj) {
-                        matchObj = optArray.find(o => {
-                            if (!o) return false;
-                            const txt = o.Description || o.Text || o.text || o.label || o.Label || (typeof o === 'string' ? o : '');
-                            return normalizeStr(txt) === targetClean;
-                        });
-                    }
-
-                    if (matchObj) {
-                        const setterFunc = scope.selectOption || scope.select || scope.choose || scope.setValue || scope.onChange;
-                        if (typeof setterFunc === 'function') {
-                            setterFunc.call(scope, matchObj);
-                            if (!scope.$$phase) scope.$apply();
-                            return true;
-                        }
-
-                        const keys = ['selectedOption', 'selected', 'selectedValue', 'model', 'value', 'studentAnswer'];
-                        for (let key of keys) {
-                            if (scope[key] !== undefined) scope[key] = matchObj;
-                        }
-                        if (!scope.$$phase) scope.$apply();
-                        return true;
-                    }
-                }
-            }
-        } catch(e) {}
-
         const elementsInside = el.querySelectorAll('span, div, li, a, option');
         for (let subEl of elementsInside) {
             if (getTileText(subEl) === targetExact && subEl.offsetParent !== null) {
@@ -421,7 +367,6 @@
 
     function isQuestionSlide(q) {
         if (!q || !q.questionDef || !q.questionDef.Components) return false;
-
         return q.questionDef.Components.some(c => {
             if (c.Gaps && c.Gaps.length > 0) return true;
             if (c.ComponentTypeCode && !['INFORMATION_COMPONENT', 'TEXT_COMPONENT', 'IMAGE_COMPONENT'].includes(c.ComponentTypeCode)) return true;
@@ -502,12 +447,6 @@
                         for (let sel of totalSelects) { if (solveDropdownElement(sel, correctAns)) { solved = true; break; } }
                     }
 
-                    try {
-                        c.SelectedOption = c.Options.find(o => getTileText(o.Description || o.Text) === getTileText(correctAns));
-                        c.value = correctAns; c.studentAnswer = correctAns;
-                        if (c.Answers) c.Answers[0] = correctAns;
-                    } catch(e) {}
-
                     if (solved || correctAns) trackingSuccess++;
                 }
             }
@@ -520,21 +459,30 @@
                     const ans = g.CorrectOptions?.[0];
                     if (!ans) return;
 
-                    // Sync Angular Model State
+                    // Deep Angular Scope State Binding
+                    let matchOpt = null;
+                    if (c.Options) {
+                        matchOpt = c.Options.find(o => {
+                            const txt = o.Text || o.Description || o.Label || o.Value || '';
+                            return normalizeStr(getTileText(txt)) === normalizeStr(getTileText(ans)) && !o.Used && !o.IsUsed;
+                        });
+                    }
+
                     try {
-                        g.value = ans; g.studentAnswer = ans; g.userAnswer = ans; g.answered = true; g.isCorrect = true; g.text = ans;
-                        if (c.Options) {
-                            const matchOpt = c.Options.find(o => {
-                                const txt = o.Text || o.Description || o.Label || '';
-                                return getTileText(txt) === getTileText(ans) && !o.Used && !o.IsUsed;
-                            });
-                            if (matchOpt) {
-                                matchOpt.Used = true;
-                                matchOpt.IsUsed = true;
-                                matchOpt.used = true;
-                                g.SelectedOption = matchOpt;
-                                g.selectedOption = matchOpt;
-                            }
+                        g.Value = ans; g.value = ans;
+                        g.StudentAnswer = ans; g.studentAnswer = ans;
+                        g.UserAnswer = ans; g.userAnswer = ans;
+                        g.Answer = ans; g.answer = ans;
+                        g.Text = ans; g.text = ans;
+                        g.answered = true; g.isCorrect = true;
+
+                        if (matchOpt) {
+                            g.SelectedOption = matchOpt;
+                            g.selectedOption = matchOpt;
+                            g.Option = matchOpt;
+                            g.option = matchOpt;
+                            matchOpt.Used = true; matchOpt.IsUsed = true;
+                            matchOpt.used = true; matchOpt.isUsed = true;
                         }
                     } catch(e) {}
 
@@ -543,7 +491,7 @@
                     if (selectIdx < totalSelects.length && solveDropdownElement(totalSelects[selectIdx], ans)) {
                         gapSolved = true; selectIdx++; trackingSuccess++;
                     }
-                    if (!gapSolved && customDropIdx < totalCustomDropdowns.length && solveDropdownElement(totalCustomDropdowns[customDropIdx], correctAns)) {
+                    if (!gapSolved && customDropIdx < totalCustomDropdowns.length && solveDropdownElement(totalCustomDropdowns[customDropIdx], ans)) {
                         gapSolved = true; customDropIdx++; trackingSuccess++;
                     }
                     if (!gapSolved && totalInputs.length > 0 && totalInputs[inputIdx]) {
@@ -558,18 +506,20 @@
                             usedElementsSet.add(tileElement);
 
                             if (targetGapEl) {
-                                // Mode 1: Click gap then click tile
+                                // Sequence A: Focus gap, then click option tile
                                 simulatePreciseClick(targetGapEl);
-                                setTimeout(() => simulatePreciseClick(tileElement), 20);
+                                setTimeout(() => simulatePreciseClick(tileElement), 30);
 
-                                // Mode 2: Drag tile onto gap
-                                simulateComplexDrag(tileElement, targetGapEl);
-
-                                // Mode 3: Click tile then click gap
+                                // Sequence B: Focus option tile, then click gap
                                 setTimeout(() => {
                                     simulatePreciseClick(tileElement);
                                     simulatePreciseClick(targetGapEl);
-                                }, 50);
+                                }, 60);
+
+                                // Sequence C: Emulate physical drag onto gap
+                                setTimeout(() => {
+                                    simulateComplexDrag(tileElement, targetGapEl);
+                                }, 90);
                             } else {
                                 simulatePreciseClick(tileElement);
                             }
@@ -628,7 +578,6 @@
         try { gs.$apply(); } catch(e) {}
 
         if (trackingTotal === 0) return true;
-
         return (trackingSuccess >= trackingTotal);
     }
 
@@ -687,7 +636,7 @@
             const answers = getAnswers(q);
             const questionType = isQuestionSlide(q);
 
-            overlay.innerText = (autoModeActive ? '🤖 FULL AUTO ACTIVE (v23.0)\n' : '⏳ ENGINE STANDBY (v23.0)\n') +
+            overlay.innerText = (autoModeActive ? '🤖 FULL AUTO ACTIVE (v24.0)\n' : '⏳ ENGINE STANDBY (v24.0)\n') +
                                 (questionType ? 'Type: [QUESTION] | Ans: ' + (answers.length ? answers.join(' / ') : 'Solving...') : 'Type: [CONTEXT / INFO SLIDE]');
 
             if (!autoModeActive) return;
@@ -752,4 +701,3 @@
         }
     });
 })();
-
