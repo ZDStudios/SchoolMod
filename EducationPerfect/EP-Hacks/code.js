@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         EP Ultimate Automation Helper (v27.0)
+// @name         EP Ultimate Automation Helper (v28.0)
 // @namespace    http://tampermonkey.net/
-// @version      27.0
-// @description  Full auto-solver + Focus/Fullscreen Spoofing + Image Resolver + "Submit Anyway" Dialog Bypass.
+// @version      28.0
+// @description  Full auto-solver + Focus/Fullscreen Spoofing + Image Resolver + Direct Angular Modal Bypass + Self-Mark Auto-Completer.
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -51,9 +51,9 @@
     let filledSuccess = false;
     let bypassed = false;
     
-    const LOOP_SPEED = 250;          // Clock cycle frequency (ms)
-    const SETTLE_DELAY = 450;        // Wait time for slide load animations (ms)
-    const SUBMIT_DELAY = 600;        // Delay before clicking submit (ms)
+    const LOOP_SPEED = 200;          // Clock cycle frequency (ms)
+    const SETTLE_DELAY = 400;        // Wait time for slide load animations (ms)
+    const SUBMIT_DELAY = 500;        // Delay before clicking submit (ms)
 
     // ---- UI Control Panel ----
     let overlay = document.getElementById('ep-ultimate-overlay');
@@ -74,21 +74,52 @@
         white-space: pre-wrap;
     `;
     document.body.appendChild(overlay);
-    overlay.innerText = 'Initializing Framework Sync (v27.0)...';
+    overlay.innerText = 'Initializing Framework Sync (v28.0)...';
 
-    // ---- Auto-Dismiss "Submit Anyway" Modal Engine ----
+    // ---- Direct Angular & DOM "Submit Anyway" Bypass Engine ----
     function dismissNoAnswerModal() {
-        const modalButtons = document.querySelectorAll('.stuck-button, [ng-click*="closeDialog"], .modal-dialog div, .modal-dialog button');
+        let closed = false;
+
+        // Direct AngularJS controller/scope execution for fast modal bypass
+        const modalElements = document.querySelectorAll('.modal-dialog, uib-modal-window, .modal, [class*="modal"]');
+        modalElements.forEach(m => {
+            try {
+                if (window.angular) {
+                    const scope = window.angular.element(m).scope();
+                    if (scope && scope.self && typeof scope.self.closeDialog === 'function') {
+                        scope.self.closeDialog(false);
+                        try { scope.$apply(); } catch(e) {}
+                        closed = true;
+                    }
+                }
+            } catch(e) {}
+        });
+
+        // DOM Element targeted clicks fallback
+        const modalButtons = document.querySelectorAll('.stuck-button, [ng-click*="closeDialog"], .modal-footer div, .modal-footer button, .modal-dialog div, .modal-dialog button, a, span');
         for (let btn of modalButtons) {
             if (btn.offsetParent !== null) {
                 const txt = (btn.innerText || btn.textContent || '').trim().toLowerCase();
                 if (txt.includes('submit anyway')) {
                     simulatePreciseClick(btn);
-                    return true;
+                    try {
+                        if (window.angular) {
+                            const scope = window.angular.element(btn).scope();
+                            if (scope) {
+                                if (scope.self && typeof scope.self.closeDialog === 'function') {
+                                    scope.self.closeDialog(false);
+                                } else {
+                                    scope.$eval(btn.getAttribute('ng-click'));
+                                }
+                                try { scope.$apply(); } catch(e) {}
+                            }
+                        }
+                    } catch(e) {}
+                    closed = true;
                 }
             }
         }
-        return false;
+        return closed;
     }
 
     // ---- EP-Blue Disabled Timer Bypass Engine ----
@@ -306,6 +337,7 @@
         const props = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, screenX: x, screenY: y, which: 1, buttons: 1 };
 
         try { el.focus(); } catch(e) {}
+        try { el.click(); } catch(e) {}
 
         ['pointerdown', 'touchstart', 'mousedown', 'pointerup', 'touchend', 'mouseup', 'click'].forEach(evt => {
             try {
@@ -377,10 +409,12 @@
         inputEl.dispatchEvent(new Event('change', { bubbles: true }));
         
         try {
-            const ngModel = angular.element(inputEl).controller('ngModel');
-            if (ngModel) {
-                ngModel.$setViewValue(text);
-                ngModel.$render();
+            if (window.angular) {
+                const ngModel = window.angular.element(inputEl).controller('ngModel');
+                if (ngModel) {
+                    ngModel.$setViewValue(text);
+                    ngModel.$render();
+                }
             }
         } catch(e) {}
         inputEl.dispatchEvent(new Event('blur', { bubbles: true }));
@@ -405,11 +439,13 @@
                 selectEl.dispatchEvent(new Event('input', { bubbles: true }));
                 
                 try {
-                    const ngEl = angular.element(selectEl);
-                    const ngModel = ngEl.controller('ngModel');
-                    if (ngModel) {
-                        ngModel.$setViewValue(matchOpt.value);
-                        ngModel.$render();
+                    if (window.angular) {
+                        const ngEl = window.angular.element(selectEl);
+                        const ngModel = ngEl.controller('ngModel');
+                        if (ngModel) {
+                            ngModel.$setViewValue(matchOpt.value);
+                            ngModel.$render();
+                        }
                     }
                 } catch(e) {}
                 return true;
@@ -430,8 +466,10 @@
         let gs = null;
         document.querySelectorAll('*').forEach(el => {
             try {
-                const s = angular.element(el).scope();
-                if (s && s.game && s.game.model) gs = s;
+                if (window.angular) {
+                    const s = window.angular.element(el).scope();
+                    if (s && s.game && s.game.model) gs = s;
+                }
             } catch(e) {}
         });
         return gs;
@@ -649,7 +687,7 @@
         return (trackingSuccess >= trackingTotal);
     }
 
-    // ---- Enhanced Continue/Submit Engine ----
+    // ---- Enhanced Continue/Submit & Self-Mark Engine ----
     function pressSubmitOrContinue(isQuestion = false, isFilled = false) {
         dismissNoAnswerModal();
 
@@ -658,6 +696,20 @@
         }
 
         triggerBypass();
+
+        // Target Self-Mark Answer buttons explicitly for Blue Tasks / Speaking / Audio
+        const selfMarkSelectors = [
+            'button[id*="self-mark"]', '.self-mark-button', '[ng-click*="selfMark"]',
+            '[ng-click*="self-mark"]', '[ng-click*="selfMarkAnswer"]'
+        ];
+        for (let selector of selfMarkSelectors) {
+            const btn = document.querySelector(selector);
+            if (btn && btn.offsetParent !== null) {
+                simulatePreciseClick(btn);
+                setTimeout(dismissNoAnswerModal, 50);
+                return true;
+            }
+        }
 
         const primarySelectors = [
             '#continue-button', '.continue-button', '.submit-button',
@@ -679,8 +731,9 @@
         for (let b of candidates) {
             if (b.offsetParent === null) continue;
             const txt = (b.innerText || b.textContent || '').trim().toLowerCase();
-            if (txt.includes('continue') || txt.includes('submit') || txt.includes('next') || txt.includes('check') || txt.includes('got it') || txt.includes('bypass')) {
+            if (txt.includes('self-mark answer') || txt.includes('self mark answer') || txt.includes('self-mark') || txt.includes('self mark') || txt.includes('continue') || txt.includes('submit') || txt.includes('next') || txt.includes('check') || txt.includes('got it') || txt.includes('bypass')) {
                 simulatePreciseClick(b);
+                setTimeout(dismissNoAnswerModal, 50);
                 return true;
             }
         }
@@ -712,7 +765,7 @@
                 return imgName ? `[Img: ${imgName}]` : ans;
             });
 
-            overlay.innerText = (autoModeActive ? '🤖 FULL AUTO ACTIVE (v27.0)\n' : '⏳ ENGINE STANDBY (v27.0)\n') + 
+            overlay.innerText = (autoModeActive ? '🤖 FULL AUTO ACTIVE (v28.0)\n' : '⏳ ENGINE STANDBY (v28.0)\n') + 
                                 (questionType ? 'Type: [QUESTION] | Ans: ' + (displayAnswers.length ? displayAnswers.join(' / ') : 'Solving...') : 'Type: [CONTEXT / INFO SLIDE]');
 
             if (!autoModeActive) return;
@@ -731,6 +784,10 @@
                         if (verified) {
                             filledSuccess = true;
                             fillExecutedTime = now; 
+                        } else {
+                            // If it's a blue speaking task with no fillable gaps, treat as filled so it clicks Self-Mark
+                            filledSuccess = true;
+                            fillExecutedTime = now;
                         }
                         return;
                     }
@@ -738,7 +795,7 @@
                     if (filledSuccess && (now - fillExecutedTime > SUBMIT_DELAY)) {
                         pressSubmitOrContinue(true, true);
                         
-                        if (now - fillExecutedTime > 2500) {
+                        if (now - fillExecutedTime > 1500) {
                             filledSuccess = false;
                             slideSettledTime = now;
                         }
