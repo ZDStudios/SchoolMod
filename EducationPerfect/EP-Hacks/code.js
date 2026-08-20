@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         EP Ultimate Automation Helper (v25.0)
+// @name         EP Ultimate Automation Helper (v27.0)
 // @namespace    http://tampermonkey.net/
-// @version      25.0
-// @description  Full auto-solver + Focus/Fullscreen Spoofing + EP-Blue Bypass.
+// @version      27.0
+// @description  Full auto-solver + Focus/Fullscreen Spoofing + Image Resolver + "Submit Anyway" Dialog Bypass.
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -13,7 +13,6 @@
 
     // ---- Anti-Detection Engine (Focus & Fullscreen Spoofing) ----
     (function initSpoofers() {
-        // 1. Force Active Tab & Visibility State
         try {
             Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
             Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
@@ -21,14 +20,12 @@
             document.hasFocus = () => true;
         } catch(e) {}
 
-        // Intercept and swallow focus-loss events
         const focusEvents = ['blur', 'focusout', 'mouseleave', 'visibilitychange', 'webkitvisibilitychange', 'pagehide'];
         focusEvents.forEach(evt => {
             window.addEventListener(evt, e => e.stopImmediatePropagation(), true);
             document.addEventListener(evt, e => e.stopImmediatePropagation(), true);
         });
 
-        // 2. Force Constant Fullscreen State
         try {
             const fakeFsElement = document.documentElement;
             Object.defineProperty(document, 'fullscreenElement', { get: () => fakeFsElement, configurable: true });
@@ -40,7 +37,6 @@
             Object.defineProperty(document, 'webkitFullscreenEnabled', { get: () => true, configurable: true });
         } catch(e) {}
 
-        // Intercept fullscreen exit change events
         const fsEvents = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
         fsEvents.forEach(evt => {
             window.addEventListener(evt, e => e.stopImmediatePropagation(), true);
@@ -78,7 +74,22 @@
         white-space: pre-wrap;
     `;
     document.body.appendChild(overlay);
-    overlay.innerText = 'Initializing Framework Sync (v25.0)...';
+    overlay.innerText = 'Initializing Framework Sync (v27.0)...';
+
+    // ---- Auto-Dismiss "Submit Anyway" Modal Engine ----
+    function dismissNoAnswerModal() {
+        const modalButtons = document.querySelectorAll('.stuck-button, [ng-click*="closeDialog"], .modal-dialog div, .modal-dialog button');
+        for (let btn of modalButtons) {
+            if (btn.offsetParent !== null) {
+                const txt = (btn.innerText || btn.textContent || '').trim().toLowerCase();
+                if (txt.includes('submit anyway')) {
+                    simulatePreciseClick(btn);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     // ---- EP-Blue Disabled Timer Bypass Engine ----
     function resetButtons() {
@@ -86,6 +97,8 @@
     }
 
     function triggerBypass() {
+        dismissNoAnswerModal();
+
         if (bypassed) return;
         let didBypass = false;
 
@@ -114,6 +127,7 @@
     }
 
     const bypassObserver = new MutationObserver(mutations => {
+        dismissNoAnswerModal();
         for (const mutation of mutations) {
             if (mutation.type === 'characterData' && /got\s*it[!.]?/i.test(mutation.target.textContent)) {
                 triggerBypass(); return;
@@ -136,10 +150,23 @@
         });
     }
 
-    // ---- Text Sanitization & Tile Decoders ----
+    // ---- Text Sanitization & Image Extraction helpers ----
     function extractText(t) {
         if (!t) return '';
-        return t.replace(/\[block[^\n]*\n/g,'').replace(/\]/g,'').replace(/\*\*/g,'').trim();
+        return t.replace(/\[block[^\n]*\n/g,'').replace(/\*\*/g,'').trim();
+    }
+
+    function getTargetImageFilename(str) {
+        if (!str) return null;
+        const match = str.match(/url=["']?([^"'\s>]+)/i) || str.match(/src=["']?([^"'\s>]+)/i) || str.match(/(https?:\/\/[^\s"'\>]+\.(?:jpg|jpeg|png|gif|webp|svg))/i);
+        if (match) {
+            const rawUrl = match[1] || match[0];
+            const cleanUrl = rawUrl.replace(/["'\>]/g, '');
+            const parts = cleanUrl.split('/');
+            const filename = parts[parts.length - 1].split('?')[0];
+            return filename.length > 2 ? filename : null;
+        }
+        return null;
     }
 
     function getTileText(el) {
@@ -294,6 +321,16 @@
 
     function findBestElement(targetText) {
         if (!targetText) return null;
+
+        const imgFilename = getTargetImageFilename(targetText);
+        if (imgFilename) {
+            const allImgs = Array.from(document.querySelectorAll('img'));
+            const matchImg = allImgs.find(img => img.src && img.src.toLowerCase().includes(imgFilename.toLowerCase()));
+            if (matchImg) {
+                const clickable = matchImg.closest('button, label, [role="radio"], [role="checkbox"], .option, .mc-option, [class*="option"], [class*="choice"], [class*="tile"], li, div') || matchImg;
+                return clickable;
+            }
+        }
         
         const targetExact = targetText.trim();
         const targetClean = normalizeStr(targetText);
@@ -614,6 +651,8 @@
 
     // ---- Enhanced Continue/Submit Engine ----
     function pressSubmitOrContinue(isQuestion = false, isFilled = false) {
+        dismissNoAnswerModal();
+
         if (isQuestion && !isFilled) {
             return false;
         }
@@ -652,6 +691,7 @@
     setInterval(() => {
         const now = Date.now();
         try {
+            dismissNoAnswerModal();
             triggerBypass();
 
             const gs = getGameScope();
@@ -664,11 +704,16 @@
             }
 
             const q = gs.game.model.currentQuestion;
-            const answers = getAnswers(q);
+            const rawAnswers = getAnswers(q);
             const questionType = isQuestionSlide(q);
 
-            overlay.innerText = (autoModeActive ? '🤖 FULL AUTO ACTIVE (v25.0)\n' : '⏳ ENGINE STANDBY (v25.0)\n') + 
-                                (questionType ? 'Type: [QUESTION] | Ans: ' + (answers.length ? answers.join(' / ') : 'Solving...') : 'Type: [CONTEXT / INFO SLIDE]');
+            const displayAnswers = rawAnswers.map(ans => {
+                const imgName = getTargetImageFilename(ans);
+                return imgName ? `[Img: ${imgName}]` : ans;
+            });
+
+            overlay.innerText = (autoModeActive ? '🤖 FULL AUTO ACTIVE (v27.0)\n' : '⏳ ENGINE STANDBY (v27.0)\n') + 
+                                (questionType ? 'Type: [QUESTION] | Ans: ' + (displayAnswers.length ? displayAnswers.join(' / ') : 'Solving...') : 'Type: [CONTEXT / INFO SLIDE]');
 
             if (!autoModeActive) return;
 
@@ -714,7 +759,7 @@
         } catch(e) {}
     }, LOOP_SPEED);
 
-    // Keyboard Shortcuts: Ctrl+U (Toggle Overlay), Ctrl+Alt+L (Toggle Auto Mode)
+    // Shortcuts: Ctrl+U (Toggle Overlay), Ctrl+Alt+L (Toggle Auto Mode)
     window.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key.toLowerCase() === 'u') {
             e.preventDefault();
