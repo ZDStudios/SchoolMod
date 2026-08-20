@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         EP Ultimate Automation Helper (v30.0)
+// @name         EP Ultimate Automation Helper (v31.0)
 // @namespace    http://tampermonkey.net/
-// @version      30.0
-// @description  Full auto-solver + Focus Spoofing + Deep Multi-Source Image Resolver + Copyable UI + Themes + Custom Task Toggles + Drag Support
+// @version      31.0
+// @description  Full auto-solver + Gap Fill Engine + Focus Spoofing + Deep Multi-Source Image Resolver + Copyable UI + Themes + Custom Task Toggles
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -93,7 +93,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v30.0</span>
+            <span>🤖 EP Automation v31.0</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
@@ -270,10 +270,6 @@
                   .trim();
     }
 
-    function normalizeStr(str) {
-        return (str || '').toLowerCase().replace(/[\n\r\s]+/g, ' ').trim();
-    }
-
     function parseHighlight(c) {
         const correct = c.CorrectOptions || [];
         const matches = [...(c.TextTemplate || '').matchAll(/\[hl (\d+):([^:]+):/g)];
@@ -376,7 +372,30 @@
         const q = gs.game.model.currentQuestion;
         if (!q?.questionDef?.Components) return true;
 
+        let scopeUpdated = false;
+
         q.questionDef.Components.forEach(c => {
+            // ---- 1. Cloze / Gap Fill Handler ----
+            if (c.Gaps && c.Gaps.length > 0) {
+                c.Gaps.forEach((g, idx) => {
+                    if (g.CorrectOptions && g.CorrectOptions[0]) {
+                        const ans = g.CorrectOptions[0];
+                        g.UserAnswer = ans;
+                        g.SelectedOption = ans;
+                        g.Value = ans;
+                        scopeUpdated = true;
+
+                        const gapInputs = document.querySelectorAll('.cloze-gap input, ep-gap input, input.gap-input, .gap-element input, .gap input');
+                        if (gapInputs[idx]) {
+                            robustType(gapInputs[idx], ans);
+                        } else {
+                            gapInputs.forEach(inp => robustType(inp, ans));
+                        }
+                    }
+                });
+            }
+
+            // ---- 2. Multiple Choice Handler ----
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
                     if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
@@ -385,11 +404,18 @@
                     }
                 });
             }
+
+            // ---- 3. Text Box Handler ----
             if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) {
                 const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, [contenteditable="true"]')).filter(i => i.offsetParent !== null);
                 inputs.forEach(inp => robustType(inp, c.Options[0].trim()));
             }
         });
+
+        if (scopeUpdated && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+
         return true;
     }
 
