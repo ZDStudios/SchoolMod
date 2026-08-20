@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         EP Ultimate Automation Helper (v24.0)
+// @name         EP Ultimate Automation Helper (v25.0)
 // @namespace    http://tampermonkey.net/
-// @version      24.0
-// @description  Full auto-solver + Enhanced Cloze & Gap-Fill Engine + EP-Blue Bypass.
-// @match        https://app.educationperfect.com/*
+// @version      25.0
+// @description  Full auto-solver + Focus/Fullscreen Spoofing + EP-Blue Bypass.
+// @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
@@ -11,13 +11,50 @@
 (function() {
     'use strict';
 
+    // ---- Anti-Detection Engine (Focus & Fullscreen Spoofing) ----
+    (function initSpoofers() {
+        // 1. Force Active Tab & Visibility State
+        try {
+            Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+            Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+            Object.defineProperty(document, 'webkitVisibilityState', { get: () => 'visible', configurable: true });
+            document.hasFocus = () => true;
+        } catch(e) {}
+
+        // Intercept and swallow focus-loss events
+        const focusEvents = ['blur', 'focusout', 'mouseleave', 'visibilitychange', 'webkitvisibilitychange', 'pagehide'];
+        focusEvents.forEach(evt => {
+            window.addEventListener(evt, e => e.stopImmediatePropagation(), true);
+            document.addEventListener(evt, e => e.stopImmediatePropagation(), true);
+        });
+
+        // 2. Force Constant Fullscreen State
+        try {
+            const fakeFsElement = document.documentElement;
+            Object.defineProperty(document, 'fullscreenElement', { get: () => fakeFsElement, configurable: true });
+            Object.defineProperty(document, 'webkitFullscreenElement', { get: () => fakeFsElement, configurable: true });
+            Object.defineProperty(document, 'mozFullScreenElement', { get: () => fakeFsElement, configurable: true });
+            Object.defineProperty(document, 'msFullscreenElement', { get: () => fakeFsElement, configurable: true });
+
+            Object.defineProperty(document, 'fullscreenEnabled', { get: () => true, configurable: true });
+            Object.defineProperty(document, 'webkitFullscreenEnabled', { get: () => true, configurable: true });
+        } catch(e) {}
+
+        // Intercept fullscreen exit change events
+        const fsEvents = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
+        fsEvents.forEach(evt => {
+            window.addEventListener(evt, e => e.stopImmediatePropagation(), true);
+            document.addEventListener(evt, e => e.stopImmediatePropagation(), true);
+        });
+    })();
+
     let autoModeActive = false;
     let currentQuestionID = null;
     let slideSettledTime = 0;
     let fillExecutedTime = 0;
     let filledSuccess = false;
     let bypassed = false;
-
+    
     const LOOP_SPEED = 250;          // Clock cycle frequency (ms)
     const SETTLE_DELAY = 450;        // Wait time for slide load animations (ms)
     const SUBMIT_DELAY = 600;        // Delay before clicking submit (ms)
@@ -41,7 +78,7 @@
         white-space: pre-wrap;
     `;
     document.body.appendChild(overlay);
-    overlay.innerText = 'Initializing Framework Sync (v24.0)...';
+    overlay.innerText = 'Initializing Framework Sync (v25.0)...';
 
     // ---- EP-Blue Disabled Timer Bypass Engine ----
     function resetButtons() {
@@ -164,7 +201,7 @@
     // ---- Universal Tile Locator ----
     function findUnusedTile(targetText, usedSet) {
         if (!targetText) return null;
-
+        
         const targetExact = targetText.trim();
         const targetClean = normalizeStr(targetText);
 
@@ -174,7 +211,7 @@
             '[class*="token"]', '[ng-repeat*="option"]', '[ng-repeat*="item"]', '[ng-repeat*="token"]',
             '.choice', '.item', 'button', 'span', 'div'
         ];
-
+        
         let rawTiles = Array.from(document.querySelectorAll(tileSelectors.join(',')));
 
         const candidateTiles = rawTiles.filter(el => {
@@ -185,11 +222,9 @@
             return getTileText(el).length > 0;
         });
 
-        // 1. Exact match
         let match = candidateTiles.find(el => getTileText(el) === targetExact);
         if (match) return match;
 
-        // 2. Normalized match
         match = candidateTiles.find(el => normalizeStr(getTileText(el)) === targetClean);
         if (match) return match;
 
@@ -240,7 +275,7 @@
         const rect = el.getBoundingClientRect();
         const x = rect.left + rect.width / 2;
         const y = rect.top + rect.height / 2;
-
+        
         const props = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, screenX: x, screenY: y, which: 1, buttons: 1 };
 
         try { el.focus(); } catch(e) {}
@@ -259,12 +294,12 @@
 
     function findBestElement(targetText) {
         if (!targetText) return null;
-
+        
         const targetExact = targetText.trim();
         const targetClean = normalizeStr(targetText);
-
+        
         const rawCandidates = document.querySelectorAll('span, button, div, label, p, [role="checkbox"], [role="radio"], .option, .mc-option, .highlight-word, .hl-word, .word, [class*="option"]');
-
+        
         const candidates = Array.from(rawCandidates).filter(el => {
             return el.offsetParent !== null && el.tagName !== 'OPTION' && el.innerText.length <= targetText.length + 60;
         });
@@ -283,7 +318,7 @@
             const elClean = normalizeStr(cleaned);
             if (elClean === targetClean || (targetClean.length > 1 && elClean.includes(targetClean))) {
                 let score = cleaned.length + (el.children.length * 12);
-                if (elClean === targetClean) score -= 300;
+                if (elClean === targetClean) score -= 300; 
                 if (cleaned === targetExact) score -= 500;
 
                 if (score < bestScore) {
@@ -300,10 +335,10 @@
         inputEl.focus();
         inputEl.value = text;
         if (inputEl.getAttribute('contenteditable') === 'true') inputEl.innerText = text;
-
+        
         inputEl.dispatchEvent(new Event('input', { bubbles: true }));
         inputEl.dispatchEvent(new Event('change', { bubbles: true }));
-
+        
         try {
             const ngModel = angular.element(inputEl).controller('ngModel');
             if (ngModel) {
@@ -316,22 +351,22 @@
 
     function solveDropdownElement(el, correctText) {
         if (!el || !correctText) return false;
-
+        
         const targetExact = correctText.trim();
         const targetClean = normalizeStr(correctText);
-
+        
         if (el.tagName === 'SELECT' || el.querySelector('select')) {
             const selectEl = el.tagName === 'SELECT' ? el : el.querySelector('select');
             const options = Array.from(selectEl.options);
 
             let matchOpt = options.find(o => getTileText(o) === targetExact || o.value.trim() === targetExact);
             if (!matchOpt) matchOpt = options.find(o => normalizeStr(o.text) === targetClean || normalizeStr(o.value) === targetClean);
-
+            
             if (matchOpt) {
                 selectEl.value = matchOpt.value;
                 selectEl.dispatchEvent(new Event('change', { bubbles: true }));
                 selectEl.dispatchEvent(new Event('input', { bubbles: true }));
-
+                
                 try {
                     const ngEl = angular.element(selectEl);
                     const ngModel = ngEl.controller('ngModel');
@@ -378,7 +413,7 @@
     function getAnswers(q) {
         const answers = [];
         if (!q?.questionDef?.Components) return answers;
-
+        
         q.questionDef.Components.forEach(c => {
             if (c.Gaps) {
                 c.Gaps.forEach(g => { if (g.CorrectOptions?.[0]) answers.push(g.CorrectOptions[0]); });
@@ -459,7 +494,6 @@
                     const ans = g.CorrectOptions?.[0];
                     if (!ans) return;
 
-                    // Deep Angular Scope State Binding
                     let matchOpt = null;
                     if (c.Options) {
                         matchOpt = c.Options.find(o => {
@@ -504,19 +538,16 @@
 
                         if (tileElement) {
                             usedElementsSet.add(tileElement);
-
+                            
                             if (targetGapEl) {
-                                // Sequence A: Focus gap, then click option tile
                                 simulatePreciseClick(targetGapEl);
                                 setTimeout(() => simulatePreciseClick(tileElement), 30);
 
-                                // Sequence B: Focus option tile, then click gap
                                 setTimeout(() => {
                                     simulatePreciseClick(tileElement);
                                     simulatePreciseClick(targetGapEl);
                                 }, 60);
 
-                                // Sequence C: Emulate physical drag onto gap
                                 setTimeout(() => {
                                     simulateComplexDrag(tileElement, targetGapEl);
                                 }, 90);
@@ -534,7 +565,7 @@
                     if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true || o.IsCorrect === 'true') {
                         trackingTotal++;
                         try { o.Selected = true; o.selected = true; o.Chosen = true; } catch(e) {}
-
+                        
                         const rawText = o.TextTemplate || o.Text || o.Label || o.Description;
                         const targetEl = findBestElement(extractText(rawText));
                         if (targetEl) {
@@ -596,7 +627,7 @@
             '[ng-click*="submit"]', '[ng-click*="continue"]', '[ng-click*="next"]',
             '[ng-click*="nextSlide"]'
         ];
-
+        
         for (let selector of primarySelectors) {
             const btn = document.querySelector(selector);
             if (btn && btn.offsetParent !== null && btn.tagName !== 'BODY') {
@@ -604,7 +635,7 @@
                 return true;
             }
         }
-
+        
         const candidates = document.querySelectorAll('button, .button, .ep-button, a, div[role="button"], span[role="button"], [class*="btn"]');
         for (let b of candidates) {
             if (b.offsetParent === null) continue;
@@ -624,7 +655,7 @@
             triggerBypass();
 
             const gs = getGameScope();
-
+            
             if (!gs) {
                 currentQuestionID = null;
                 filledSuccess = false;
@@ -636,7 +667,7 @@
             const answers = getAnswers(q);
             const questionType = isQuestionSlide(q);
 
-            overlay.innerText = (autoModeActive ? '🤖 FULL AUTO ACTIVE (v24.0)\n' : '⏳ ENGINE STANDBY (v24.0)\n') +
+            overlay.innerText = (autoModeActive ? '🤖 FULL AUTO ACTIVE (v25.0)\n' : '⏳ ENGINE STANDBY (v25.0)\n') + 
                                 (questionType ? 'Type: [QUESTION] | Ans: ' + (answers.length ? answers.join(' / ') : 'Solving...') : 'Type: [CONTEXT / INFO SLIDE]');
 
             if (!autoModeActive) return;
@@ -645,7 +676,7 @@
                 if (q.contentID !== currentQuestionID) {
                     currentQuestionID = q.contentID;
                     filledSuccess = false;
-                    slideSettledTime = now;
+                    slideSettledTime = now; 
                     return;
                 }
 
@@ -654,14 +685,14 @@
                         const verified = solveCurrentQuestion();
                         if (verified) {
                             filledSuccess = true;
-                            fillExecutedTime = now;
+                            fillExecutedTime = now; 
                         }
                         return;
                     }
 
                     if (filledSuccess && (now - fillExecutedTime > SUBMIT_DELAY)) {
                         pressSubmitOrContinue(true, true);
-
+                        
                         if (now - fillExecutedTime > 2500) {
                             filledSuccess = false;
                             slideSettledTime = now;
