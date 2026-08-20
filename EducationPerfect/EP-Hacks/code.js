@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         EP Ultimate Automation Helper (v31.0)
+// @name         EP Ultimate Automation Helper (v31.1)
 // @namespace    http://tampermonkey.net/
-// @version      31.0
-// @description  Full auto-solver + Gap Fill Engine + Focus Spoofing + Deep Multi-Source Image Resolver + Copyable UI + Themes + Custom Task Toggles
+// @version      31.1
+// @description  Full auto-solver + Gap Fill Engine + Focus Spoofing + Persistent Auto-Hide + Copyable UI
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -11,12 +11,13 @@
 (function() {
     'use strict';
 
-    // ---- Settings State ----
+    // ---- Settings State (Persists Auto-Hide setting) ----
     const settings = {
         autoSolve: true,
         autoSubmit: true,
         antiDetect: true,
         selfMarkBypass: true,
+        autoHide: localStorage.getItem('ep_autohide') === 'true',
         theme: 'dark'
     };
 
@@ -89,11 +90,12 @@
         border-right: 5px solid #70B80B;
         transition: background 0.2s, color 0.2s;
         overflow: hidden;
+        display: ${settings.autoHide ? 'none' : 'block'};
     `;
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v31.0</span>
+            <span>🤖 EP Automation v31.1</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
@@ -107,7 +109,7 @@
                 </select>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; font-size: 11px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; font-size: 11px;">
                 <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input type="checkbox" id="toggle-solve" checked style="cursor: pointer;"> Auto Solve
                 </label>
@@ -120,6 +122,13 @@
                 <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input type="checkbox" id="toggle-selfmark" checked style="cursor: pointer;"> Self-Mark/Bypass
                 </label>
+                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; grid-column: span 2;">
+                    <input type="checkbox" id="toggle-autohide" ${settings.autoHide ? 'checked' : ''} style="cursor: pointer;"> Auto-Hide UI on Load
+                </label>
+            </div>
+
+            <div style="font-size: 10px; opacity: 0.75; text-align: center; margin-bottom: 6px;">
+                Press <b style="color: inherit; text-decoration: underline;">Ctrl + U</b> to Hide / View Menu
             </div>
 
             <div id="ep-status-box" style="
@@ -156,6 +165,10 @@
     overlay.querySelector('#toggle-submit').addEventListener('change', (e) => settings.autoSubmit = e.target.checked);
     overlay.querySelector('#toggle-antidetect').addEventListener('change', (e) => settings.antiDetect = e.target.checked);
     overlay.querySelector('#toggle-selfmark').addEventListener('change', (e) => settings.selfMarkBypass = e.target.checked);
+    overlay.querySelector('#toggle-autohide').addEventListener('change', (e) => {
+        settings.autoHide = e.target.checked;
+        localStorage.setItem('ep_autohide', e.target.checked);
+    });
 
     // ---- Draggable Window Engine ----
     let isDragging = false;
@@ -487,7 +500,7 @@
         } catch(e) {}
     }, LOOP_SPEED);
 
-    // Shortcuts: Ctrl+U (Toggle Hide/Show), Ctrl+Alt+L (Toggle Full Auto Mode)
+    // Shortcuts: Ctrl+U (Toggle Hide/Show UI), Ctrl+Alt+L (Toggle Full Auto Mode)
     window.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key.toLowerCase() === 'u') {
             e.preventDefault();
