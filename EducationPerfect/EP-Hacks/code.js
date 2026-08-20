@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         EP Ultimate Automation Helper (v28.0)
+// @name         EP Ultimate Automation Helper (v29.0)
 // @namespace    http://tampermonkey.net/
-// @version      28.0
-// @description  Full auto-solver + Focus/Fullscreen Spoofing + Image Resolver + Direct Angular Modal Bypass + Self-Mark Auto-Completer.
+// @version      29.0
+// @description  Full auto-solver + Focus/Fullscreen Spoofing + Deep Multi-Source Image Resolver + Direct Angular Modal Bypass + Self-Mark Auto-Completer.
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -74,13 +74,12 @@
         white-space: pre-wrap;
     `;
     document.body.appendChild(overlay);
-    overlay.innerText = 'Initializing Framework Sync (v28.0)...';
+    overlay.innerText = 'Initializing Framework Sync (v29.0)...';
 
     // ---- Direct Angular & DOM "Submit Anyway" Bypass Engine ----
     function dismissNoAnswerModal() {
         let closed = false;
 
-        // Direct AngularJS controller/scope execution for fast modal bypass
         const modalElements = document.querySelectorAll('.modal-dialog, uib-modal-window, .modal, [class*="modal"]');
         modalElements.forEach(m => {
             try {
@@ -95,7 +94,6 @@
             } catch(e) {}
         });
 
-        // DOM Element targeted clicks fallback
         const modalButtons = document.querySelectorAll('.stuck-button, [ng-click*="closeDialog"], .modal-footer div, .modal-footer button, .modal-dialog div, .modal-dialog button, a, span');
         for (let btn of modalButtons) {
             if (btn.offsetParent !== null) {
@@ -181,23 +179,25 @@
         });
     }
 
-    // ---- Text Sanitization & Image Extraction helpers ----
+    // ---- Text Sanitization & Deep Image Extraction helpers ----
     function extractText(t) {
         if (!t) return '';
         return t.replace(/\[block[^\n]*\n/g,'').replace(/\*\*/g,'').trim();
     }
 
-    function getTargetImageFilename(str) {
-        if (!str) return null;
+    function getTargetImageKeys(str) {
+        if (!str) return [];
         const match = str.match(/url=["']?([^"'\s>]+)/i) || str.match(/src=["']?([^"'\s>]+)/i) || str.match(/(https?:\/\/[^\s"'\>]+\.(?:jpg|jpeg|png|gif|webp|svg))/i);
-        if (match) {
-            const rawUrl = match[1] || match[0];
-            const cleanUrl = rawUrl.replace(/["'\>]/g, '');
-            const parts = cleanUrl.split('/');
-            const filename = parts[parts.length - 1].split('?')[0];
-            return filename.length > 2 ? filename : null;
+        const urlStr = match ? (match[1] || match[0]) : str;
+        const cleanUrl = urlStr.replace(/["'\>]/g, '');
+        const filename = cleanUrl.split('/').pop().split('?')[0];
+        
+        const keys = [filename];
+        const numMatches = filename.match(/\d{4,}/g);
+        if (numMatches) {
+            keys.push(...numMatches);
         }
-        return null;
+        return keys.filter(k => k && k.length > 2);
     }
 
     function getTileText(el) {
@@ -354,13 +354,31 @@
     function findBestElement(targetText) {
         if (!targetText) return null;
 
-        const imgFilename = getTargetImageFilename(targetText);
-        if (imgFilename) {
-            const allImgs = Array.from(document.querySelectorAll('img'));
-            const matchImg = allImgs.find(img => img.src && img.src.toLowerCase().includes(imgFilename.toLowerCase()));
-            if (matchImg) {
-                const clickable = matchImg.closest('button, label, [role="radio"], [role="checkbox"], .option, .mc-option, [class*="option"], [class*="choice"], [class*="tile"], li, div') || matchImg;
-                return clickable;
+        // ---- Enhanced Multi-Source Image Matching ----
+        const imgKeys = getTargetImageKeys(targetText);
+        if (imgKeys.length > 0) {
+            const allElements = Array.from(document.querySelectorAll('img, [style*="background"], div, span, label, button, .option, [class*="option"]'));
+            
+            for (let key of imgKeys) {
+                const keyLower = key.toLowerCase();
+                for (let el of allElements) {
+                    if (el.offsetParent === null) continue;
+                    
+                    let found = false;
+                    if (el.tagName === 'IMG') {
+                        const src = el.src || el.getAttribute('ng-src') || el.getAttribute('data-src') || '';
+                        if (src.toLowerCase().includes(keyLower)) found = true;
+                    }
+                    if (!found) {
+                        const bg = el.style.backgroundImage || (window.getComputedStyle ? window.getComputedStyle(el).backgroundImage : '');
+                        if (bg && bg.toLowerCase().includes(keyLower)) found = true;
+                    }
+
+                    if (found) {
+                        const clickable = el.closest('button, label, [role="radio"], [role="checkbox"], .option, .mc-option, [class*="option"], [class*="choice"], [class*="tile"], li, td, tr') || el;
+                        return clickable;
+                    }
+                }
             }
         }
         
@@ -697,7 +715,6 @@
 
         triggerBypass();
 
-        // Target Self-Mark Answer buttons explicitly for Blue Tasks / Speaking / Audio
         const selfMarkSelectors = [
             'button[id*="self-mark"]', '.self-mark-button', '[ng-click*="selfMark"]',
             '[ng-click*="self-mark"]', '[ng-click*="selfMarkAnswer"]'
@@ -761,11 +778,11 @@
             const questionType = isQuestionSlide(q);
 
             const displayAnswers = rawAnswers.map(ans => {
-                const imgName = getTargetImageFilename(ans);
-                return imgName ? `[Img: ${imgName}]` : ans;
+                const keys = getTargetImageKeys(ans);
+                return keys.length > 0 ? `[Img Key: ${keys[0]}]` : ans;
             });
 
-            overlay.innerText = (autoModeActive ? '🤖 FULL AUTO ACTIVE (v28.0)\n' : '⏳ ENGINE STANDBY (v28.0)\n') + 
+            overlay.innerText = (autoModeActive ? '🤖 FULL AUTO ACTIVE (v29.0)\n' : '⏳ ENGINE STANDBY (v29.0)\n') + 
                                 (questionType ? 'Type: [QUESTION] | Ans: ' + (displayAnswers.length ? displayAnswers.join(' / ') : 'Solving...') : 'Type: [CONTEXT / INFO SLIDE]');
 
             if (!autoModeActive) return;
@@ -785,7 +802,6 @@
                             filledSuccess = true;
                             fillExecutedTime = now; 
                         } else {
-                            // If it's a blue speaking task with no fillable gaps, treat as filled so it clicks Self-Mark
                             filledSuccess = true;
                             fillExecutedTime = now;
                         }
