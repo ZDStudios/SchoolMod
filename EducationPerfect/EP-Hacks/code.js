@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         EP Ultimate Automation Helper (v31.2)
+// @name         EP Ultimate Automation Helper (v31.3)
 // @namespace    http://tampermonkey.net/
-// @version      31.2
-// @description  Full auto-solver + Gap/Tile Fill Engine + Focus Spoofing + Section Auto-Advance + Copyable UI
+// @version      31.3
+// @description  Full auto-solver + Gap/Tile Fill Engine + Focus Spoofing + Auto Mode UI Toggle + Copyable UI
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -95,7 +95,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v31.2</span>
+            <span>🤖 EP Automation v31.3</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
@@ -110,6 +110,10 @@
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; font-size: 11px;">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; grid-column: span 2; background: rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.15);">
+                    <input type="checkbox" id="toggle-automode" style="cursor: pointer;"> 
+                    <span style="font-weight: 700;">🤖 Auto Mode Active</span>
+                </label>
                 <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input type="checkbox" id="toggle-solve" checked style="cursor: pointer;"> Auto Solve
                 </label>
@@ -128,7 +132,7 @@
             </div>
 
             <div style="font-size: 10px; opacity: 0.75; text-align: center; margin-bottom: 6px;">
-                Press <b style="color: inherit; text-decoration: underline;">Ctrl + U</b> to Hide / View Menu
+                Press <b style="color: inherit; text-decoration: underline;">Ctrl + U</b> (Menu) | <b style="color: inherit; text-decoration: underline;">Ctrl + Alt + L</b> (Auto)
             </div>
 
             <div id="ep-status-box" style="
@@ -146,19 +150,29 @@
     const headerEl = overlay.querySelector('#ep-header');
     const statusBox = overlay.querySelector('#ep-status-box');
     const themeSelect = overlay.querySelector('#ep-theme-select');
+    const autoModeToggle = overlay.querySelector('#toggle-automode');
 
     function applyTheme(themeName) {
         const t = themes[themeName] || themes.dark;
         settings.theme = themeName;
         overlay.style.background = t.bg;
         overlay.style.color = t.text;
-        overlay.style.borderRightColor = t.border;
+        overlay.style.borderRightColor = autoModeActive ? '#E11D48' : t.border;
         headerEl.style.background = t.header;
     }
     applyTheme('dark');
 
+    // Sync Auto-Mode state between UI & Hotkey
+    function setAutoMode(state) {
+        autoModeActive = state;
+        if (autoModeToggle) autoModeToggle.checked = autoModeActive;
+        const currentTheme = themes[settings.theme] || themes.dark;
+        overlay.style.borderRightColor = autoModeActive ? '#E11D48' : currentTheme.border;
+    }
+
     themeSelect.addEventListener('change', (e) => applyTheme(e.target.value));
 
+    autoModeToggle.addEventListener('change', (e) => setAutoMode(e.target.checked));
     overlay.querySelector('#toggle-solve').addEventListener('change', (e) => settings.autoSolve = e.target.checked);
     overlay.querySelector('#toggle-submit').addEventListener('change', (e) => settings.autoSubmit = e.target.checked);
     overlay.querySelector('#toggle-antidetect').addEventListener('change', (e) => settings.antiDetect = e.target.checked);
@@ -456,7 +470,7 @@
 
             const gs = getGameScope();
             if (!gs) {
-                statusBox.innerText = autoModeActive ? '🤖 Waiting for active lesson...' : '⏳ ENGINE STANDBY (Ctrl+Alt+L to Start)';
+                statusBox.innerText = autoModeActive ? '🤖 Waiting for active lesson...' : '⏳ ENGINE STANDBY (Toggle UI or Ctrl+Alt+L)';
                 if (autoModeActive) pressSubmitOrContinue();
                 return;
             }
@@ -505,8 +519,7 @@
         }
         if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'l') {
             e.preventDefault();
-            autoModeActive = !autoModeActive;
-            overlay.style.borderRightColor = autoModeActive ? '#E11D48' : '#70B80B';
+            setAutoMode(!autoModeActive);
         }
     });
 })();
