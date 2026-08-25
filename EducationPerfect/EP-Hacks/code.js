@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         EP Ultimate Automation Helper (v31.1)
+// @name         EP Ultimate Automation Helper (v31.2)
 // @namespace    http://tampermonkey.net/
-// @version      31.1
-// @description  Full auto-solver + Gap Fill Engine + Focus Spoofing + Persistent Auto-Hide + Copyable UI
+// @version      31.2
+// @description  Full auto-solver + Gap/Tile Fill Engine + Focus Spoofing + Section Auto-Advance + Copyable UI
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -11,7 +11,7 @@
 (function() {
     'use strict';
 
-    // ---- Settings State (Persists Auto-Hide setting) ----
+    // ---- Settings State ----
     const settings = {
         autoSolve: true,
         autoSubmit: true,
@@ -29,7 +29,7 @@
         minimal: { bg: 'rgba(0, 0, 0, 0.9)', text: '#a3e635', border: '#a3e635', header: '#18181b', accent: '#a3e635' }
     };
 
-    // ---- Anti-Detection Engine (Focus & Fullscreen Spoofing) ----
+    // ---- Anti-Detection Engine ----
     (function initSpoofers() {
         try {
             Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
@@ -95,7 +95,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v31.1</span>
+            <span>🤖 EP Automation v31.2</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
@@ -147,7 +147,6 @@
     const statusBox = overlay.querySelector('#ep-status-box');
     const themeSelect = overlay.querySelector('#ep-theme-select');
 
-    // ---- Apply Theme Logic ----
     function applyTheme(themeName) {
         const t = themes[themeName] || themes.dark;
         settings.theme = themeName;
@@ -160,7 +159,6 @@
 
     themeSelect.addEventListener('change', (e) => applyTheme(e.target.value));
 
-    // ---- Toggle Event Handlers ----
     overlay.querySelector('#toggle-solve').addEventListener('change', (e) => settings.autoSolve = e.target.checked);
     overlay.querySelector('#toggle-submit').addEventListener('change', (e) => settings.autoSubmit = e.target.checked);
     overlay.querySelector('#toggle-antidetect').addEventListener('change', (e) => settings.antiDetect = e.target.checked);
@@ -170,7 +168,6 @@
         localStorage.setItem('ep_autohide', e.target.checked);
     });
 
-    // ---- Draggable Window Engine ----
     let isDragging = false;
     let dragOffsetX = 0;
     let dragOffsetY = 0;
@@ -194,30 +191,16 @@
         headerEl.style.cursor = 'grab';
     });
 
-    // ---- Direct Angular & DOM Bypass Engine ----
+    // ---- Targeted Bypass Engine ----
     function dismissNoAnswerModal() {
         if (!settings.selfMarkBypass) return false;
         let closed = false;
 
-        const modalElements = document.querySelectorAll('.modal-dialog, uib-modal-window, .modal, [class*="modal"]');
-        modalElements.forEach(m => {
-            try {
-                if (window.angular) {
-                    const scope = window.angular.element(m).scope();
-                    if (scope && scope.self && typeof scope.self.closeDialog === 'function') {
-                        scope.self.closeDialog(false);
-                        try { scope.$apply(); } catch(e) {}
-                        closed = true;
-                    }
-                }
-            } catch(e) {}
-        });
-
-        const modalButtons = document.querySelectorAll('.stuck-button, [ng-click*="closeDialog"], .modal-footer div, .modal-footer button, .modal-dialog div, .modal-dialog button, a, span');
+        const modalButtons = document.querySelectorAll('.stuck-button, [ng-click*="closeDialog"], .modal-footer div, .modal-footer button, .modal-dialog div, .modal-dialog button, button, a, span');
         for (let btn of modalButtons) {
             if (btn.offsetParent !== null) {
                 const txt = (btn.innerText || btn.textContent || '').trim().toLowerCase();
-                if (txt.includes('submit anyway')) {
+                if (txt.includes('submit anyway') || txt.includes('yes, submit') || txt.includes('continue anyway')) {
                     simulatePreciseClick(btn);
                     closed = true;
                 }
@@ -265,7 +248,8 @@
     function getTargetImageKeys(str) {
         if (!str) return [];
         const match = str.match(/url=["']?([^"'\s>]+)/i) || str.match(/src=["']?([^"'\s>]+)/i) || str.match(/(https?:\/\/[^\s"'\>]+\.(?:jpg|jpeg|png|gif|webp|svg))/i);
-        const urlStr = match ? (match[1] || match[0]) : str;
+        if (!match) return [];
+        const urlStr = match[1] || match[0];
         const cleanUrl = urlStr.replace(/["'\>]/g, '');
         const filename = cleanUrl.split('/').pop().split('?')[0];
         
@@ -330,7 +314,7 @@
         }
         
         const targetExact = targetText.trim();
-        const rawCandidates = document.querySelectorAll('span, button, div, label, p, [role="checkbox"], [role="radio"], .option, .mc-option');
+        const rawCandidates = document.querySelectorAll('span, button, div, label, p, [role="checkbox"], [role="radio"], .option, .mc-option, .tile, [class*="tile"]');
         const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null && el.innerText.length <= targetText.length + 60);
 
         return candidates.find(el => getTileText(el) === targetExact) || candidates.find(el => el.innerText.trim() === targetExact) || null;
@@ -388,7 +372,7 @@
         let scopeUpdated = false;
 
         q.questionDef.Components.forEach(c => {
-            // ---- 1. Cloze / Gap Fill Handler ----
+            // ---- 1. Cloze / Gap Fill & Tile Handler ----
             if (c.Gaps && c.Gaps.length > 0) {
                 c.Gaps.forEach((g, idx) => {
                     if (g.CorrectOptions && g.CorrectOptions[0]) {
@@ -396,7 +380,18 @@
                         g.UserAnswer = ans;
                         g.SelectedOption = ans;
                         g.Value = ans;
+
+                        if (g.Options) {
+                            const opt = g.Options.find(o => (o.Text || o.Value || o.Label || '').trim() === ans.trim());
+                            if (opt) {
+                                g.SelectedOption = opt;
+                                g.SelectedOptionId = opt.ID || opt.Id;
+                            }
+                        }
                         scopeUpdated = true;
+
+                        const tileEl = findBestElement(ans);
+                        if (tileEl) simulatePreciseClick(tileEl);
 
                         const gapInputs = document.querySelectorAll('.cloze-gap input, ep-gap input, input.gap-input, .gap-element input, .gap input');
                         if (gapInputs[idx]) {
@@ -441,7 +436,10 @@
         for (let b of candidates) {
             if (b.offsetParent === null) continue;
             const txt = (b.innerText || b.textContent || '').trim().toLowerCase();
-            if (txt.includes('continue') || txt.includes('submit') || txt.includes('next') || txt.includes('check') || txt.includes('got it') || txt.includes('bypass')) {
+            if (txt.includes('continue') || txt.includes('submit') || txt.includes('next section') || 
+                txt.includes('next task') || txt.includes('start section') || txt.includes('finish task') || 
+                txt.includes('done') || txt.includes('start') || txt.includes('next') || 
+                txt.includes('check') || txt.includes('got it') || txt.includes('bypass')) {
                 simulatePreciseClick(b);
                 return true;
             }
@@ -500,7 +498,6 @@
         } catch(e) {}
     }, LOOP_SPEED);
 
-    // Shortcuts: Ctrl+U (Toggle Hide/Show UI), Ctrl+Alt+L (Toggle Full Auto Mode)
     window.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key.toLowerCase() === 'u') {
             e.preventDefault();
