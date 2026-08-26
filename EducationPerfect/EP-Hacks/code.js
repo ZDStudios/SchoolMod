@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      31.5
-// @description  Automates EP tasks and logs answers to the console.
+// @version      32.0
+// @description  Automates EP tasks, cleans answer text, and highlights answers directly in UI.
 // @match        *://*/*
 // @grant        none
 // @run-at       document-idle
@@ -10,70 +10,6 @@
 
 (function() {
     'use strict';
-
-    // Enhanced Global Console Helper Function
-    window.getEPAnswer = function() {
-        if (!window.angular) {
-            console.warn("AngularJS context not found on main window.");
-            return;
-        }
-
-        // Search multiple potential root elements for the game scope
-        const selectors = ['#game-page-container', '[ng-app]', '[ng-controller]', '.game-container', 'body'];
-        let scope = null;
-
-        for (const sel of selectors) {
-            const el = document.querySelector(sel);
-            if (el) {
-                const s = window.angular.element(el).scope();
-                if (s?.game?.model || s?._currentQuestion || s?.currentQuestion) {
-                    scope = s;
-                    break;
-                }
-            }
-        }
-
-        if (!scope) {
-            // Fallback: search all elements
-            document.querySelectorAll('*').forEach(el => {
-                if (scope) return;
-                try {
-                    const s = window.angular.element(el).scope();
-                    if (s?.game?.model) scope = s;
-                } catch(e) {}
-            });
-        }
-
-        const model = scope?.game?.model || scope;
-        const currentQ = model?._currentQuestion || model?.currentQuestion;
-        const comp0 = currentQ?.questionDef?.Components?.[0];
-
-        if (!comp0) {
-            return console.warn("No active question component found in scope.", { model, currentQ });
-        }
-
-        // Gather all possible answer/explanation sources
-        const possibleAnswers = [
-            comp0.ModelAnswerHTML,
-            comp0.SampleAnswer,
-            comp0.ExplanationHTML,
-            comp0.ModelAnswer,
-            ...(comp0.Options || []).map(o => o.TextTemplate || o.Text || o.Label)
-        ].filter(Boolean);
-
-        if (possibleAnswers.length === 0) {
-            console.warn("Component found, but no explicit answer strings detected:", comp0);
-            return;
-        }
-
-        console.log("%c=== EP ANSWER / EXPLANATION ===", "color: #00ff00; font-weight: bold; font-size: 14px;");
-        possibleAnswers.forEach((ans, idx) => {
-            const div = document.createElement('div');
-            div.innerHTML = String(ans);
-            const cleanText = div.textContent.trim();
-            console.log(`%c[Source ${idx + 1}]:%c ${cleanText}`, "color: #38bdf8; font-weight: bold;", "color: #ffffff;");
-        });
-    };
 
     // ---- Settings State ----
     const settings = {
@@ -137,6 +73,28 @@
     const SETTLE_DELAY = 400;       
     const SUBMIT_DELAY = 500;       
 
+    // ---- Clean Text Utility (Strips all HTML/Code/Entities) ----
+    function cleanAnswerText(raw) {
+        if (!raw) return '';
+        let str = String(raw);
+        
+        // Use browser DOM parser to strip HTML tags and decode HTML entities (&nbsp;, &lt;, etc.)
+        const temp = document.createElement('div');
+        temp.innerHTML = str;
+        str = temp.textContent || temp.innerText || '';
+
+        // Strip leftover code, brackets, block tags, and special characters
+        str = str
+            .replace(/\[block[^\n]*\n?/g, '')
+            .replace(/<[^>]*>?/gm, '')
+            .replace(/[\{\}\<\>\&\=\;\/\\]/g, '')
+            .replace(/\*\*/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        return str;
+    }
+
     // ---- Build Modular UI Overlay ----
     let overlay = document.getElementById('ep-ultimate-overlay');
     if (overlay) overlay.remove();
@@ -159,7 +117,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v31.5</span>
+            <span>🤖 EP Automation v32.0</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
@@ -195,19 +153,13 @@
                 </label>
             </div>
 
-            <div style="margin-bottom: 8px;">
-                <button id="ep-btn-get-answer" style="width: 100%; padding: 6px; background: rgba(255,255,255,0.15); color: inherit; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s;">
-                    🔍 Get Answer (Console Log)
-                </button>
-            </div>
-
             <div style="font-size: 10px; opacity: 0.75; text-align: center; margin-bottom: 6px;">
                 Press <b style="color: inherit; text-decoration: underline;">Ctrl + U</b> (Menu) | <b style="color: inherit; text-decoration: underline;">Ctrl + Alt + L</b> (Auto)
             </div>
 
             <div id="ep-status-box" style="
-                background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.1);
-                padding: 8px; border-radius: 6px; min-height: 48px; max-height: 120px;
+                background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15);
+                padding: 8px; border-radius: 6px; min-height: 52px; max-height: 140px;
                 overflow-y: auto; white-space: pre-wrap; word-break: break-word;
                 user-select: text; -webkit-user-select: text; cursor: text;
                 line-height: 1.4; font-size: 11px;
@@ -221,9 +173,6 @@
     const statusBox = overlay.querySelector('#ep-status-box');
     const themeSelect = overlay.querySelector('#ep-theme-select');
     const autoModeToggle = overlay.querySelector('#toggle-automode');
-    const getAnswerBtn = overlay.querySelector('#ep-btn-get-answer');
-
-    getAnswerBtn.addEventListener('click', () => window.getEPAnswer());
 
     function applyTheme(themeName) {
         const t = themes[themeName] || themes.dark;
@@ -285,7 +234,7 @@
         const modalButtons = document.querySelectorAll('.stuck-button, [ng-click*="closeDialog"], .modal-footer div, .modal-footer button, .modal-dialog div, .modal-dialog button, button, a, span');
         for (let btn of modalButtons) {
             if (btn.offsetParent !== null) {
-                const txt = (btn.innerText || btn.textContent || '').trim().toLowerCase();
+                const txt = cleanAnswerText(btn.innerText || btn.textContent || '').toLowerCase();
                 if (txt.includes('submit anyway') || txt.includes('yes, submit') || txt.includes('continue anyway')) {
                     simulatePreciseClick(btn);
                     closed = true;
@@ -325,38 +274,10 @@
         }
     }
 
-    // ---- Helper Utilities ----
-    function extractText(t) {
-        if (!t) return '';
-        return t.replace(/\[block[^\n]*\n/g,'').replace(/\*\*/g,'').trim();
-    }
-
-    function getTargetImageKeys(str) {
-        if (!str) return [];
-        const match = str.match(/url=["']?([^"'\s>]+)/i) || str.match(/src=["']?([^"'\s>]+)/i) || str.match(/(https?:\/\/[^\s"'\>]+\.(?:jpg|jpeg|png|gif|webp|svg))/i);
-        if (!match) return [];
-        const urlStr = match[1] || match[0];
-        const cleanUrl = urlStr.replace(/["'\>]/g, '');
-        const filename = cleanUrl.split('/').pop().split('?')[0];
-        
-        const keys = [filename];
-        const numMatches = filename.match(/\d{4,}/g);
-        if (numMatches) keys.push(...numMatches);
-        return keys.filter(k => k && k.length > 2);
-    }
-
-    function getTileText(el) {
-        if (!el) return '';
-        let txt = (typeof el === 'string') ? el : el.innerText || el.textContent || '';
-        return txt.replace(/^[\s:\u22EE\u2800-\u28FF\u2022\u25C0-\u25FF\u2630]+/g, '')
-                  .replace(/[\s:\u22EE\u2800-\u28FF\u2022\u25C0-\u25FF\u2630]+$/g, '')
-                  .trim();
-    }
-
     function parseHighlight(c) {
         const correct = c.CorrectOptions || [];
         const matches = [...(c.TextTemplate || '').matchAll(/\[hl (\d+):([^:]+):/g)];
-        return matches.filter(m => correct.includes(parseInt(m[1]))).map(m => ({ index: parseInt(m[1]), text: m[2] }));
+        return matches.filter(m => correct.includes(parseInt(m[1]))).map(m => ({ index: parseInt(m[1]), text: cleanAnswerText(m[2]) }));
     }
 
     function simulatePreciseClick(el) {
@@ -375,42 +296,23 @@
 
     function findBestElement(targetText) {
         if (!targetText) return null;
-
-        const imgKeys = getTargetImageKeys(targetText);
-        if (imgKeys.length > 0) {
-            const allElements = Array.from(document.querySelectorAll('img, [style*="background"], div, span, label, button, .option, [class*="option"]'));
-            for (let key of imgKeys) {
-                const keyLower = key.toLowerCase();
-                for (let el of allElements) {
-                    if (el.offsetParent === null) continue;
-                    let found = false;
-                    if (el.tagName === 'IMG') {
-                        const src = el.src || el.getAttribute('ng-src') || el.getAttribute('data-src') || '';
-                        if (src.toLowerCase().includes(keyLower)) found = true;
-                    }
-                    if (!found) {
-                        const bg = el.style.backgroundImage || (window.getComputedStyle ? window.getComputedStyle(el).backgroundImage : '');
-                        if (bg && bg.toLowerCase().includes(keyLower)) found = true;
-                    }
-                    if (found) {
-                        return el.closest('button, label, [role="radio"], [role="checkbox"], .option, .mc-option, [class*="option"], [class*="choice"], li') || el;
-                    }
-                }
-            }
-        }
-        
         const targetExact = targetText.trim();
         const rawCandidates = document.querySelectorAll('span, button, div, label, p, [role="checkbox"], [role="radio"], .option, .mc-option, .tile, [class*="tile"]');
         const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null && el.innerText.length <= targetText.length + 60);
 
-        return candidates.find(el => getTileText(el) === targetExact) || candidates.find(el => el.innerText.trim() === targetExact) || null;
+        return candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetExact) || null;
     }
 
     function robustType(inputEl, text) {
         if (!inputEl) return;
         inputEl.focus();
-        inputEl.value = text;
-        if (inputEl.getAttribute('contenteditable') === 'true') inputEl.innerText = text;
+        if (inputEl.tagName === 'INPUT' || inputEl.tagName === 'TEXTAREA') {
+            inputEl.value = text;
+        }
+        if (inputEl.getAttribute('contenteditable') === 'true' || inputEl.classList.contains('fr-element')) {
+            inputEl.innerText = text;
+            inputEl.innerHTML = text;
+        }
         inputEl.dispatchEvent(new Event('input', { bubbles: true }));
         inputEl.dispatchEvent(new Event('change', { bubbles: true }));
     }
@@ -428,28 +330,31 @@
         return gs;
     }
 
+    // ---- Extract Cleaned Answers ----
     function getAnswers(q) {
         const answers = [];
         if (!q?.questionDef?.Components) return answers;
         
         q.questionDef.Components.forEach(c => {
-            if (c.Gaps) c.Gaps.forEach(g => { if (g.CorrectOptions?.[0]) answers.push(g.CorrectOptions[0]); });
+            if (c.Gaps) c.Gaps.forEach(g => { if (g.CorrectOptions?.[0]) answers.push(cleanAnswerText(g.CorrectOptions[0])); });
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
                     if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
                         const t = o.TextTemplate || o.Text || o.Label || o.Description;
-                        if (t) answers.push(extractText(t));
+                        if (t) answers.push(cleanAnswerText(t));
                     }
                 });
             }
             if (c.ComponentTypeCode === 'HIGHLIGHT_COMPONENT') answers.push(...parseHighlight(c).map(d => d.text));
-            if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) answers.push(c.Options[0].trim());
-            if (c.ModelAnswerHTML) answers.push(c.ModelAnswerHTML);
-            if (c.SampleAnswer) answers.push(c.SampleAnswer);
+            if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) answers.push(cleanAnswerText(c.Options[0]));
+            if (c.ModelAnswerHTML) answers.push(cleanAnswerText(c.ModelAnswerHTML));
+            if (c.SampleAnswer) answers.push(cleanAnswerText(c.SampleAnswer));
+            if (c.ExplanationHTML) answers.push(cleanAnswerText(c.ExplanationHTML));
         });
-        return answers;
+        return [...new Set(answers.filter(Boolean))];
     }
 
+    // ---- Auto-Solve Routine Including Rich Text / Comma Insertion ----
     function solveCurrentQuestion() {
         if (!settings.autoSolve) return true;
         const gs = getGameScope();
@@ -458,53 +363,47 @@
         if (!q?.questionDef?.Components) return true;
 
         let scopeUpdated = false;
+        const cleanAnsList = getAnswers(q);
 
         q.questionDef.Components.forEach(c => {
-            // ---- 1. Cloze / Gap Fill & Tile Handler ----
+            // 1. Cloze / Gap Fill
             if (c.Gaps && c.Gaps.length > 0) {
                 c.Gaps.forEach((g, idx) => {
                     if (g.CorrectOptions && g.CorrectOptions[0]) {
-                        const ans = g.CorrectOptions[0];
+                        const ans = cleanAnswerText(g.CorrectOptions[0]);
                         g.UserAnswer = ans;
                         g.SelectedOption = ans;
                         g.Value = ans;
-
-                        if (g.Options) {
-                            const opt = g.Options.find(o => (o.Text || o.Value || o.Label || '').trim() === ans.trim());
-                            if (opt) {
-                                g.SelectedOption = opt;
-                                g.SelectedOptionId = opt.ID || opt.Id;
-                            }
-                        }
                         scopeUpdated = true;
 
                         const tileEl = findBestElement(ans);
                         if (tileEl) simulatePreciseClick(tileEl);
 
                         const gapInputs = document.querySelectorAll('.cloze-gap input, ep-gap input, input.gap-input, .gap-element input, .gap input');
-                        if (gapInputs[idx]) {
-                            robustType(gapInputs[idx], ans);
-                        } else {
-                            gapInputs.forEach(inp => robustType(inp, ans));
-                        }
+                        if (gapInputs[idx]) robustType(gapInputs[idx], ans);
                     }
                 });
             }
 
-            // ---- 2. Multiple Choice Handler ----
+            // 2. Multiple Choice
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
                     if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
-                        const targetEl = findBestElement(extractText(o.TextTemplate || o.Text || o.Label || o.Description));
+                        const targetEl = findBestElement(cleanAnswerText(o.TextTemplate || o.Text || o.Label || o.Description));
                         if (targetEl) simulatePreciseClick(targetEl);
                     }
                 });
             }
 
-            // ---- 3. Text Box Handler ----
-            if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) {
-                const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, [contenteditable="true"]')).filter(i => i.offsetParent !== null);
-                inputs.forEach(inp => robustType(inp, c.Options[0].trim()));
+            // 3. Text Box / Open-Ended Rich Text Editor (Froala / ContentEditable for Comma Insertion)
+            if (cleanAnsList.length > 0) {
+                const targetText = cleanAnsList[0];
+                const richEditors = document.querySelectorAll('.fr-element, [contenteditable="true"], textarea, input[type="text"]:not([hidden])');
+                richEditors.forEach(editor => {
+                    if (editor.offsetParent !== null) {
+                        robustType(editor, targetText);
+                    }
+                });
             }
         });
 
@@ -523,7 +422,7 @@
         const candidates = document.querySelectorAll('button, .button, .ep-button, a, div[role="button"], span[role="button"]');
         for (let b of candidates) {
             if (b.offsetParent === null) continue;
-            const txt = (b.innerText || b.textContent || '').trim().toLowerCase();
+            const txt = cleanAnswerText(b.innerText || b.textContent || '').toLowerCase();
             if (txt.includes('continue') || txt.includes('submit') || txt.includes('next section') || 
                 txt.includes('next task') || txt.includes('start section') || txt.includes('finish task') || 
                 txt.includes('done') || txt.includes('start') || txt.includes('next') || 
@@ -535,7 +434,7 @@
         return false;
     }
 
-    // ---- Core Loop ----
+    // ---- Core Loop & UI Rendering ----
     setInterval(() => {
         const now = Date.now();
         try {
@@ -544,21 +443,28 @@
 
             const gs = getGameScope();
             if (!gs) {
-                statusBox.innerText = autoModeActive ? '🤖 Waiting for active lesson...' : '⏳ ENGINE STANDBY (Toggle UI or Ctrl+Alt+L)';
+                statusBox.innerHTML = autoModeActive ? '🤖 Waiting for active lesson...' : '⏳ ENGINE STANDBY (Toggle UI or Ctrl+Alt+L)';
                 if (autoModeActive) pressSubmitOrContinue();
                 return;
             }
 
             const q = gs.game.model.currentQuestion;
-            const rawAnswers = getAnswers(q);
+            const cleanAns = getAnswers(q);
 
-            const displayAnswers = rawAnswers.map(ans => {
-                const keys = getTargetImageKeys(ans);
-                return keys.length > 0 ? `[Img: ${keys[0]}]` : ans;
-            });
+            // Render status with Answer Highlighting (Bright Yellow / Neon Green)
+            let statusHTML = (autoModeActive ? '<span style="color: #f43f5e; font-weight: 700;">🤖 AUTO ACTIVE</span>\n' : '<span style="color: #38bdf8; font-weight: 700;">⏳ ENGINE STANDBY</span>\n');
 
-            statusBox.innerText = (autoModeActive ? '🤖 AUTO ACTIVE\n' : '⏳ ENGINE STANDBY\n') +
-                (displayAnswers.length ? 'Answers: ' + displayAnswers.join(' / ') : 'Slide loaded / Ready');
+            if (cleanAns.length > 0) {
+                statusHTML += '<div style="margin-top: 4px;">';
+                cleanAns.forEach((ans, i) => {
+                    statusHTML += `<div style="background: rgba(250, 204, 21, 0.25); color: #fef08a; border: 1px solid #eab308; padding: 4px 6px; border-radius: 4px; margin-top: 4px; font-weight: 700; font-size: 11px; word-break: break-word;">💡 Answer ${i + 1}: ${ans}</div>`;
+                });
+                statusHTML += '</div>';
+            } else {
+                statusHTML += '<span style="opacity: 0.8;">Slide loaded / Ready</span>';
+            }
+
+            statusBox.innerHTML = statusHTML;
 
             if (!autoModeActive) return;
 
