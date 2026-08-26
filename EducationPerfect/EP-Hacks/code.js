@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      32.1
-// @description  Automates EP tasks including interactive text/comma clickers.
+// @version      32.3
+// @description  Automates EP tasks including full-sentence inline comma editing.
 // @match        *://*/*
 // @grant        none
 // @run-at       document-idle
@@ -115,7 +115,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v32.1</span>
+            <span>🤖 EP Automation v32.3</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
@@ -295,7 +295,7 @@
     function findBestElement(targetText) {
         if (!targetText) return null;
         const targetExact = targetText.trim();
-        const rawCandidates = document.querySelectorAll('span, button, div, label, p, [role="checkbox"], [role="radio"], .option, .mc-option, .tile, [class*="tile"]');
+        const rawCandidates = document.querySelectorAll('span, button, div, label, p, [role="checkbox"], [role="radio"], .option, .mc-option, .tile, [class*="tile"], .draggable-item, .drag-option');
         const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null && el.innerText.length <= targetText.length + 60);
 
         return candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetExact) || null;
@@ -307,7 +307,7 @@
         if (inputEl.tagName === 'INPUT' || inputEl.tagName === 'TEXTAREA') {
             inputEl.value = text;
         }
-        if (inputEl.getAttribute('contenteditable') === 'true' || inputEl.classList.contains('fr-element')) {
+        if (inputEl.getAttribute('contenteditable') === 'true' || inputEl.classList.contains('fr-element') || inputEl.classList.contains('editable-sentence')) {
             inputEl.innerText = text;
             inputEl.innerHTML = text;
         }
@@ -348,6 +348,8 @@
             if (c.ModelAnswerHTML) answers.push(cleanAnswerText(c.ModelAnswerHTML));
             if (c.SampleAnswer) answers.push(cleanAnswerText(c.SampleAnswer));
             if (c.ExplanationHTML) answers.push(cleanAnswerText(c.ExplanationHTML));
+            if (c.CorrectAnswer) answers.push(cleanAnswerText(c.CorrectAnswer));
+            if (c.Text) answers.push(cleanAnswerText(c.Text));
         });
         return [...new Set(answers.filter(Boolean))];
     }
@@ -364,7 +366,18 @@
         const cleanAnsList = getAnswers(q);
 
         q.questionDef.Components.forEach(c => {
-            // 1. Interactive Word Clicker / Highlight Component (Comma Placement)
+            // 1. Direct Model Sync for Sentence Editing / Inline Punctuation
+            if (c.ComponentTypeCode === 'SENTENCE_EDITING' || c.ComponentTypeCode === 'INLINE_TEXT_EDIT' || c.CorrectAnswer) {
+                const targetText = cleanAnswerText(c.CorrectAnswer || c.ModelAnswerHTML || cleanAnsList[0]);
+                if (targetText) {
+                    c.UserAnswer = targetText;
+                    c.Value = targetText;
+                    c.Text = targetText;
+                    scopeUpdated = true;
+                }
+            }
+
+            // 2. Interactive Word Clicker / Highlight Component
             if (c.ComponentTypeCode === 'HIGHLIGHT_COMPONENT' || c.TextTemplate) {
                 const targetWords = parseHighlight(c).map(d => d.text);
                 targetWords.forEach(word => {
@@ -377,18 +390,23 @@
                 });
             }
 
-            // 2. Cloze / Gap Fill
+            // 3. Drag & Drop & Cloze Gaps
             if (c.Gaps && c.Gaps.length > 0) {
                 c.Gaps.forEach((g, idx) => {
                     if (g.CorrectOptions && g.CorrectOptions[0]) {
                         const ans = cleanAnswerText(g.CorrectOptions[0]);
+                        
                         g.UserAnswer = ans;
                         g.SelectedOption = ans;
                         g.Value = ans;
+                        g.PlacedToken = ans;
                         scopeUpdated = true;
 
                         const tileEl = findBestElement(ans);
                         if (tileEl) simulatePreciseClick(tileEl);
+
+                        const dropZones = document.querySelectorAll('.drop-target, .gap-element, .cloze-gap, ep-gap, input.gap-input');
+                        if (dropZones[idx]) simulatePreciseClick(dropZones[idx]);
 
                         const gapInputs = document.querySelectorAll('.cloze-gap input, ep-gap input, input.gap-input, .gap-element input, .gap input');
                         if (gapInputs[idx]) robustType(gapInputs[idx], ans);
@@ -396,7 +414,7 @@
                 });
             }
 
-            // 3. Multiple Choice
+            // 4. Multiple Choice
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
                     if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
@@ -406,10 +424,10 @@
                 });
             }
 
-            // 4. Text Box / Open-Ended Rich Text Editor
+            // 5. Fallback DOM Input / Rich Text Sentence Editor Filling
             if (cleanAnsList.length > 0) {
                 const targetText = cleanAnsList[0];
-                const richEditors = document.querySelectorAll('.fr-element, [contenteditable="true"], textarea, input[type="text"]:not([hidden])');
+                const richEditors = document.querySelectorAll('.fr-element, [contenteditable="true"], textarea, input[type="text"]:not([hidden]), .sentence-editor');
                 richEditors.forEach(editor => {
                     if (editor.offsetParent !== null) {
                         robustType(editor, targetText);
