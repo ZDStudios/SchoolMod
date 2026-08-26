@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      32.3
-// @description  Automates EP tasks including full-sentence inline comma editing.
+// @version      32.4
+// @description  Automates EP tasks with fixes for inline sentence editing and prompt filtering.
 // @match        *://*/*
 // @grant        none
 // @run-at       document-idle
@@ -93,6 +93,18 @@
         return str;
     }
 
+    function isPromptText(text) {
+        if (!text) return true;
+        const lower = text.toLowerCase();
+        return (
+            lower.includes('you might think about') ||
+            lower.includes('including adjectives') ||
+            lower.includes('using commas to correctly') ||
+            lower.includes('write a description') ||
+            lower.includes('read the following passage')
+        );
+    }
+
     // ---- Build Modular UI Overlay ----
     let overlay = document.getElementById('ep-ultimate-overlay');
     if (overlay) overlay.remove();
@@ -115,7 +127,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v32.3</span>
+            <span>🤖 EP Automation v32.4</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
@@ -306,13 +318,13 @@
         inputEl.focus();
         if (inputEl.tagName === 'INPUT' || inputEl.tagName === 'TEXTAREA') {
             inputEl.value = text;
-        }
-        if (inputEl.getAttribute('contenteditable') === 'true' || inputEl.classList.contains('fr-element') || inputEl.classList.contains('editable-sentence')) {
+        } else {
             inputEl.innerText = text;
             inputEl.innerHTML = text;
         }
-        inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-        inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+        ['input', 'change', 'keyup', 'keydown', 'blur'].forEach(evtType => {
+            inputEl.dispatchEvent(new Event(evtType, { bubbles: true }));
+        });
     }
 
     function getGameScope() {
@@ -345,13 +357,11 @@
             }
             if (c.ComponentTypeCode === 'HIGHLIGHT_COMPONENT') answers.push(...parseHighlight(c).map(d => d.text));
             if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) answers.push(cleanAnswerText(c.Options[0]));
-            if (c.ModelAnswerHTML) answers.push(cleanAnswerText(c.ModelAnswerHTML));
-            if (c.SampleAnswer) answers.push(cleanAnswerText(c.SampleAnswer));
-            if (c.ExplanationHTML) answers.push(cleanAnswerText(c.ExplanationHTML));
             if (c.CorrectAnswer) answers.push(cleanAnswerText(c.CorrectAnswer));
-            if (c.Text) answers.push(cleanAnswerText(c.Text));
+            if (c.ModelAnswerHTML && !isPromptText(cleanAnswerText(c.ModelAnswerHTML))) answers.push(cleanAnswerText(c.ModelAnswerHTML));
+            if (c.SampleAnswer && !isPromptText(cleanAnswerText(c.SampleAnswer))) answers.push(cleanAnswerText(c.SampleAnswer));
         });
-        return [...new Set(answers.filter(Boolean))];
+        return [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
     }
 
     // ---- Auto-Solve Routine ----
@@ -366,14 +376,20 @@
         const cleanAnsList = getAnswers(q);
 
         q.questionDef.Components.forEach(c => {
-            // 1. Direct Model Sync for Sentence Editing / Inline Punctuation
+            // 1. Direct Model Sync & UI Input for Sentence Editing / Inline Punctuation
             if (c.ComponentTypeCode === 'SENTENCE_EDITING' || c.ComponentTypeCode === 'INLINE_TEXT_EDIT' || c.CorrectAnswer) {
-                const targetText = cleanAnswerText(c.CorrectAnswer || c.ModelAnswerHTML || cleanAnsList[0]);
-                if (targetText) {
+                const targetText = cleanAnswerText(c.CorrectAnswer || cleanAnsList[0]);
+                if (targetText && !isPromptText(targetText)) {
                     c.UserAnswer = targetText;
                     c.Value = targetText;
                     c.Text = targetText;
                     scopeUpdated = true;
+
+                    // Locate active sentence editor element
+                    const sentenceEditors = document.querySelectorAll('.fr-element, [contenteditable="true"], input[type="text"]:not([hidden]), .editable-sentence');
+                    sentenceEditors.forEach(ed => {
+                        if (ed.offsetParent !== null) robustType(ed, targetText);
+                    });
                 }
             }
 
@@ -424,15 +440,17 @@
                 });
             }
 
-            // 5. Fallback DOM Input / Rich Text Sentence Editor Filling
+            // 5. Fallback DOM Input filling
             if (cleanAnsList.length > 0) {
                 const targetText = cleanAnsList[0];
-                const richEditors = document.querySelectorAll('.fr-element, [contenteditable="true"], textarea, input[type="text"]:not([hidden]), .sentence-editor');
-                richEditors.forEach(editor => {
-                    if (editor.offsetParent !== null) {
-                        robustType(editor, targetText);
-                    }
-                });
+                if (!isPromptText(targetText)) {
+                    const richEditors = document.querySelectorAll('.fr-element, [contenteditable="true"], textarea, input[type="text"]:not([hidden])');
+                    richEditors.forEach(editor => {
+                        if (editor.offsetParent !== null) {
+                            robustType(editor, targetText);
+                        }
+                    });
+                }
             }
         });
 
@@ -489,7 +507,7 @@
                 });
                 statusHTML += '</div>';
             } else {
-                statusHTML += '<span style="opacity: 0.8;">Slide loaded / Ready</span>';
+                statusHTML += '<span style="opacity: 0.8;">Slide loaded / Free Writing (Use Self-Mark Bypass)</span>';
             }
 
             statusBox.innerHTML = statusHTML;
