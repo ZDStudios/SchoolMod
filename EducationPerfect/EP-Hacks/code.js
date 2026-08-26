@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      32.5
 // @description  Automates EP tasks with fixes for punctuation tiles and inline drag-and-drop gaps.
-// @match        *://*/*
+// @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
