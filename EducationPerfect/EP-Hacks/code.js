@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      32.4
-// @description  Automates EP tasks with fixes for inline sentence editing and prompt filtering.
+// @version      32.5
+// @description  Automates EP tasks with fixes for punctuation tiles and inline drag-and-drop gaps.
 // @match        *://*/*
 // @grant        none
 // @run-at       document-idle
@@ -73,9 +73,9 @@
     const SETTLE_DELAY = 400;       
     const SUBMIT_DELAY = 500;       
 
-    // ---- Clean Text Utility ----
+    // ---- Preserved Text Utility (Punctuation Friendly) ----
     function cleanAnswerText(raw) {
-        if (!raw) return '';
+        if (raw === null || raw === undefined) return '';
         let str = String(raw);
         
         const temp = document.createElement('div');
@@ -85,7 +85,6 @@
         str = str
             .replace(/\[block[^\n]*\n?/g, '')
             .replace(/<[^>]*>?/gm, '')
-            .replace(/[\{\}\<\>\&\=\;\/\\]/g, '')
             .replace(/\*\*/g, '')
             .replace(/\s+/g, ' ')
             .trim();
@@ -127,7 +126,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v32.4</span>
+            <span>🤖 EP Automation v32.5</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
@@ -304,13 +303,34 @@
         });
     }
 
+    function simulateDragAndDrop(sourceEl, targetEl) {
+        if (!sourceEl || !targetEl) return;
+        simulatePreciseClick(sourceEl);
+        
+        try {
+            const dataTransfer = new DataTransfer();
+            sourceEl.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer }));
+            targetEl.dispatchEvent(new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer }));
+            targetEl.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer }));
+            targetEl.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
+            sourceEl.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true, dataTransfer }));
+        } catch(e) {}
+
+        simulatePreciseClick(targetEl);
+    }
+
     function findBestElement(targetText) {
         if (!targetText) return null;
         const targetExact = targetText.trim();
-        const rawCandidates = document.querySelectorAll('span, button, div, label, p, [role="checkbox"], [role="radio"], .option, .mc-option, .tile, [class*="tile"], .draggable-item, .drag-option');
-        const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null && el.innerText.length <= targetText.length + 60);
+        const rawCandidates = document.querySelectorAll('span, button, div, label, p, [role="checkbox"], [role="radio"], .option, .mc-option, .tile, [class*="tile"], .draggable-item, .drag-option, .token');
+        const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null);
 
-        return candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetExact) || null;
+        // First pass: exact content match
+        let found = candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetExact);
+        if (found) return found;
+
+        // Second pass: relaxed match for symbols like , or .
+        return candidates.find(el => (el.innerText || el.textContent || '').trim() === targetExact) || null;
     }
 
     function robustType(inputEl, text) {
@@ -346,7 +366,9 @@
         if (!q?.questionDef?.Components) return answers;
         
         q.questionDef.Components.forEach(c => {
-            if (c.Gaps) c.Gaps.forEach(g => { if (g.CorrectOptions?.[0]) answers.push(cleanAnswerText(g.CorrectOptions[0])); });
+            if (c.Gaps) c.Gaps.forEach(g => { 
+                if (g.CorrectOptions?.[0]) answers.push(cleanAnswerText(g.CorrectOptions[0])); 
+            });
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
                     if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
@@ -385,7 +407,6 @@
                     c.Text = targetText;
                     scopeUpdated = true;
 
-                    // Locate active sentence editor element
                     const sentenceEditors = document.querySelectorAll('.fr-element, [contenteditable="true"], input[type="text"]:not([hidden]), .editable-sentence');
                     sentenceEditors.forEach(ed => {
                         if (ed.offsetParent !== null) robustType(ed, targetText);
@@ -406,7 +427,7 @@
                 });
             }
 
-            // 3. Drag & Drop & Cloze Gaps
+            // 3. Drag & Drop & Cloze Punctuation Gaps
             if (c.Gaps && c.Gaps.length > 0) {
                 c.Gaps.forEach((g, idx) => {
                     if (g.CorrectOptions && g.CorrectOptions[0]) {
@@ -419,10 +440,14 @@
                         scopeUpdated = true;
 
                         const tileEl = findBestElement(ans);
-                        if (tileEl) simulatePreciseClick(tileEl);
+                        const dropZones = document.querySelectorAll('.drop-target, .gap-element, .cloze-gap, ep-gap, input.gap-input, .inline-gap');
+                        const targetZone = dropZones[idx] || dropZones[0];
 
-                        const dropZones = document.querySelectorAll('.drop-target, .gap-element, .cloze-gap, ep-gap, input.gap-input');
-                        if (dropZones[idx]) simulatePreciseClick(dropZones[idx]);
+                        if (tileEl && targetZone) {
+                            simulateDragAndDrop(tileEl, targetZone);
+                        } else if (tileEl) {
+                            simulatePreciseClick(tileEl);
+                        }
 
                         const gapInputs = document.querySelectorAll('.cloze-gap input, ep-gap input, input.gap-input, .gap-element input, .gap input');
                         if (gapInputs[idx]) robustType(gapInputs[idx], ans);
