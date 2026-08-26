@@ -1,15 +1,25 @@
 // ==UserScript==
-// @name         EP Ultimate Automation Helper (v31.3)
+// @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      31.3
-// @description  Full auto-solver + Gap/Tile Fill Engine + Focus Spoofing + Auto Mode UI Toggle + Copyable UI
-// @match        *://*.educationperfect.com/*
+// @version      31.4
+// @description  Automates EP tasks and logs answers to the console.
+// @match        *://*/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
 
 (function() {
     'use strict';
+
+    // Global Console Helper Function
+    window.getEPAnswer = function() {
+        const comp0 = angular.element(document.querySelector('#game-page-container')).scope()?.game?.model?._currentQuestion?.questionDef?.Components?.[0]; 
+        if (!comp0) return console.warn("No active question component found."); 
+         
+        const div = document.createElement('div'); 
+        div.innerHTML = comp0.ModelAnswerHTML || ''; 
+        console.log("%c=== ANSWER ===", "color: #00ff00; font-weight: bold;", div.textContent.trim()); 
+    };
 
     // ---- Settings State ----
     const settings = {
@@ -69,9 +79,9 @@
     let filledSuccess = false;
     let bypassed = false;
 
-    const LOOP_SPEED = 200;          
-    const SETTLE_DELAY = 400;        
-    const SUBMIT_DELAY = 500;        
+    const LOOP_SPEED = 200;         
+    const SETTLE_DELAY = 400;       
+    const SUBMIT_DELAY = 500;       
 
     // ---- Build Modular UI Overlay ----
     let overlay = document.getElementById('ep-ultimate-overlay');
@@ -95,7 +105,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v31.3</span>
+            <span>🤖 EP Automation v31.4</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
@@ -131,6 +141,12 @@
                 </label>
             </div>
 
+            <div style="margin-bottom: 8px;">
+                <button id="ep-btn-get-answer" style="width: 100%; padding: 6px; background: rgba(255,255,255,0.15); color: inherit; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s;">
+                    🔍 Get Answer (Console Log)
+                </button>
+            </div>
+
             <div style="font-size: 10px; opacity: 0.75; text-align: center; margin-bottom: 6px;">
                 Press <b style="color: inherit; text-decoration: underline;">Ctrl + U</b> (Menu) | <b style="color: inherit; text-decoration: underline;">Ctrl + Alt + L</b> (Auto)
             </div>
@@ -151,6 +167,9 @@
     const statusBox = overlay.querySelector('#ep-status-box');
     const themeSelect = overlay.querySelector('#ep-theme-select');
     const autoModeToggle = overlay.querySelector('#toggle-automode');
+    const getAnswerBtn = overlay.querySelector('#ep-btn-get-answer');
+
+    getAnswerBtn.addEventListener('click', () => window.getEPAnswer());
 
     function applyTheme(themeName) {
         const t = themes[themeName] || themes.dark;
