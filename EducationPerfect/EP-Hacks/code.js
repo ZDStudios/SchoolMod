@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      32.0
-// @description  Automates EP tasks, cleans answer text, and highlights answers directly in UI.
+// @version      32.1
+// @description  Automates EP tasks including interactive text/comma clickers.
 // @match        *://*/*
 // @grant        none
 // @run-at       document-idle
@@ -73,17 +73,15 @@
     const SETTLE_DELAY = 400;       
     const SUBMIT_DELAY = 500;       
 
-    // ---- Clean Text Utility (Strips all HTML/Code/Entities) ----
+    // ---- Clean Text Utility ----
     function cleanAnswerText(raw) {
         if (!raw) return '';
         let str = String(raw);
         
-        // Use browser DOM parser to strip HTML tags and decode HTML entities (&nbsp;, &lt;, etc.)
         const temp = document.createElement('div');
         temp.innerHTML = str;
         str = temp.textContent || temp.innerText || '';
 
-        // Strip leftover code, brackets, block tags, and special characters
         str = str
             .replace(/\[block[^\n]*\n?/g, '')
             .replace(/<[^>]*>?/gm, '')
@@ -117,7 +115,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v32.0</span>
+            <span>🤖 EP Automation v32.1</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
@@ -354,7 +352,7 @@
         return [...new Set(answers.filter(Boolean))];
     }
 
-    // ---- Auto-Solve Routine Including Rich Text / Comma Insertion ----
+    // ---- Auto-Solve Routine ----
     function solveCurrentQuestion() {
         if (!settings.autoSolve) return true;
         const gs = getGameScope();
@@ -366,7 +364,20 @@
         const cleanAnsList = getAnswers(q);
 
         q.questionDef.Components.forEach(c => {
-            // 1. Cloze / Gap Fill
+            // 1. Interactive Word Clicker / Highlight Component (Comma Placement)
+            if (c.ComponentTypeCode === 'HIGHLIGHT_COMPONENT' || c.TextTemplate) {
+                const targetWords = parseHighlight(c).map(d => d.text);
+                targetWords.forEach(word => {
+                    const spans = document.querySelectorAll('span, div, .word, .clickable-word');
+                    spans.forEach(el => {
+                        if (el.offsetParent !== null && cleanAnswerText(el.innerText || el.textContent) === word) {
+                            simulatePreciseClick(el);
+                        }
+                    });
+                });
+            }
+
+            // 2. Cloze / Gap Fill
             if (c.Gaps && c.Gaps.length > 0) {
                 c.Gaps.forEach((g, idx) => {
                     if (g.CorrectOptions && g.CorrectOptions[0]) {
@@ -385,7 +396,7 @@
                 });
             }
 
-            // 2. Multiple Choice
+            // 3. Multiple Choice
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
                     if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
@@ -395,7 +406,7 @@
                 });
             }
 
-            // 3. Text Box / Open-Ended Rich Text Editor (Froala / ContentEditable for Comma Insertion)
+            // 4. Text Box / Open-Ended Rich Text Editor
             if (cleanAnsList.length > 0) {
                 const targetText = cleanAnsList[0];
                 const richEditors = document.querySelectorAll('.fr-element, [contenteditable="true"], textarea, input[type="text"]:not([hidden])');
@@ -451,7 +462,6 @@
             const q = gs.game.model.currentQuestion;
             const cleanAns = getAnswers(q);
 
-            // Render status with Answer Highlighting (Bright Yellow / Neon Green)
             let statusHTML = (autoModeActive ? '<span style="color: #f43f5e; font-weight: 700;">🤖 AUTO ACTIVE</span>\n' : '<span style="color: #38bdf8; font-weight: 700;">⏳ ENGINE STANDBY</span>\n');
 
             if (cleanAns.length > 0) {
