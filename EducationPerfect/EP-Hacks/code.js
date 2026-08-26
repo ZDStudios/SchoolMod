@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      31.4
+// @version      31.5
 // @description  Automates EP tasks and logs answers to the console.
 // @match        *://*/*
 // @grant        none
@@ -11,14 +11,68 @@
 (function() {
     'use strict';
 
-    // Global Console Helper Function
+    // Enhanced Global Console Helper Function
     window.getEPAnswer = function() {
-        const comp0 = angular.element(document.querySelector('#game-page-container')).scope()?.game?.model?._currentQuestion?.questionDef?.Components?.[0]; 
-        if (!comp0) return console.warn("No active question component found."); 
-         
-        const div = document.createElement('div'); 
-        div.innerHTML = comp0.ModelAnswerHTML || ''; 
-        console.log("%c=== ANSWER ===", "color: #00ff00; font-weight: bold;", div.textContent.trim()); 
+        if (!window.angular) {
+            console.warn("AngularJS context not found on main window.");
+            return;
+        }
+
+        // Search multiple potential root elements for the game scope
+        const selectors = ['#game-page-container', '[ng-app]', '[ng-controller]', '.game-container', 'body'];
+        let scope = null;
+
+        for (const sel of selectors) {
+            const el = document.querySelector(sel);
+            if (el) {
+                const s = window.angular.element(el).scope();
+                if (s?.game?.model || s?._currentQuestion || s?.currentQuestion) {
+                    scope = s;
+                    break;
+                }
+            }
+        }
+
+        if (!scope) {
+            // Fallback: search all elements
+            document.querySelectorAll('*').forEach(el => {
+                if (scope) return;
+                try {
+                    const s = window.angular.element(el).scope();
+                    if (s?.game?.model) scope = s;
+                } catch(e) {}
+            });
+        }
+
+        const model = scope?.game?.model || scope;
+        const currentQ = model?._currentQuestion || model?.currentQuestion;
+        const comp0 = currentQ?.questionDef?.Components?.[0];
+
+        if (!comp0) {
+            return console.warn("No active question component found in scope.", { model, currentQ });
+        }
+
+        // Gather all possible answer/explanation sources
+        const possibleAnswers = [
+            comp0.ModelAnswerHTML,
+            comp0.SampleAnswer,
+            comp0.ExplanationHTML,
+            comp0.ModelAnswer,
+            ...(comp0.Options || []).map(o => o.TextTemplate || o.Text || o.Label)
+        ].filter(Boolean);
+
+        if (possibleAnswers.length === 0) {
+            console.warn("Component found, but no explicit answer strings detected:", comp0);
+            return;
+        }
+
+        console.log("%c=== EP ANSWER / EXPLANATION ===", "color: #00ff00; font-weight: bold; font-size: 14px;");
+        possibleAnswers.forEach((ans, idx) => {
+            const div = document.createElement('div');
+            div.innerHTML = String(ans);
+            const cleanText = div.textContent.trim();
+            console.log(`%c[Source ${idx + 1}]:%c ${cleanText}`, "color: #38bdf8; font-weight: bold;", "color: #ffffff;");
+        });
     };
 
     // ---- Settings State ----
@@ -105,7 +159,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v31.4</span>
+            <span>🤖 EP Automation v31.5</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
@@ -181,7 +235,6 @@
     }
     applyTheme('dark');
 
-    // Sync Auto-Mode state between UI & Hotkey
     function setAutoMode(state) {
         autoModeActive = state;
         if (autoModeToggle) autoModeToggle.checked = autoModeActive;
@@ -391,6 +444,8 @@
             }
             if (c.ComponentTypeCode === 'HIGHLIGHT_COMPONENT') answers.push(...parseHighlight(c).map(d => d.text));
             if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) answers.push(c.Options[0].trim());
+            if (c.ModelAnswerHTML) answers.push(c.ModelAnswerHTML);
+            if (c.SampleAnswer) answers.push(c.SampleAnswer);
         });
         return answers;
     }
