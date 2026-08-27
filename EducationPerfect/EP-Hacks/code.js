@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      32.8
 // @description  Fixes submit gate locks, Froala text editor injection, and Check Answer triggers.
-// @match        *://*/*
+// @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
