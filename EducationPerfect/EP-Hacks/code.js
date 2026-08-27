@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      32.5
-// @description  Automates EP tasks with fixes for punctuation tiles and inline drag-and-drop gaps.
-// @match        *://*.educationperfect.com/*
+// @version      32.7
+// @description  Fixes bracket parsing bugs and multiple-choice matching failures.
+// @match        *://*/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
@@ -70,10 +70,10 @@
     let bypassed = false;
 
     const LOOP_SPEED = 200;         
-    const SETTLE_DELAY = 400;       
-    const SUBMIT_DELAY = 500;       
+    const SETTLE_DELAY = 450;       
+    const SUBMIT_DELAY = 600;       
 
-    // ---- Preserved Text Utility (Punctuation Friendly) ----
+    // ---- Clean Text Utility (Strips Stray Brackets & Bad Formatting) ----
     function cleanAnswerText(raw) {
         if (raw === null || raw === undefined) return '';
         let str = String(raw);
@@ -85,11 +85,15 @@
         str = str
             .replace(/\[block[^\n]*\n?/g, '')
             .replace(/<[^>]*>?/gm, '')
-            .replace(/\*\*/g, '')
+            .replace(/[\*\[\]]/g, '') // Strips *, [, and ]
             .replace(/\s+/g, ' ')
             .trim();
 
         return str;
+    }
+
+    function normalizeForComparison(str) {
+        return cleanAnswerText(str).toLowerCase().replace(/[^a-z0-9]/g, '');
     }
 
     function isPromptText(text) {
@@ -125,8 +129,8 @@
     `;
 
     overlay.innerHTML = `
-        <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v32.5</span>
+        <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-space-between; align-items: center; user-select: none; font-weight: 700;">
+            <span>🤖 EP Automation v32.7</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
@@ -201,7 +205,6 @@
     }
 
     themeSelect.addEventListener('change', (e) => applyTheme(e.target.value));
-
     autoModeToggle.addEventListener('change', (e) => setAutoMode(e.target.checked));
     overlay.querySelector('#toggle-solve').addEventListener('change', (e) => settings.autoSolve = e.target.checked);
     overlay.querySelector('#toggle-submit').addEventListener('change', (e) => settings.autoSubmit = e.target.checked);
@@ -301,6 +304,12 @@
         ['pointerdown', 'touchstart', 'mousedown', 'pointerup', 'touchend', 'mouseup', 'click'].forEach(evt => {
             try { el.dispatchEvent(new MouseEvent(evt, props)); } catch (e) {}
         });
+
+        const input = el.tagName === 'INPUT' ? el : el.querySelector('input');
+        if (input) {
+            input.checked = true;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
     }
 
     function simulateDragAndDrop(sourceEl, targetEl) {
@@ -321,16 +330,28 @@
 
     function findBestElement(targetText) {
         if (!targetText) return null;
-        const targetExact = targetText.trim();
-        const rawCandidates = document.querySelectorAll('span, button, div, label, p, [role="checkbox"], [role="radio"], .option, .mc-option, .tile, [class*="tile"], .draggable-item, .drag-option, .token');
+        const targetClean = cleanAnswerText(targetText);
+        const targetNorm = normalizeForComparison(targetText);
+        
+        const rawCandidates = document.querySelectorAll('li, label, span, button, div, [role="checkbox"], [role="radio"], .option, .mc-option, .tile, [class*="tile"], .draggable-item, .drag-option, .token');
         const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null);
 
-        // First pass: exact content match
-        let found = candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetExact);
+        // First pass: exact clean match
+        let found = candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetClean);
         if (found) return found;
 
-        // Second pass: relaxed match for symbols like , or .
-        return candidates.find(el => (el.innerText || el.textContent || '').trim() === targetExact) || null;
+        // Second pass: normalized alphanumeric match (for multi-choice lines)
+        found = candidates.find(el => {
+            const elNorm = normalizeForComparison(el.innerText || el.textContent);
+            return elNorm === targetNorm && elNorm.length > 0;
+        });
+        if (found) return found;
+
+        // Third pass: substring fallback
+        return candidates.find(el => {
+            const txt = (el.innerText || el.textContent || '').trim();
+            return txt === targetClean || txt.includes(targetClean);
+        }) || null;
     }
 
     function robustType(inputEl, text) {
@@ -360,7 +381,6 @@
         return gs;
     }
 
-    // ---- Extract Cleaned Answers ----
     function getAnswers(q) {
         const answers = [];
         if (!q?.questionDef?.Components) return answers;
@@ -386,6 +406,37 @@
         return [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
     }
 
+    // ---- Pre-Submit Validation Gate ----
+    function isQuestionFullyAnswered(gs, q) {
+        if (!q || !q.questionDef || !q.questionDef.Components) return true;
+        let allValid = true;
+
+        q.questionDef.Components.forEach(c => {
+            if (c.Gaps) {
+                c.Gaps.forEach(g => {
+                    if (!g.UserAnswer && !g.SelectedOption && !g.Value && !g.PlacedToken) {
+                        allValid = false;
+                    }
+                });
+            }
+            if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT') {
+                const selected = document.querySelector('input[type="radio"]:checked, [role="radio"][aria-checked="true"], .mc-option.selected, .option.selected');
+                if (!selected) allValid = false;
+            }
+        });
+
+        const gapsOrInputs = document.querySelectorAll('input[type="text"]:not([hidden]), textarea, .cloze-gap:not(.filled), ep-gap:not(.filled), .gap-element:not(.filled)');
+        gapsOrInputs.forEach(el => {
+            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                if (!el.value || !el.value.trim()) allValid = false;
+            } else {
+                if (!el.innerText || !el.innerText.trim()) allValid = false;
+            }
+        });
+
+        return allValid;
+    }
+
     // ---- Auto-Solve Routine ----
     function solveCurrentQuestion() {
         if (!settings.autoSolve) return true;
@@ -398,7 +449,7 @@
         const cleanAnsList = getAnswers(q);
 
         q.questionDef.Components.forEach(c => {
-            // 1. Direct Model Sync & UI Input for Sentence Editing / Inline Punctuation
+            // 1. Direct Model Sync & UI Input
             if (c.ComponentTypeCode === 'SENTENCE_EDITING' || c.ComponentTypeCode === 'INLINE_TEXT_EDIT' || c.CorrectAnswer) {
                 const targetText = cleanAnswerText(c.CorrectAnswer || cleanAnsList[0]);
                 if (targetText && !isPromptText(targetText)) {
@@ -455,27 +506,22 @@
                 });
             }
 
-            // 4. Multiple Choice
+            // 4. Multiple Choice (Enhanced)
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
                     if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
-                        const targetEl = findBestElement(cleanAnswerText(o.TextTemplate || o.Text || o.Label || o.Description));
-                        if (targetEl) simulatePreciseClick(targetEl);
+                        const targetText = cleanAnswerText(o.TextTemplate || o.Text || o.Label || o.Description);
+                        o.Selected = true;
+                        scopeUpdated = true;
+                        
+                        const targetEl = findBestElement(targetText);
+                        if (targetEl) {
+                            simulatePreciseClick(targetEl);
+                            const radio = targetEl.querySelector('input[type="radio"]') || targetEl.closest('label')?.querySelector('input[type="radio"]');
+                            if (radio) simulatePreciseClick(radio);
+                        }
                     }
                 });
-            }
-
-            // 5. Fallback DOM Input filling
-            if (cleanAnsList.length > 0) {
-                const targetText = cleanAnsList[0];
-                if (!isPromptText(targetText)) {
-                    const richEditors = document.querySelectorAll('.fr-element, [contenteditable="true"], textarea, input[type="text"]:not([hidden])');
-                    richEditors.forEach(editor => {
-                        if (editor.offsetParent !== null) {
-                            robustType(editor, targetText);
-                        }
-                    });
-                }
             }
         });
 
@@ -490,6 +536,14 @@
         if (!settings.autoSubmit) return false;
         dismissNoAnswerModal();
         triggerBypass();
+
+        const gs = getGameScope();
+        const q = gs?.game?.model?.currentQuestion;
+
+        const hasAnswers = getAnswers(q).length > 0;
+        if (hasAnswers && !isQuestionFullyAnswered(gs, q)) {
+            return false; 
+        }
 
         const candidates = document.querySelectorAll('button, .button, .ep-button, a, div[role="button"], span[role="button"]');
         for (let b of candidates) {
@@ -522,6 +576,7 @@
 
             const q = gs.game.model.currentQuestion;
             const cleanAns = getAnswers(q);
+            const fullyAnswered = isQuestionFullyAnswered(gs, q);
 
             let statusHTML = (autoModeActive ? '<span style="color: #f43f5e; font-weight: 700;">🤖 AUTO ACTIVE</span>\n' : '<span style="color: #38bdf8; font-weight: 700;">⏳ ENGINE STANDBY</span>\n');
 
@@ -531,6 +586,9 @@
                     statusHTML += `<div style="background: rgba(250, 204, 21, 0.25); color: #fef08a; border: 1px solid #eab308; padding: 4px 6px; border-radius: 4px; margin-top: 4px; font-weight: 700; font-size: 11px; word-break: break-word;">💡 Answer ${i + 1}: ${ans}</div>`;
                 });
                 statusHTML += '</div>';
+                if (!fullyAnswered) {
+                    statusHTML += '<div style="color: #fca5a5; margin-top: 4px; font-weight: 700;">⚠️ Gaps unfilled. Holding submit.</div>';
+                }
             } else {
                 statusHTML += '<span style="opacity: 0.8;">Slide loaded / Free Writing (Use Self-Mark Bypass)</span>';
             }
