@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      32.9
-// @description  Restored Auto-Hide toggle, fixed submit triggers and Froala editor input sync.
+// @version      33.0
+// @description  Adds multi-part ordering & image choice support + Synthwave & Nordic themes.
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -17,13 +17,15 @@
         antiDetect: true,
         selfMarkBypass: true,
         autoHide: localStorage.getItem('ep_autohide') === 'true',
-        theme: 'cyberpunk'
+        theme: 'synthwave'
     };
 
     const themes = {
+        cyberpunk: { bg: 'rgba(18, 16, 38, 0.98)', text: '#00ffcc', border: '#ff007f', header: '#2a1b4e' },
+        synthwave: { bg: 'rgba(26, 11, 46, 0.98)', text: '#ff71ce', border: '#01cdfe', header: '#3a135e' },
+        nordic: { bg: 'rgba(15, 28, 44, 0.98)', text: '#e0f2fe', border: '#38bdf8', header: '#1e3a5f' },
         dark: { bg: 'rgba(15, 23, 42, 0.98)', text: '#ffffff', border: '#70B80B', header: '#1e293b' },
         light: { bg: 'rgba(248, 250, 252, 0.98)', text: '#0f172a', border: '#10b981', header: '#e2e8f0' },
-        cyberpunk: { bg: 'rgba(18, 16, 38, 0.98)', text: '#00ffcc', border: '#ff007f', header: '#2a1b4e' },
         minimal: { bg: 'rgba(0, 0, 0, 0.9)', text: '#a3e635', border: '#a3e635', header: '#18181b' }
     };
 
@@ -88,20 +90,22 @@
         font-size: 12px; font-weight: 600;
         box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
         font-family: system-ui, -apple-system, sans-serif;
-        border-right: 5px solid #ff007f;
+        border-right: 5px solid #01cdfe;
         overflow: hidden;
         display: ${settings.autoHide ? 'none' : 'block'};
     `;
 
     overlay.innerHTML = `
-        <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v32.9</span>
+        <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-space-between; align-items: center; user-select: none; font-weight: 700;">
+            <span>🤖 EP Automation v33.0</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; justify-space-between; align-items: center; margin-bottom: 8px;">
                 <label for="ep-theme-select">Theme:</label>
                 <select id="ep-theme-select" style="background: rgba(255,255,255,0.1); color: inherit; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 6px; font-size: 11px;">
+                    <option value="synthwave" style="color:#000;">Neon Synthwave</option>
+                    <option value="nordic" style="color:#000;">Nordic Frost</option>
                     <option value="cyberpunk" style="color:#000;">Cyberpunk</option>
                     <option value="dark" style="color:#000;">Dark Slate</option>
                     <option value="light" style="color:#000;">Light Mode</option>
@@ -143,20 +147,20 @@
     const autoHideToggle = overlay.querySelector('#toggle-autohide');
 
     function applyTheme(themeName) {
-        const t = themes[themeName] || themes.cyberpunk;
+        const t = themes[themeName] || themes.synthwave;
         settings.theme = themeName;
         overlay.style.background = t.bg;
         overlay.style.color = t.text;
-        overlay.style.borderRightColor = autoModeActive ? '#E11D48' : t.border;
+        overlay.style.borderRightColor = autoModeActive ? '#ff0055' : t.border;
         headerEl.style.background = t.header;
     }
-    applyTheme('cyberpunk');
+    applyTheme('synthwave');
 
     function setAutoMode(state) {
         autoModeActive = state;
         if (autoModeToggle) autoModeToggle.checked = autoModeActive;
-        const currentTheme = themes[settings.theme] || themes.cyberpunk;
-        overlay.style.borderRightColor = autoModeActive ? '#E11D48' : currentTheme.border;
+        const currentTheme = themes[settings.theme] || themes.synthwave;
+        overlay.style.borderRightColor = autoModeActive ? '#ff0055' : currentTheme.border;
     }
 
     themeSelect.addEventListener('change', (e) => applyTheme(e.target.value));
@@ -185,7 +189,7 @@
         const targetClean = cleanAnswerText(targetText);
         const targetNorm = normalizeForComparison(targetText);
         
-        const rawCandidates = document.querySelectorAll('li, label, span, button, div, [role="checkbox"], [role="radio"], .option, .mc-option');
+        const rawCandidates = document.querySelectorAll('li, label, span, button, div, [role="checkbox"], [role="radio"], .option, .mc-option, .drag-item, .sequence-item');
         const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null);
 
         let found = candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetClean);
@@ -236,6 +240,17 @@
             if (c.Gaps) c.Gaps.forEach(g => { 
                 if (g.CorrectOptions?.[0]) answers.push(cleanAnswerText(g.CorrectOptions[0])); 
             });
+            if (c.OrderedSequence) {
+                c.OrderedSequence.forEach(item => {
+                    const txt = item.Text || item.Label || item.Value;
+                    if (txt) answers.push(cleanAnswerText(txt));
+                });
+            }
+            if (c.Targets) {
+                c.Targets.forEach(t => {
+                    if (t.CorrectValue) answers.push(cleanAnswerText(t.CorrectValue));
+                });
+            }
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
                     if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
@@ -250,20 +265,6 @@
             if (c.SampleAnswer && !isPromptText(cleanAnswerText(c.SampleAnswer))) answers.push(cleanAnswerText(c.SampleAnswer));
         });
         return [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
-    }
-
-    function isQuestionFullyAnswered(gs, q) {
-        const hasRadioChoice = document.querySelector('input[type="radio"]:checked, [role="radio"][aria-checked="true"], .selected, [class*="selected"]');
-        if (hasRadioChoice) return true;
-
-        let inputs = document.querySelectorAll('input[type="text"]:not([hidden]), textarea, .fr-element, [contenteditable="true"]');
-        for (let el of inputs) {
-            if (el.offsetParent !== null) {
-                const txt = (el.value || el.innerText || el.textContent || '').trim();
-                if (txt) return true;
-            }
-        }
-        return true;
     }
 
     function solveCurrentQuestion() {
@@ -307,6 +308,13 @@
                     }
                 });
             }
+
+            if (c.OrderedSequence || c.Targets) {
+                cleanAnsList.forEach((ansText) => {
+                    const el = findBestElement(ansText);
+                    if (el) simulatePreciseClick(el);
+                });
+            }
         });
 
         if (scopeUpdated && window.angular) {
@@ -346,7 +354,7 @@
             const q = gs.game.model.currentQuestion;
             const cleanAns = getAnswers(q);
 
-            let statusHTML = (autoModeActive ? '<span style="color: #ff007f; font-weight: 700;">🤖 AUTO ACTIVE</span>\n' : '<span style="color: #00ffcc; font-weight: 700;">⏳ ENGINE STANDBY</span>\n');
+            let statusHTML = (autoModeActive ? '<span style="color: #ff71ce; font-weight: 700;">🤖 AUTO ACTIVE</span>\n' : '<span style="color: #01cdfe; font-weight: 700;">⏳ ENGINE STANDBY</span>\n');
 
             if (cleanAns.length > 0) {
                 statusHTML += '<div style="margin-top: 4px;">';
