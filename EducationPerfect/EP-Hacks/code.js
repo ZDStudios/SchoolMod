@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      32.8
-// @description  Fixes submit gate locks, Froala text editor injection, and Check Answer triggers.
+// @version      32.9
+// @description  Restored Auto-Hide toggle, fixed submit triggers and Froala editor input sync.
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -21,10 +21,10 @@
     };
 
     const themes = {
-        dark: { bg: 'rgba(15, 23, 42, 0.98)', text: '#ffffff', border: '#70B80B', header: '#1e293b', accent: '#38bdf8' },
-        light: { bg: 'rgba(248, 250, 252, 0.98)', text: '#0f172a', border: '#10b981', header: '#e2e8f0', accent: '#0284c7' },
-        cyberpunk: { bg: 'rgba(18, 16, 38, 0.98)', text: '#00ffcc', border: '#ff007f', header: '#2a1b4e', accent: '#ff007f' },
-        minimal: { bg: 'rgba(0, 0, 0, 0.9)', text: '#a3e635', border: '#a3e635', header: '#18181b', accent: '#a3e635' }
+        dark: { bg: 'rgba(15, 23, 42, 0.98)', text: '#ffffff', border: '#70B80B', header: '#1e293b' },
+        light: { bg: 'rgba(248, 250, 252, 0.98)', text: '#0f172a', border: '#10b981', header: '#e2e8f0' },
+        cyberpunk: { bg: 'rgba(18, 16, 38, 0.98)', text: '#00ffcc', border: '#ff007f', header: '#2a1b4e' },
+        minimal: { bg: 'rgba(0, 0, 0, 0.9)', text: '#a3e635', border: '#a3e635', header: '#18181b' }
     };
 
     (function initSpoofers() {
@@ -95,7 +95,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v32.8</span>
+            <span>🤖 EP Automation v32.9</span>
             <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
         </div>
         <div style="padding: 10px 12px;">
@@ -117,6 +117,13 @@
                 <label><input type="checkbox" id="toggle-submit" checked> Auto Submit</label>
                 <label><input type="checkbox" id="toggle-antidetect" checked> Anti-Detect</label>
                 <label><input type="checkbox" id="toggle-selfmark" checked> Self-Mark/Bypass</label>
+                <label style="grid-column: span 2; display: flex; align-items: center; gap: 4px;">
+                    <input type="checkbox" id="toggle-autohide" ${settings.autoHide ? 'checked' : ''}> Auto-Hide UI on Load
+                </label>
+            </div>
+
+            <div style="font-size: 10px; opacity: 0.75; text-align: center; margin-bottom: 6px;">
+                Press <b style="text-decoration: underline;">Ctrl + U</b> (Menu) | <b style="text-decoration: underline;">Ctrl + Alt + L</b> (Auto)
             </div>
 
             <div id="ep-status-box" style="
@@ -133,6 +140,7 @@
     const statusBox = overlay.querySelector('#ep-status-box');
     const themeSelect = overlay.querySelector('#ep-theme-select');
     const autoModeToggle = overlay.querySelector('#toggle-automode');
+    const autoHideToggle = overlay.querySelector('#toggle-autohide');
 
     function applyTheme(themeName) {
         const t = themes[themeName] || themes.cyberpunk;
@@ -153,6 +161,10 @@
 
     themeSelect.addEventListener('change', (e) => applyTheme(e.target.value));
     autoModeToggle.addEventListener('change', (e) => setAutoMode(e.target.checked));
+    autoHideToggle.addEventListener('change', (e) => {
+        settings.autoHide = e.target.checked;
+        localStorage.setItem('ep_autohide', e.target.checked);
+    });
 
     function simulatePreciseClick(el) {
         if (!el) return;
@@ -187,7 +199,6 @@
         if (!inputEl) return;
         inputEl.focus();
         
-        // Handle Froala & ContentEditable Editors
         if (inputEl.classList.contains('fr-element') || inputEl.getAttribute('contenteditable') === 'true') {
             inputEl.innerHTML = `<p>${text}</p>`;
             if (window.jQuery && window.jQuery(inputEl).data('froala.editor')) {
@@ -241,10 +252,7 @@
         return [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
     }
 
-    // Fixed Gate: Correctly recognizes radio selections & rich text values
     function isQuestionFullyAnswered(gs, q) {
-        if (!q || !q.questionDef || !q.questionDef.Components) return true;
-
         const hasRadioChoice = document.querySelector('input[type="radio"]:checked, [role="radio"][aria-checked="true"], .selected, [class*="selected"]');
         if (hasRadioChoice) return true;
 
@@ -252,7 +260,7 @@
         for (let el of inputs) {
             if (el.offsetParent !== null) {
                 const txt = (el.value || el.innerText || el.textContent || '').trim();
-                if (!txt) return false;
+                if (txt) return true;
             }
         }
         return true;
@@ -310,10 +318,6 @@
 
     function pressSubmitOrContinue() {
         if (!settings.autoSubmit) return false;
-        const gs = getGameScope();
-        const q = gs?.game?.model?.currentQuestion;
-
-        if (!isQuestionFullyAnswered(gs, q)) return false;
 
         const candidates = document.querySelectorAll('button, .button, .ep-button, a, div[role="button"], span[role="button"]');
         for (let b of candidates) {
@@ -341,7 +345,6 @@
 
             const q = gs.game.model.currentQuestion;
             const cleanAns = getAnswers(q);
-            const fullyAnswered = isQuestionFullyAnswered(gs, q);
 
             let statusHTML = (autoModeActive ? '<span style="color: #ff007f; font-weight: 700;">🤖 AUTO ACTIVE</span>\n' : '<span style="color: #00ffcc; font-weight: 700;">⏳ ENGINE STANDBY</span>\n');
 
@@ -351,9 +354,6 @@
                     statusHTML += `<div style="background: rgba(250, 204, 21, 0.25); color: #fef08a; border: 1px solid #eab308; padding: 4px 6px; border-radius: 4px; margin-top: 4px; font-weight: 700; font-size: 11px;">💡 Answer ${i + 1}: ${ans}</div>`;
                 });
                 statusHTML += '</div>';
-                if (!fullyAnswered) {
-                    statusHTML += '<div style="color: #fca5a5; margin-top: 4px; font-weight: 700;">⚠️ Gaps unfilled. Holding submit.</div>';
-                }
             } else {
                 statusHTML += '<span style="opacity: 0.8;">Slide loaded / Manual grading area</span>';
             }
