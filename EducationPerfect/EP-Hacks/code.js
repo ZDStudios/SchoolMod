@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      33.2
 // @description  Adds Sentence Editing & Inline Diff component handlers, punctuation keypress emulation, UI drag, and collapse arrow.
-// @match        *://*/*
+// @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
