@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      33.2
-// @description  Adds Sentence Editing & Inline Diff component handlers, punctuation keypress emulation, UI drag, and collapse arrow.
+// @version      33.3
+// @description  Fixes colon/punctuation input targets and sentence editing diff state sync.
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -63,6 +63,12 @@
         return str.replace(/\[block[^\n]*\n?/g, '').replace(/<[^>]*>?/gm, '').replace(/[\*\[\]]/g, '').replace(/\s+/g, ' ').trim();
     }
 
+    // Strips leading punctuation like ": " or "- " that EP embeds in model answers
+    function cleanTargetForInput(raw) {
+        let txt = cleanAnswerText(raw);
+        return txt.replace(/^[:;\-–—\s]+/, '').trim();
+    }
+
     function normalizeForComparison(str) {
         return cleanAnswerText(str).toLowerCase().replace(/[^a-z0-9]/g, '');
     }
@@ -98,7 +104,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v33.2</span>
+            <span>🤖 EP Automation v33.3</span>
             <div style="display: flex; gap: 8px; align-items: center;">
                 <button id="ep-min-btn" style="background: transparent; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1;">▼</button>
             </div>
@@ -235,18 +241,23 @@
         if (!inputEl) return;
         inputEl.focus();
 
-        const cleanVal = cleanAnswerText(text);
+        const valToSet = cleanTargetForInput(text);
 
         if (inputEl.classList.contains('fr-element') || inputEl.getAttribute('contenteditable') === 'true') {
-            inputEl.innerHTML = `<p>${cleanVal}</p>`;
+            inputEl.innerHTML = `<p>${valToSet}</p>`;
             if (window.jQuery && window.jQuery(inputEl).data('froala.editor')) {
-                try { window.jQuery(inputEl).froalaEditor('html.set', `<p>${cleanVal}</p>`); } catch(e) {}
+                try { window.jQuery(inputEl).froalaEditor('html.set', `<p>${valToSet}</p>`); } catch(e) {}
             }
         } else if (inputEl.tagName === 'INPUT' || inputEl.tagName === 'TEXTAREA') {
-            inputEl.value = cleanVal;
+            inputEl.value = valToSet;
         } else {
-            inputEl.innerText = cleanVal;
+            inputEl.innerText = valToSet;
         }
+
+        // Fire native InputEvent for Angular/React state synchronization
+        try {
+            inputEl.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: valToSet }));
+        } catch(e) {}
 
         ['input', 'change', 'keydown', 'keypress', 'keyup', 'blur'].forEach(evtType => {
             inputEl.dispatchEvent(new Event(evtType, { bubbles: true }));
@@ -301,28 +312,27 @@
         return [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
     }
 
-    // Direct Scope Injector for Sentence Editing / Text Correcting Slides
-    function solveSentenceEditing(gs, q) {
+    function solveSentenceEditingAndDiffs(gs, q) {
         if (!q?.questionDef?.Components) return false;
         let updated = false;
 
         q.questionDef.Components.forEach(c => {
-            const target = cleanAnswerText(c.CorrectAnswer || c.ModelAnswerHTML || c.SampleAnswer);
-            if (!target || isPromptText(target)) return;
+            const fullTarget = cleanAnswerText(c.CorrectAnswer || c.ModelAnswerHTML || c.SampleAnswer);
+            const inputTarget = cleanTargetForInput(c.CorrectAnswer || c.ModelAnswerHTML || c.SampleAnswer);
+            if (!fullTarget || isPromptText(fullTarget)) return;
 
-            // Handle Angular Sentence Editing / Inline Diff state
-            if (c.ComponentTypeCode === 'SENTENCE_EDITING' || c.SentenceHTML || c.OriginalSentence) {
-                c.UserAnswer = target;
-                c.Value = target;
-                c.CorrectAnswer = target;
-                updated = true;
+            // Direct Angular model override
+            c.UserAnswer = fullTarget;
+            c.Value = fullTarget;
+            if (c.SentenceHTML) c.SentenceHTML = fullTarget;
+            if (c.EditingTokens) c.EditingTokens = fullTarget;
+            updated = true;
 
-                // Sync editable sentence block in DOM
-                const editables = document.querySelectorAll('.sentence-editing, .inline-editor, [contenteditable="true"], .fr-element');
-                editables.forEach(ed => {
-                    if (ed.offsetParent !== null) robustType(ed, target);
-                });
-            }
+            // Target editable components and single text gaps
+            const fields = document.querySelectorAll('.sentence-editing, .inline-editor, [contenteditable="true"], .fr-element, input[type="text"]:not([hidden]), textarea');
+            fields.forEach(f => {
+                if (f.offsetParent !== null) robustType(f, inputTarget);
+            });
         });
 
         if (updated && window.angular) {
@@ -339,15 +349,18 @@
             if (c.Gaps) {
                 c.Gaps.forEach((g, idx) => {
                     if (g.CorrectOptions && g.CorrectOptions[0]) {
-                        const correctVal = cleanAnswerText(g.CorrectOptions[0]);
-                        g.Value = correctVal;
-                        g.UserAnswer = correctVal;
+                        const rawAns = g.CorrectOptions[0];
+                        const inputVal = cleanTargetForInput(rawAns);
+                        const cleanVal = cleanAnswerText(rawAns);
+
+                        g.Value = cleanVal;
+                        g.UserAnswer = cleanVal;
 
                         const gapEls = document.querySelectorAll('.cloze-gap, [class*="gap"], .drop-zone, input[type="text"]:not([hidden])');
                         if (gapEls[idx]) {
-                            robustType(gapEls[idx], correctVal);
+                            robustType(gapEls[idx], inputVal);
                             
-                            const tileEl = findBestElement(correctVal);
+                            const tileEl = findBestElement(inputVal) || findBestElement(cleanVal);
                             if (tileEl) {
                                 simulatePreciseClick(tileEl);
                                 simulatePreciseClick(gapEls[idx]);
@@ -372,24 +385,10 @@
         const q = gs.game.model.currentQuestion;
         if (!q?.questionDef?.Components) return true;
 
-        let scopeUpdated = solveSentenceEditing(gs, q) || solveClozeGaps(gs, q);
+        let scopeUpdated = solveSentenceEditingAndDiffs(gs, q) || solveClozeGaps(gs, q);
         const cleanAnsList = getAnswers(q);
 
         q.questionDef.Components.forEach(c => {
-            if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' || c.ModelAnswerHTML || c.SampleAnswer) {
-                const targetText = cleanAnswerText(c.CorrectAnswer || c.ModelAnswerHTML || c.SampleAnswer || cleanAnsList[0]);
-                if (targetText && !isPromptText(targetText)) {
-                    c.UserAnswer = targetText;
-                    c.Value = targetText;
-                    scopeUpdated = true;
-
-                    const textEditors = document.querySelectorAll('.fr-element, [contenteditable="true"], textarea, input[type="text"]:not([hidden])');
-                    textEditors.forEach(ed => {
-                        if (ed.offsetParent !== null) robustType(ed, targetText);
-                    });
-                }
-            }
-
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
                     if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
