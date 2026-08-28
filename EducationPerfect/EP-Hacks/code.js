@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      33.3
-// @description  Fixes colon/punctuation input targets and sentence editing diff state sync.
+// @version      33.4
+// @description  Hooks directly into Angular Controllers and Component Directives to solve Sentence Editing & Punctuation Gaps.
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -63,7 +63,6 @@
         return str.replace(/\[block[^\n]*\n?/g, '').replace(/<[^>]*>?/gm, '').replace(/[\*\[\]]/g, '').replace(/\s+/g, ' ').trim();
     }
 
-    // Strips leading punctuation like ": " or "- " that EP embeds in model answers
     function cleanTargetForInput(raw) {
         let txt = cleanAnswerText(raw);
         return txt.replace(/^[:;\-–—\s]+/, '').trim();
@@ -104,7 +103,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v33.3</span>
+            <span>🤖 EP Automation v33.4</span>
             <div style="display: flex; gap: 8px; align-items: center;">
                 <button id="ep-min-btn" style="background: transparent; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1;">▼</button>
             </div>
@@ -237,30 +236,40 @@
         return found || null;
     }
 
-    function robustType(inputEl, text) {
-        if (!inputEl) return;
-        inputEl.focus();
+    // Advanced input runner with angular element controller trigger
+    function setControllerValue(el, val) {
+        if (!el) return;
+        el.focus();
 
-        const valToSet = cleanTargetForInput(text);
-
-        if (inputEl.classList.contains('fr-element') || inputEl.getAttribute('contenteditable') === 'true') {
-            inputEl.innerHTML = `<p>${valToSet}</p>`;
-            if (window.jQuery && window.jQuery(inputEl).data('froala.editor')) {
-                try { window.jQuery(inputEl).froalaEditor('html.set', `<p>${valToSet}</p>`); } catch(e) {}
-            }
-        } else if (inputEl.tagName === 'INPUT' || inputEl.tagName === 'TEXTAREA') {
-            inputEl.value = valToSet;
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            el.value = val;
         } else {
-            inputEl.innerText = valToSet;
+            el.innerText = val;
+            el.innerHTML = `<p>${val}</p>`;
         }
 
-        // Fire native InputEvent for Angular/React state synchronization
+        if (window.angular) {
+            try {
+                const ngEl = window.angular.element(el);
+                const ctrl = ngEl.controller ? ngEl.controller() : null;
+                const scope = ngEl.scope ? ngEl.scope() : null;
+
+                if (ctrl && typeof ctrl.onChange === 'function') ctrl.onChange({ $value: val });
+                if (ctrl && typeof ctrl.onTextChanged === 'function') ctrl.onTextChanged(val);
+                if (scope) {
+                    if (scope.model) scope.model.value = val;
+                    if (scope.gap) scope.gap.Value = val;
+                    scope.$apply();
+                }
+            } catch(e) {}
+        }
+
         try {
-            inputEl.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: valToSet }));
+            el.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: val }));
         } catch(e) {}
 
-        ['input', 'change', 'keydown', 'keypress', 'keyup', 'blur'].forEach(evtType => {
-            inputEl.dispatchEvent(new Event(evtType, { bubbles: true }));
+        ['input', 'change', 'keydown', 'keypress', 'keyup', 'blur'].forEach(evt => {
+            try { el.dispatchEvent(new Event(evt, { bubbles: true })); } catch(e) {}
         });
     }
 
@@ -312,6 +321,7 @@
         return [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
     }
 
+    // Controller-level invocation for Direct Editing & Diff slides
     function solveSentenceEditingAndDiffs(gs, q) {
         if (!q?.questionDef?.Components) return false;
         let updated = false;
@@ -321,17 +331,18 @@
             const inputTarget = cleanTargetForInput(c.CorrectAnswer || c.ModelAnswerHTML || c.SampleAnswer);
             if (!fullTarget || isPromptText(fullTarget)) return;
 
-            // Direct Angular model override
             c.UserAnswer = fullTarget;
             c.Value = fullTarget;
             if (c.SentenceHTML) c.SentenceHTML = fullTarget;
             if (c.EditingTokens) c.EditingTokens = fullTarget;
             updated = true;
 
-            // Target editable components and single text gaps
-            const fields = document.querySelectorAll('.sentence-editing, .inline-editor, [contenteditable="true"], .fr-element, input[type="text"]:not([hidden]), textarea');
-            fields.forEach(f => {
-                if (f.offsetParent !== null) robustType(f, inputTarget);
+            // Direct Angular Component Directive Controller Injection
+            const componentNodes = document.querySelectorAll('.sentence-editing-component, [class*="sentence-editing"], [class*="inline-editor"], [contenteditable="true"], .fr-element, input[type="text"]:not([hidden]), textarea');
+            componentNodes.forEach(node => {
+                if (node.offsetParent !== null) {
+                    setControllerValue(node, inputTarget);
+                }
             });
         });
 
@@ -358,7 +369,7 @@
 
                         const gapEls = document.querySelectorAll('.cloze-gap, [class*="gap"], .drop-zone, input[type="text"]:not([hidden])');
                         if (gapEls[idx]) {
-                            robustType(gapEls[idx], inputVal);
+                            setControllerValue(gapEls[idx], inputVal);
                             
                             const tileEl = findBestElement(inputVal) || findBestElement(cleanVal);
                             if (tileEl) {
