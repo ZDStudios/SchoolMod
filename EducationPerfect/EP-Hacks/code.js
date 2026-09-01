@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      33.7
-// @description  Adds Highlight/Token answer detection, Beta feature gate, and multi-target solver fixes.
+// @version      33.8
+// @description  Adds Dropdown/Inline Select parsing and improves Sentence Editing string cleanup.
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -81,7 +81,8 @@
             lower.includes('including adjectives') ||
             lower.includes('using commas to correctly') ||
             lower.includes('write a description') ||
-            lower.includes('read the following passage')
+            lower.includes('read the following passage') ||
+            lower.includes('use the dropdown menus')
         );
     }
 
@@ -131,7 +132,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v33.7</span>
+            <span>🤖 EP Automation v33.8</span>
             <div style="display: flex; gap: 8px; align-items: center;">
                 <button id="ep-min-btn" style="background: transparent; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1;">▼</button>
             </div>
@@ -277,8 +278,8 @@
         const targetClean = cleanAnswerText(targetText);
         const targetNorm = normalizeForComparison(targetText);
         
-        const rawCandidates = document.querySelectorAll('li, label, span, button, div, [role="checkbox"], [role="radio"], .option, .mc-option, .drag-item, .sequence-item, .draggable, .word-token, .token, [class*="word"]');
-        const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null);
+        const rawCandidates = document.querySelectorAll('li, label, span, button, div, option, [role="checkbox"], [role="radio"], .option, .mc-option, .drag-item, .sequence-item, .draggable, .word-token, .token, [class*="word"]');
+        const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null || el.tagName === 'OPTION');
 
         let found = candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetClean);
         if (found) return found;
@@ -329,6 +330,18 @@
             if (c.Gaps) c.Gaps.forEach(g => { 
                 if (g.CorrectOptions?.[0]) answers.push(cleanAnswerText(g.CorrectOptions[0])); 
             });
+            if (c.Dropdowns || c.Selects) {
+                const selects = c.Dropdowns || c.Selects;
+                selects.forEach(s => {
+                    const opts = s.Options || s.Choices || [];
+                    opts.forEach(o => {
+                        if (o.IsCorrect || o.Correct === true || o.Correct === 'true') {
+                            const txt = o.Text || o.Value || o.Label;
+                            if (txt) answers.push(cleanAnswerText(txt));
+                        }
+                    });
+                });
+            }
             if (c.OrderedSequence) {
                 c.OrderedSequence.forEach(item => {
                     const txt = item.Text || item.Label || item.Value;
@@ -370,7 +383,59 @@
             if (c.ModelAnswerHTML && !isPromptText(cleanAnswerText(c.ModelAnswerHTML))) answers.push(cleanAnswerText(c.ModelAnswerHTML));
             if (c.SampleAnswer && !isPromptText(cleanAnswerText(c.SampleAnswer))) answers.push(cleanAnswerText(c.SampleAnswer));
         });
-        return [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
+
+        const filtered = [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
+
+        const hasFullSentence = filtered.some(a => a.length > 15 && a.includes(' '));
+        if (hasFullSentence) {
+            return filtered.filter(a => !(a.length < 5 && !a.includes(' ')));
+        }
+
+        return filtered;
+    }
+
+    function solveDropdowns(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let solvedAny = false;
+
+        q.questionDef.Components.forEach(c => {
+            const selectsData = c.Dropdowns || c.Selects;
+            if (selectsData) {
+                const DOMSelects = document.querySelectorAll('select, .custom-select, [class*="dropdown"]');
+                selectsData.forEach((s, idx) => {
+                    const correctOpt = (s.Options || s.Choices || []).find(o => o.IsCorrect || o.Correct === true || o.Correct === 'true');
+                    if (correctOpt) {
+                        const targetVal = cleanAnswerText(correctOpt.Text || correctOpt.Value || correctOpt.Label);
+                        s.SelectedValue = targetVal;
+                        s.UserAnswer = targetVal;
+
+                        const selectEl = DOMSelects[idx];
+                        if (selectEl) {
+                            if (selectEl.tagName === 'SELECT') {
+                                const optionToSelect = Array.from(selectEl.options).find(opt => cleanAnswerText(opt.text || opt.value) === targetVal);
+                                if (optionToSelect) {
+                                    selectEl.value = optionToSelect.value;
+                                    selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                                    solvedAny = true;
+                                }
+                            } else {
+                                simulatePreciseClick(selectEl);
+                                const optionEl = findBestElement(targetVal);
+                                if (optionEl) {
+                                    simulatePreciseClick(optionEl);
+                                    solvedAny = true;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        if (solvedAny && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+        return solvedAny;
     }
 
     function solveSentenceEditingAndDiffs(gs, q) {
@@ -507,7 +572,7 @@
         const q = gs.game.model.currentQuestion;
         if (!q?.questionDef?.Components) return true;
 
-        let scopeUpdated = solveSentenceEditingAndDiffs(gs, q) || solveClozeGaps(gs, q) || solveMultiTargetMatching(gs, q) || solveWordHighlighting(gs, q);
+        let scopeUpdated = solveDropdowns(gs, q) || solveSentenceEditingAndDiffs(gs, q) || solveClozeGaps(gs, q) || solveMultiTargetMatching(gs, q) || solveWordHighlighting(gs, q);
         const cleanAnsList = getAnswers(q);
 
         q.questionDef.Components.forEach(c => {
