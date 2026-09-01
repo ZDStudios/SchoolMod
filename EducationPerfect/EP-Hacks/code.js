@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      33.4
-// @description  Hooks directly into Angular Controllers and Component Directives to solve Sentence Editing & Punctuation Gaps.
-// @match        *://*.educationperfect.com/*
+// @version      33.6
+// @description  Adds Beta Features gate, multi-target drag fix, and token-level sentence editing bypass.
+// @match        *://*/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
@@ -12,6 +12,7 @@
     'use strict';
 
     const settings = {
+        enableBeta: localStorage.getItem('ep_enable_beta') === 'true',
         autoSolve: true,
         autoSubmit: true,
         antiDetect: true,
@@ -84,6 +85,33 @@
         );
     }
 
+    function showBetaNoticeModal() {
+        let modal = document.getElementById('ep-beta-notice');
+        if (modal) modal.remove();
+
+        modal = document.createElement('div');
+        modal.id = 'ep-beta-notice';
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.75); z-index: 9999999;
+            display: flex; align-items: center; justify-content: center;
+            font-family: system-ui, -apple-system, sans-serif;
+        `;
+
+        modal.innerHTML = `
+            <div style="background: #1e1b2e; color: #f8fafc; padding: 24px; border-radius: 12px; width: 380px; border: 2px solid #ff71ce; box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center;">
+                <h3 style="margin: 0 0 12px 0; color: #ff71ce; font-size: 16px;">⚠️ Beta Features Notice</h3>
+                <p style="font-size: 13px; line-height: 1.5; opacity: 0.9; margin-bottom: 16px;">
+                    Some features may still be under development and need fine-tuning. Contact the developer if you have issues or suggestions.
+                </p>
+                <button id="ep-beta-close-btn" style="background: #01cdfe; color: #000; font-weight: 700; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 12px;">I Understand</button>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        document.getElementById('ep-beta-close-btn').addEventListener('click', () => modal.remove());
+    }
+
     let overlay = document.getElementById('ep-ultimate-overlay');
     if (overlay) overlay.remove();
 
@@ -103,7 +131,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v33.4</span>
+            <span>🤖 EP Automation v33.6</span>
             <div style="display: flex; gap: 8px; align-items: center;">
                 <button id="ep-min-btn" style="background: transparent; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1;">▼</button>
             </div>
@@ -123,9 +151,14 @@
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; font-size: 11px;">
-                    <label style="display: flex; align-items: center; gap: 6px; grid-column: span 2; background: rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 5px;">
+                    <label style="grid-column: span 2; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.05); padding: 4px 6px; border-radius: 4px;">
+                        <input type="checkbox" id="toggle-beta" ${settings.enableBeta ? 'checked' : ''}> Enable Beta Features
+                    </label>
+
+                    <label id="automode-wrapper" style="display: ${settings.enableBeta ? 'flex' : 'none'}; align-items: center; gap: 6px; grid-column: span 2; background: rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 5px;">
                         <input type="checkbox" id="toggle-automode"> <span style="font-weight: 700;">🤖 Auto Mode Active</span>
                     </label>
+
                     <label><input type="checkbox" id="toggle-solve" checked> Auto Solve</label>
                     <label><input type="checkbox" id="toggle-submit" checked> Auto Submit</label>
                     <label><input type="checkbox" id="toggle-antidetect" checked> Anti-Detect</label>
@@ -180,6 +213,8 @@
 
     const statusBox = overlay.querySelector('#ep-status-box');
     const themeSelect = overlay.querySelector('#ep-theme-select');
+    const betaToggle = overlay.querySelector('#toggle-beta');
+    const autoModeWrapper = overlay.querySelector('#automode-wrapper');
     const autoModeToggle = overlay.querySelector('#toggle-automode');
     const autoHideToggle = overlay.querySelector('#toggle-autohide');
 
@@ -194,11 +229,27 @@
     applyTheme('synthwave');
 
     function setAutoMode(state) {
+        if (!settings.enableBeta) {
+            autoModeActive = false;
+            if (autoModeToggle) autoModeToggle.checked = false;
+            return;
+        }
         autoModeActive = state;
         if (autoModeToggle) autoModeToggle.checked = autoModeActive;
         const currentTheme = themes[settings.theme] || themes.synthwave;
         overlay.style.borderRightColor = autoModeActive ? '#ff0055' : currentTheme.border;
     }
+
+    betaToggle.addEventListener('change', (e) => {
+        settings.enableBeta = e.target.checked;
+        localStorage.setItem('ep_enable_beta', e.target.checked);
+        autoModeWrapper.style.display = settings.enableBeta ? 'flex' : 'none';
+        if (settings.enableBeta) {
+            showBetaNoticeModal();
+        } else {
+            setAutoMode(false);
+        }
+    });
 
     themeSelect.addEventListener('change', (e) => applyTheme(e.target.value));
     autoModeToggle.addEventListener('change', (e) => setAutoMode(e.target.checked));
@@ -236,32 +287,16 @@
         return found || null;
     }
 
-    // Advanced input runner with angular element controller trigger
-    function setControllerValue(el, val) {
+    function forceNativeInput(el, val) {
         if (!el) return;
         el.focus();
 
         if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-            el.value = val;
+            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+            nativeSetter.call(el, val);
         } else {
             el.innerText = val;
             el.innerHTML = `<p>${val}</p>`;
-        }
-
-        if (window.angular) {
-            try {
-                const ngEl = window.angular.element(el);
-                const ctrl = ngEl.controller ? ngEl.controller() : null;
-                const scope = ngEl.scope ? ngEl.scope() : null;
-
-                if (ctrl && typeof ctrl.onChange === 'function') ctrl.onChange({ $value: val });
-                if (ctrl && typeof ctrl.onTextChanged === 'function') ctrl.onTextChanged(val);
-                if (scope) {
-                    if (scope.model) scope.model.value = val;
-                    if (scope.gap) scope.gap.Value = val;
-                    scope.$apply();
-                }
-            } catch(e) {}
         }
 
         try {
@@ -321,7 +356,6 @@
         return [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
     }
 
-    // Controller-level invocation for Direct Editing & Diff slides
     function solveSentenceEditingAndDiffs(gs, q) {
         if (!q?.questionDef?.Components) return false;
         let updated = false;
@@ -333,16 +367,16 @@
 
             c.UserAnswer = fullTarget;
             c.Value = fullTarget;
-            if (c.SentenceHTML) c.SentenceHTML = fullTarget;
-            if (c.EditingTokens) c.EditingTokens = fullTarget;
+            c.SentenceHTML = fullTarget;
+            c.EditingTokens = fullTarget;
+            if (c.DiffTokens && Array.isArray(c.DiffTokens)) {
+                c.DiffTokens = [{ text: fullTarget, type: 'normal' }];
+            }
             updated = true;
 
-            // Direct Angular Component Directive Controller Injection
-            const componentNodes = document.querySelectorAll('.sentence-editing-component, [class*="sentence-editing"], [class*="inline-editor"], [contenteditable="true"], .fr-element, input[type="text"]:not([hidden]), textarea');
-            componentNodes.forEach(node => {
-                if (node.offsetParent !== null) {
-                    setControllerValue(node, inputTarget);
-                }
+            const targetEls = document.querySelectorAll('.sentence-editing, .inline-editor, [contenteditable="true"], .fr-element, input[type="text"]:not([hidden]), textarea');
+            targetEls.forEach(el => {
+                if (el.offsetParent !== null) forceNativeInput(el, inputTarget);
             });
         });
 
@@ -369,7 +403,7 @@
 
                         const gapEls = document.querySelectorAll('.cloze-gap, [class*="gap"], .drop-zone, input[type="text"]:not([hidden])');
                         if (gapEls[idx]) {
-                            setControllerValue(gapEls[idx], inputVal);
+                            forceNativeInput(gapEls[idx], inputVal);
                             
                             const tileEl = findBestElement(inputVal) || findBestElement(cleanVal);
                             if (tileEl) {
@@ -389,6 +423,40 @@
         return solvedAny;
     }
 
+    // Handles Multi-Target Drag / Drop and Sequential Matching Slides
+    function solveMultiTargetMatching(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let solvedAny = false;
+
+        q.questionDef.Components.forEach(c => {
+            if (c.Targets && Array.isArray(c.Targets)) {
+                const dropZones = document.querySelectorAll('.drop-zone, [class*="target"], [class*="drop"]');
+
+                c.Targets.forEach((target, idx) => {
+                    const targetVal = cleanAnswerText(target.CorrectValue || target.Value);
+                    if (!targetVal) return;
+
+                    target.UserValue = targetVal;
+                    target.Value = targetVal;
+
+                    const draggableEl = findBestElement(targetVal);
+                    const zoneEl = dropZones[idx] || document.querySelectorAll('.drop-zone')[idx];
+
+                    if (draggableEl && zoneEl) {
+                        simulatePreciseClick(draggableEl);
+                        simulatePreciseClick(zoneEl);
+                        solvedAny = true;
+                    }
+                });
+            }
+        });
+
+        if (solvedAny && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+        return solvedAny;
+    }
+
     function solveCurrentQuestion() {
         if (!settings.autoSolve) return true;
         const gs = getGameScope();
@@ -396,7 +464,7 @@
         const q = gs.game.model.currentQuestion;
         if (!q?.questionDef?.Components) return true;
 
-        let scopeUpdated = solveSentenceEditingAndDiffs(gs, q) || solveClozeGaps(gs, q);
+        let scopeUpdated = solveSentenceEditingAndDiffs(gs, q) || solveClozeGaps(gs, q) || solveMultiTargetMatching(gs, q);
         const cleanAnsList = getAnswers(q);
 
         q.questionDef.Components.forEach(c => {
@@ -417,7 +485,7 @@
                 });
             }
 
-            if (c.OrderedSequence || c.Targets) {
+            if (c.OrderedSequence) {
                 cleanAnsList.forEach((ansText) => {
                     const el = findBestElement(ansText);
                     if (el) simulatePreciseClick(el);
@@ -509,7 +577,7 @@
         }
         if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'l') {
             e.preventDefault();
-            setAutoMode(!autoModeActive);
+            if (settings.enableBeta) setAutoMode(!autoModeActive);
         }
     });
 })();
