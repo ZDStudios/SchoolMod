@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      33.7
 // @description  Adds Highlight/Token answer detection, Beta feature gate, and multi-target solver fixes.
-// @match        *://*/*
+// @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
