@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      33.6
-// @description  Adds Beta Features gate, multi-target drag fix, and token-level sentence editing bypass.
+// @version      33.7
+// @description  Adds Highlight/Token answer detection, Beta feature gate, and multi-target solver fixes.
 // @match        *://*/*
 // @grant        none
 // @run-at       document-idle
@@ -131,7 +131,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v33.6</span>
+            <span>🤖 EP Automation v33.7</span>
             <div style="display: flex; gap: 8px; align-items: center;">
                 <button id="ep-min-btn" style="background: transparent; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1;">▼</button>
             </div>
@@ -277,7 +277,7 @@
         const targetClean = cleanAnswerText(targetText);
         const targetNorm = normalizeForComparison(targetText);
         
-        const rawCandidates = document.querySelectorAll('li, label, span, button, div, [role="checkbox"], [role="radio"], .option, .mc-option, .drag-item, .sequence-item, .draggable');
+        const rawCandidates = document.querySelectorAll('li, label, span, button, div, [role="checkbox"], [role="radio"], .option, .mc-option, .drag-item, .sequence-item, .draggable, .word-token, .token, [class*="word"]');
         const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null);
 
         let found = candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetClean);
@@ -339,6 +339,23 @@
                 c.Targets.forEach(t => {
                     if (t.CorrectValue) answers.push(cleanAnswerText(t.CorrectValue));
                 });
+            }
+            if (c.Words && Array.isArray(c.Words)) {
+                c.Words.forEach(w => {
+                    if (w.IsCorrect || w.ShouldHighlight || w.Correct) {
+                        const txt = w.Text || w.Word || w.Value;
+                        if (txt) answers.push(cleanAnswerText(txt));
+                    }
+                });
+            }
+            if (c.SelectedTokens || c.TargetTokens) {
+                const tokens = c.SelectedTokens || c.TargetTokens;
+                if (Array.isArray(tokens)) {
+                    tokens.forEach(tok => {
+                        const txt = typeof tok === 'string' ? tok : (tok.Text || tok.Value);
+                        if (txt) answers.push(cleanAnswerText(txt));
+                    });
+                }
             }
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
@@ -423,7 +440,33 @@
         return solvedAny;
     }
 
-    // Handles Multi-Target Drag / Drop and Sequential Matching Slides
+    function solveWordHighlighting(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let solvedAny = false;
+
+        q.questionDef.Components.forEach(c => {
+            if (c.Words && Array.isArray(c.Words)) {
+                c.Words.forEach(w => {
+                    if (w.IsCorrect || w.ShouldHighlight || w.Correct) {
+                        w.Selected = true;
+                        w.IsSelected = true;
+                        const wordText = cleanAnswerText(w.Text || w.Word || w.Value);
+                        const wordEl = findBestElement(wordText);
+                        if (wordEl) {
+                            simulatePreciseClick(wordEl);
+                            solvedAny = true;
+                        }
+                    }
+                });
+            }
+        });
+
+        if (solvedAny && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+        return solvedAny;
+    }
+
     function solveMultiTargetMatching(gs, q) {
         if (!q?.questionDef?.Components) return false;
         let solvedAny = false;
@@ -464,7 +507,7 @@
         const q = gs.game.model.currentQuestion;
         if (!q?.questionDef?.Components) return true;
 
-        let scopeUpdated = solveSentenceEditingAndDiffs(gs, q) || solveClozeGaps(gs, q) || solveMultiTargetMatching(gs, q);
+        let scopeUpdated = solveSentenceEditingAndDiffs(gs, q) || solveClozeGaps(gs, q) || solveMultiTargetMatching(gs, q) || solveWordHighlighting(gs, q);
         const cleanAnsList = getAnswers(q);
 
         q.questionDef.Components.forEach(c => {
