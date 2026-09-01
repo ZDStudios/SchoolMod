@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      33.8
-// @description  Adds Dropdown/Inline Select parsing and improves Sentence Editing string cleanup.
+// @version      33.9
+// @description  Adds Punctuation Token detection and Angular ngModel forced injection for Sentence Editing.
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -18,7 +18,7 @@
         antiDetect: true,
         selfMarkBypass: true,
         autoHide: localStorage.getItem('ep_autohide') === 'true',
-        theme: 'synthwave'
+        theme: 'cyberpunk'
     };
 
     const themes = {
@@ -53,7 +53,7 @@
 
     const LOOP_SPEED = 200;         
     const SETTLE_DELAY = 450;       
-    const SUBMIT_DELAY = 600;       
+    const SUBMIT_DELAY = 650;       
 
     function cleanAnswerText(raw) {
         if (raw === null || raw === undefined) return '';
@@ -89,7 +89,6 @@
     function showBetaNoticeModal() {
         let modal = document.getElementById('ep-beta-notice');
         if (modal) modal.remove();
-
         modal = document.createElement('div');
         modal.id = 'ep-beta-notice';
         modal.style.cssText = `
@@ -98,7 +97,6 @@
             display: flex; align-items: center; justify-content: center;
             font-family: system-ui, -apple-system, sans-serif;
         `;
-
         modal.innerHTML = `
             <div style="background: #1e1b2e; color: #f8fafc; padding: 24px; border-radius: 12px; width: 380px; border: 2px solid #ff71ce; box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center;">
                 <h3 style="margin: 0 0 12px 0; color: #ff71ce; font-size: 16px;">⚠️ Beta Features Notice</h3>
@@ -108,7 +106,6 @@
                 <button id="ep-beta-close-btn" style="background: #01cdfe; color: #000; font-weight: 700; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 12px;">I Understand</button>
             </div>
         `;
-
         document.body.appendChild(modal);
         document.getElementById('ep-beta-close-btn').addEventListener('click', () => modal.remove());
     }
@@ -132,7 +129,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v33.8</span>
+            <span>🤖 EP Automation v33.9</span>
             <div style="display: flex; gap: 8px; align-items: center;">
                 <button id="ep-min-btn" style="background: transparent; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1;">▼</button>
             </div>
@@ -142,9 +139,9 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <label for="ep-theme-select">Theme:</label>
                     <select id="ep-theme-select" style="background: rgba(255,255,255,0.1); color: inherit; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 6px; font-size: 11px;">
+                        <option value="cyberpunk" style="color:#000;">Cyberpunk</option>
                         <option value="synthwave" style="color:#000;">Neon Synthwave</option>
                         <option value="nordic" style="color:#000;">Nordic Frost</option>
-                        <option value="cyberpunk" style="color:#000;">Cyberpunk</option>
                         <option value="dark" style="color:#000;">Dark Slate</option>
                         <option value="light" style="color:#000;">Light Mode</option>
                         <option value="minimal" style="color:#000;">Minimal Lime</option>
@@ -183,7 +180,6 @@
     `;
 
     document.body.appendChild(overlay);
-
     const headerEl = overlay.querySelector('#ep-header');
     let isDraggingUI = false, offsetX = 0, offsetY = 0;
 
@@ -193,14 +189,12 @@
         offsetX = e.clientX - overlay.getBoundingClientRect().left;
         offsetY = e.clientY - overlay.getBoundingClientRect().top;
     });
-
     document.addEventListener('mousemove', (e) => {
         if (!isDraggingUI) return;
         overlay.style.left = `${e.clientX - offsetX}px`;
         overlay.style.top = `${e.clientY - offsetY}px`;
         overlay.style.right = 'auto';
     });
-
     document.addEventListener('mouseup', () => { isDraggingUI = false; });
 
     const minBtn = overlay.querySelector('#ep-min-btn');
@@ -220,14 +214,14 @@
     const autoHideToggle = overlay.querySelector('#toggle-autohide');
 
     function applyTheme(themeName) {
-        const t = themes[themeName] || themes.synthwave;
+        const t = themes[themeName] || themes.cyberpunk;
         settings.theme = themeName;
         overlay.style.background = t.bg;
         overlay.style.color = t.text;
         overlay.style.borderRightColor = autoModeActive ? '#ff0055' : t.border;
         headerEl.style.background = t.header;
     }
-    applyTheme('synthwave');
+    applyTheme(settings.theme);
 
     function setAutoMode(state) {
         if (!settings.enableBeta) {
@@ -237,7 +231,7 @@
         }
         autoModeActive = state;
         if (autoModeToggle) autoModeToggle.checked = autoModeActive;
-        const currentTheme = themes[settings.theme] || themes.synthwave;
+        const currentTheme = themes[settings.theme] || themes.cyberpunk;
         overlay.style.borderRightColor = autoModeActive ? '#ff0055' : currentTheme.border;
     }
 
@@ -245,13 +239,9 @@
         settings.enableBeta = e.target.checked;
         localStorage.setItem('ep_enable_beta', e.target.checked);
         autoModeWrapper.style.display = settings.enableBeta ? 'flex' : 'none';
-        if (settings.enableBeta) {
-            showBetaNoticeModal();
-        } else {
-            setAutoMode(false);
-        }
+        if (settings.enableBeta) showBetaNoticeModal();
+        else setAutoMode(false);
     });
-
     themeSelect.addEventListener('change', (e) => applyTheme(e.target.value));
     autoModeToggle.addEventListener('change', (e) => setAutoMode(e.target.checked));
     autoHideToggle.addEventListener('change', (e) => {
@@ -265,9 +255,7 @@
         const x = rect.left + rect.width / 2;
         const y = rect.top + rect.height / 2;
         const props = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, screenX: x, screenY: y, which: 1, buttons: 1 };
-
-        try { el.focus(); } catch(e) {}
-        try { el.click(); } catch(e) {}
+        try { el.focus(); el.click(); } catch(e) {}
         ['pointerdown', 'touchstart', 'mousedown', 'pointerup', 'touchend', 'mouseup', 'click'].forEach(evt => {
             try { el.dispatchEvent(new MouseEvent(evt, props)); } catch (e) {}
         });
@@ -277,8 +265,7 @@
         if (!targetText) return null;
         const targetClean = cleanAnswerText(targetText);
         const targetNorm = normalizeForComparison(targetText);
-        
-        const rawCandidates = document.querySelectorAll('li, label, span, button, div, option, [role="checkbox"], [role="radio"], .option, .mc-option, .drag-item, .sequence-item, .draggable, .word-token, .token, [class*="word"]');
+        const rawCandidates = document.querySelectorAll('li, label, span, button, div, option, [role="checkbox"], [role="radio"], .option, .mc-option, .drag-item, .sequence-item, .draggable, .word-token, .token, [class*="word"], [class*="punct"]');
         const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null || el.tagName === 'OPTION');
 
         let found = candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetClean);
@@ -294,16 +281,26 @@
 
         if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
             const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-            nativeSetter.call(el, val);
+            if (nativeSetter) nativeSetter.call(el, val);
+            else el.value = val;
         } else {
             el.innerText = val;
-            el.innerHTML = `<p>${val}</p>`;
+            el.innerHTML = val;
         }
 
+        // Force Angular to recognize the model update for contenteditable components
         try {
-            el.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: val }));
+            if (window.angular) {
+                const ngEl = window.angular.element(el);
+                const ngModel = ngEl.controller('ngModel');
+                if (ngModel) {
+                    ngModel.$setViewValue(val);
+                    ngModel.$render();
+                }
+            }
         } catch(e) {}
 
+        try { el.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: val })); } catch(e) {}
         ['input', 'change', 'keydown', 'keypress', 'keyup', 'blur'].forEach(evt => {
             try { el.dispatchEvent(new Event(evt, { bubbles: true })); } catch(e) {}
         });
@@ -353,23 +350,19 @@
                     if (t.CorrectValue) answers.push(cleanAnswerText(t.CorrectValue));
                 });
             }
-            if (c.Words && Array.isArray(c.Words)) {
-                c.Words.forEach(w => {
-                    if (w.IsCorrect || w.ShouldHighlight || w.Correct) {
-                        const txt = w.Text || w.Word || w.Value;
-                        if (txt) answers.push(cleanAnswerText(txt));
-                    }
-                });
-            }
-            if (c.SelectedTokens || c.TargetTokens) {
-                const tokens = c.SelectedTokens || c.TargetTokens;
-                if (Array.isArray(tokens)) {
-                    tokens.forEach(tok => {
-                        const txt = typeof tok === 'string' ? tok : (tok.Text || tok.Value);
-                        if (txt) answers.push(cleanAnswerText(txt));
+            
+            // Expanded Token Catch for Punctuation
+            ['Words', 'Tokens', 'PunctuationTokens', 'SelectedTokens', 'TargetTokens'].forEach(prop => {
+                if (c[prop] && Array.isArray(c[prop])) {
+                    c[prop].forEach(w => {
+                        if (w.IsCorrect || w.ShouldHighlight || w.Correct || w.IsTarget) {
+                            const txt = w.Text || w.Word || w.Value || w.Character || (typeof w === 'string' ? w : null);
+                            if (txt) answers.push(cleanAnswerText(txt));
+                        }
                     });
                 }
-            }
+            });
+
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
                     if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
@@ -385,19 +378,14 @@
         });
 
         const filtered = [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
-
         const hasFullSentence = filtered.some(a => a.length > 15 && a.includes(' '));
-        if (hasFullSentence) {
-            return filtered.filter(a => !(a.length < 5 && !a.includes(' ')));
-        }
-
+        if (hasFullSentence) return filtered.filter(a => !(a.length < 5 && !a.includes(' ')));
         return filtered;
     }
 
     function solveDropdowns(gs, q) {
         if (!q?.questionDef?.Components) return false;
         let solvedAny = false;
-
         q.questionDef.Components.forEach(c => {
             const selectsData = c.Dropdowns || c.Selects;
             if (selectsData) {
@@ -408,7 +396,6 @@
                         const targetVal = cleanAnswerText(correctOpt.Text || correctOpt.Value || correctOpt.Label);
                         s.SelectedValue = targetVal;
                         s.UserAnswer = targetVal;
-
                         const selectEl = DOMSelects[idx];
                         if (selectEl) {
                             if (selectEl.tagName === 'SELECT') {
@@ -431,10 +418,7 @@
                 });
             }
         });
-
-        if (solvedAny && window.angular) {
-            try { gs.$apply(); } catch(e) {}
-        }
+        if (solvedAny && window.angular) try { gs.$apply(); } catch(e) {}
         return solvedAny;
     }
 
@@ -447,10 +431,13 @@
             const inputTarget = cleanTargetForInput(c.CorrectAnswer || c.ModelAnswerHTML || c.SampleAnswer);
             if (!fullTarget || isPromptText(fullTarget)) return;
 
+            // Apply broad object overrides to force validation success
             c.UserAnswer = fullTarget;
             c.Value = fullTarget;
             c.SentenceHTML = fullTarget;
             c.EditingTokens = fullTarget;
+            c.UserAnswerHTML = inputTarget; 
+            c.UserAnswerText = inputTarget;
             if (c.DiffTokens && Array.isArray(c.DiffTokens)) {
                 c.DiffTokens = [{ text: fullTarget, type: 'normal' }];
             }
@@ -462,16 +449,40 @@
             });
         });
 
-        if (updated && window.angular) {
-            try { gs.$apply(); } catch(e) {}
-        }
+        if (updated && window.angular) try { gs.$apply(); } catch(e) {}
         return updated;
+    }
+
+    function solveWordHighlighting(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let solvedAny = false;
+
+        q.questionDef.Components.forEach(c => {
+            ['Words', 'Tokens', 'PunctuationTokens'].forEach(prop => {
+                if (c[prop] && Array.isArray(c[prop])) {
+                    c[prop].forEach(w => {
+                        if (w.IsCorrect || w.ShouldHighlight || w.Correct || w.IsTarget) {
+                            w.Selected = true;
+                            w.IsSelected = true;
+                            const wordText = cleanAnswerText(w.Text || w.Word || w.Value || w.Character);
+                            const wordEl = findBestElement(wordText);
+                            if (wordEl) {
+                                simulatePreciseClick(wordEl);
+                                solvedAny = true;
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        if (solvedAny && window.angular) try { gs.$apply(); } catch(e) {}
+        return solvedAny;
     }
 
     function solveClozeGaps(gs, q) {
         if (!q?.questionDef?.Components) return false;
         let solvedAny = false;
-
         q.questionDef.Components.forEach(c => {
             if (c.Gaps) {
                 c.Gaps.forEach((g, idx) => {
@@ -479,14 +490,12 @@
                         const rawAns = g.CorrectOptions[0];
                         const inputVal = cleanTargetForInput(rawAns);
                         const cleanVal = cleanAnswerText(rawAns);
-
                         g.Value = cleanVal;
                         g.UserAnswer = cleanVal;
 
                         const gapEls = document.querySelectorAll('.cloze-gap, [class*="gap"], .drop-zone, input[type="text"]:not([hidden])');
                         if (gapEls[idx]) {
                             forceNativeInput(gapEls[idx], inputVal);
-                            
                             const tileEl = findBestElement(inputVal) || findBestElement(cleanVal);
                             if (tileEl) {
                                 simulatePreciseClick(tileEl);
@@ -498,58 +507,24 @@
                 });
             }
         });
-
-        if (solvedAny && window.angular) {
-            try { gs.$apply(); } catch(e) {}
-        }
-        return solvedAny;
-    }
-
-    function solveWordHighlighting(gs, q) {
-        if (!q?.questionDef?.Components) return false;
-        let solvedAny = false;
-
-        q.questionDef.Components.forEach(c => {
-            if (c.Words && Array.isArray(c.Words)) {
-                c.Words.forEach(w => {
-                    if (w.IsCorrect || w.ShouldHighlight || w.Correct) {
-                        w.Selected = true;
-                        w.IsSelected = true;
-                        const wordText = cleanAnswerText(w.Text || w.Word || w.Value);
-                        const wordEl = findBestElement(wordText);
-                        if (wordEl) {
-                            simulatePreciseClick(wordEl);
-                            solvedAny = true;
-                        }
-                    }
-                });
-            }
-        });
-
-        if (solvedAny && window.angular) {
-            try { gs.$apply(); } catch(e) {}
-        }
+        if (solvedAny && window.angular) try { gs.$apply(); } catch(e) {}
         return solvedAny;
     }
 
     function solveMultiTargetMatching(gs, q) {
         if (!q?.questionDef?.Components) return false;
         let solvedAny = false;
-
         q.questionDef.Components.forEach(c => {
             if (c.Targets && Array.isArray(c.Targets)) {
                 const dropZones = document.querySelectorAll('.drop-zone, [class*="target"], [class*="drop"]');
-
                 c.Targets.forEach((target, idx) => {
                     const targetVal = cleanAnswerText(target.CorrectValue || target.Value);
                     if (!targetVal) return;
-
                     target.UserValue = targetVal;
                     target.Value = targetVal;
 
                     const draggableEl = findBestElement(targetVal);
                     const zoneEl = dropZones[idx] || document.querySelectorAll('.drop-zone')[idx];
-
                     if (draggableEl && zoneEl) {
                         simulatePreciseClick(draggableEl);
                         simulatePreciseClick(zoneEl);
@@ -558,10 +533,7 @@
                 });
             }
         });
-
-        if (solvedAny && window.angular) {
-            try { gs.$apply(); } catch(e) {}
-        }
+        if (solvedAny && window.angular) try { gs.$apply(); } catch(e) {}
         return solvedAny;
     }
 
@@ -572,7 +544,7 @@
         const q = gs.game.model.currentQuestion;
         if (!q?.questionDef?.Components) return true;
 
-        let scopeUpdated = solveDropdowns(gs, q) || solveSentenceEditingAndDiffs(gs, q) || solveClozeGaps(gs, q) || solveMultiTargetMatching(gs, q) || solveWordHighlighting(gs, q);
+        let scopeUpdated = solveDropdowns(gs, q) || solveSentenceEditingAndDiffs(gs, q) || solveWordHighlighting(gs, q) || solveClozeGaps(gs, q) || solveMultiTargetMatching(gs, q);
         const cleanAnsList = getAnswers(q);
 
         q.questionDef.Components.forEach(c => {
@@ -582,7 +554,6 @@
                         const targetText = cleanAnswerText(o.TextTemplate || o.Text || o.Label || o.Description);
                         o.Selected = true;
                         scopeUpdated = true;
-                        
                         const targetEl = findBestElement(targetText);
                         if (targetEl) {
                             simulatePreciseClick(targetEl);
@@ -592,7 +563,6 @@
                     }
                 });
             }
-
             if (c.OrderedSequence) {
                 cleanAnsList.forEach((ansText) => {
                     const el = findBestElement(ansText);
@@ -601,16 +571,12 @@
             }
         });
 
-        if (scopeUpdated && window.angular) {
-            try { gs.$apply(); } catch(e) {}
-        }
-
+        if (scopeUpdated && window.angular) try { gs.$apply(); } catch(e) {}
         return true;
     }
 
     function pressSubmitOrContinue() {
         if (!settings.autoSubmit) return false;
-
         const candidates = document.querySelectorAll('button, .button, .ep-button, a, div[role="button"], span[role="button"]');
         for (let b of candidates) {
             if (b.offsetParent === null) continue;
@@ -638,7 +604,7 @@
             const q = gs.game.model.currentQuestion;
             const cleanAns = getAnswers(q);
 
-            let statusHTML = (autoModeActive ? '<span style="color: #ff71ce; font-weight: 700;">🤖 AUTO ACTIVE</span>\n' : '<span style="color: #01cdfe; font-weight: 700;">⏳ ENGINE STANDBY</span>\n');
+            let statusHTML = (autoModeActive ? '<span style="color: #00ffcc; font-weight: 700;">🤖 AUTO ACTIVE</span>\n' : '<span style="color: #ff007f; font-weight: 700;">⏳ ENGINE STANDBY</span>\n');
 
             if (cleanAns.length > 0) {
                 statusHTML += '<div style="margin-top: 4px;">';
