@@ -111,8 +111,7 @@ src/
 resources/           seqta_session.py (bundled SSO helper)
 ```
 
-## 🔐 Privacy & scope
-SchoolMod is a **study productivity tool**. It does not, and will not, automate quizzes, bypass web filters, or do your assessments for you. Its predecessor's auto-answer bots and filter-bypass tools were intentionally **not** carried over.
+
 
 ## 📄 License
 MIT © ZDStudios
