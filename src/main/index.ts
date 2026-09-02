@@ -1,0 +1,670 @@
+import { app, shell, BrowserWindow, nativeTheme, session } from 'electron'
+import { join } from 'path'
+import { initStores, getSettings } from './store'
+import { registerIpc } from './ipc'
+import { findExecutable } from './services/proc'
+import {
+  setupTray,
+  applyAutoLaunch,
+  setupQuickExplain,
+  unregisterShortcuts,
+  isQuitting,
+  markQuitting
+} from './services/desktop'
+
+// process.uptime() is measured from actual process start, so it's a reliable
+// baseline regardless of how the compiler orders/hoists these imports.
+const __mark = (label: string) => {
+  if (process.env.SCHOOLMOD_PERF) console.log(`[PERF] +${Math.round(process.uptime() * 1000)}ms  ${label}`)
+}
+__mark('module graph loaded (all top-level requires done)')
+
+/** Run with SCHOOLMOD_DIAG=1 to print a full SEQTA connectivity report to stdout. */
+async function runDiagnostics() {
+  const log = (...a: unknown[]) => console.log('[DIAG]', ...a)
+  // Loaded here, not at module top, so a normal (non-diagnostic) launch never
+  // pays for requiring these services.
+  const seqta = await import('./services/seqta')
+  const ai = await import('./services/claude')
+  const s = getSettings().seqta
+  log(`mode=${s.mode} connected=${s.connected} base=${s.baseUrl} cookieLen=${s.sessionCookie.length} name="${s.displayName}"`)
+  const step = async (label: string, fn: () => Promise<unknown>) => {
+    try {
+      const r: any = await fn()
+      const n = Array.isArray(r) ? r.length : typeof r === 'string' ? `${r.length} chars` : JSON.stringify(r)?.slice(0, 160)
+      log(`${label}: OK ->`, n)
+    } catch (e: any) {
+      log(`${label}: FAILED ->`, e?.message)
+    }
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'agent') {
+    const { runAgent } = await import('./services/agent')
+    for (const q of ['What OneNote notebooks do I have?', 'Switch the app to dark mode, then back to system']) {
+      log(`--- ASK: "${q}"`)
+      const tools: string[] = []
+      let answer = ''
+      try {
+        await runAgent([{ role: 'user', content: q }], (m) => ai.chat(m), {
+          onTool: (t) => tools.push(t),
+          onDelta: (t) => (answer += t)
+        })
+        log('tools called:', tools.join(', ') || '(none)')
+        log('answer:', answer.replace(/\s+/g, ' ').slice(0, 300))
+      } catch (e: any) {
+        log('FAILED:', e?.message)
+      }
+    }
+    log('theme now =', getSettings().theme)
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'study') {
+    const nbs = await import('./services/notebooks')
+    const decks = await import('./services/flashcards')
+    let nbId = ''
+    let deckId = ''
+    await step('notebook.create', async () => {
+      const nb = nbs.create('DIAG notebook')
+      nbId = nb.id
+      return nb.title
+    })
+    await step('notebook.addSourceText', async () =>
+      nbs.addSourceText(nbId, 'diag.txt', 'Photosynthesis converts light energy into glucose in chloroplasts. The Calvin cycle fixes carbon dioxide.')
+    )
+    await step('notebook.ask', async () => (await nbs.ask(nbId, 'Where does photosynthesis happen?')).answer.slice(0, 120))
+    await step('deck.create', async () => {
+      const d = decks.create('DIAG deck')
+      deckId = d.id
+      return d.title
+    })
+    await step('deck.generate', async () => (await decks.generate(deckId, 'Photosynthesis basics', 4)).cards.length + ' cards')
+    // clean up the diagnostic artefacts
+    nbs.remove(nbId)
+    decks.remove(deckId)
+    log('cleaned up DIAG notebook + deck')
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'ms') {
+    const ms = await import('./services/msElectron')
+    await step('ms.connect', () => ms.connect())
+    await step('ms.recentFiles', () => ms.recentFiles())
+    let notebooks: any[] = []
+    await step('ms.oneNoteNotebooks', async () => {
+      notebooks = await ms.oneNoteNotebooks()
+      return notebooks.map((n: any) => n.name)
+    })
+    if (notebooks.length) {
+      await step(`ms.readNotebook("${notebooks[0].name}")`, async () => {
+        const r = await ms.readNotebook(notebooks[0].name)
+        return { notebook: r.notebook, sections: r.sections, pages: r.pages, textLen: r.text.length, textSample: r.text.slice(0, 200) }
+      })
+    }
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'course') {
+    const seqta = await import('./services/seqta')
+    const r = await seqta.courseContent('Science')
+    const c = r[0]
+    const withBody = c.lessons.filter((l: any) => l.html)
+    log(`subject=${c.subject} lessons=${c.lessons.length} withBody=${withBody.length} empty=${c.lessons.length - withBody.length}`)
+    const numeric = c.lessons.filter((l: any) => /^\d+$/.test((l.notes || '').trim()))
+    log('lessons whose body is a bare number =', numeric.length)
+
+    // The exact lesson the user reported as blank.
+    const kin = c.lessons.find((l: any) => /kinetic energy/i.test(l.title))
+    log('--- reported-blank lesson ---')
+    log('title    :', kin?.title)
+    log('html len :', kin?.html?.length ?? 0)
+    log('text len :', kin?.notes?.length ?? 0)
+    log('text     :', (kin?.notes || '').replace(/\s+/g, ' ').slice(0, 320))
+
+    // Which lessons are STILL empty, and are they legitimately empty?
+    const empties = c.lessons.filter((l: any) => !l.html)
+    log('still-empty titles =', JSON.stringify(empties.map((l: any) => l.title).slice(0, 12)))
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'computer') {
+    const s = await import('./store')
+    const fs = await import('fs')
+    const path = await import('path')
+    const os = await import('os')
+    s.setSettings({ computerAccess: true })
+    const { runAgent } = await import('./services/agent')
+    const { chat } = await import('./services/claude')
+    const testFile = path.join(os.tmpdir(), 'schoolmod-write-test.txt')
+    if (fs.existsSync(testFile)) fs.unlinkSync(testFile)
+
+    for (const q of [`Write the exact text "SCHOOLMOD_WRITE_OK" to the file ${testFile.replace(/\\/g, '\\\\')}`]) {
+      log(`--- ASK: "${q}"`)
+      let answer = ''
+      const tools: string[] = []
+      // Wrap chat() to log the model's raw reply at each turn — tells us
+      // whether it emitted <tool> syntax at all, vs just narrating in prose.
+      let turn = 0
+      const chatSpy = async (msgs: any[]) => {
+        const r = await chat(msgs)
+        log(`  raw reply [turn ${++turn}]:`, JSON.stringify(r))
+        return r
+      }
+      await runAgent([{ role: 'user', content: q }], chatSpy, {
+        onTool: (t) => tools.push(t),
+        onDelta: (t) => (answer += t)
+      })
+      log('tools called:', tools.join(', ') || '(none)')
+      log('answer (full):', JSON.stringify(answer))
+    }
+
+    // Ground truth: did the file actually get written, independent of what the model claims?
+    const exists = fs.existsSync(testFile)
+    const content = exists ? fs.readFileSync(testFile, 'utf-8') : null
+    log('GROUND TRUTH: file exists ->', exists, '| content ->', JSON.stringify(content))
+    if (exists) fs.unlinkSync(testFile)
+
+    s.setSettings({ computerAccess: false })
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'raw') {
+    const direct = await import('./services/seqtaDirect')
+    await (direct as any).ensure()
+    const subs = await (direct as any).subjects()
+    const target = subs.find((s: any) => /science/i.test(s.title)) || subs[0]
+    const data = await (direct as any).payload('/seqta/student/load/courses', {
+      programme: String(target.programme),
+      metaclass: String(target.metaclass)
+    })
+    const d: any[] = data.d || []
+    const w: any[] = data.w || []
+    log(`d.length=${d.length}  w.length=${w.length}`)
+    log('all d[i].n values =', JSON.stringify(d.map((x) => x.n)))
+    const missing = d.filter((x) => w[x.n] === undefined)
+    log('weeks whose w[n] is UNDEFINED =', missing.length, JSON.stringify(missing.map((x) => `T${x.t}W${x.w} n=${x.n}`)))
+
+    // Every distinct key seen on a lesson object, with how often it appears.
+    const keyCount = new Map<string, number>()
+    const all: any[] = []
+    for (const bucket of w) for (const it of (Array.isArray(bucket) ? bucket : [bucket])) {
+      all.push(it)
+      Object.keys(it || {}).forEach((k) => keyCount.set(k, (keyCount.get(k) || 0) + 1))
+    }
+    log('total lesson objects =', all.length)
+    log('key frequency =', JSON.stringify([...keyCount.entries()].sort((a, b) => b[1] - a[1])))
+
+    // Focus on the lesson the user reported as empty.
+    const kin = all.find((x) => /kinetic energy/i.test(x?.t || ''))
+    log('--- "Kinetic Energy" lesson ---')
+    log('keys =', JSON.stringify(Object.keys(kin || {})))
+    log('o length =', (kin?.o || '').length, '| l =', JSON.stringify(kin?.l), '| h =', JSON.stringify(kin?.h))
+    log('full (minus document) =', JSON.stringify({ ...kin, document: undefined })?.slice(0, 800))
+    try {
+      const doc = JSON.parse(kin?.document?.contents || '{}')
+      const mods = doc?.document?.modules || []
+      log('document modules =', mods.length)
+      mods.forEach((m: any, i: number) =>
+        log(`  mod[${i}] type=${m.type} contentNull=${m.content == null} keys=${JSON.stringify(Object.keys(m.content?.value || {}))} sample=${JSON.stringify(m.content?.value)?.slice(0, 200)}`)
+      )
+      log('document id =', kin?.document?.id)
+    } catch (e: any) { log('document parse failed:', e?.message) }
+
+    // Do any lessons carry prose inside a module rather than in `o`?
+    let modProse = 0
+    for (const it of all) {
+      if (it?.o) continue
+      try {
+        const doc = JSON.parse(it?.document?.contents || '{}')
+        for (const m of doc?.document?.modules || []) {
+          const v = JSON.stringify(m?.content?.value || '')
+          if (v.length > 80 && !v.includes('resources')) { modProse++; log('  prose-in-module sample:', v.slice(0, 300)) }
+        }
+      } catch { /* ignore */ }
+    }
+    log('lessons WITHOUT o that have prose inside a module =', modProse)
+
+    // The body must live behind the document id. Probe plausible endpoints and
+    // report which one returns something real.
+    try {
+      const doc = JSON.parse(kin?.document?.contents || '{}')
+      const mods = doc?.document?.modules || []
+      log('mod[1].content FULL =', JSON.stringify(mods[1]?.content)?.slice(0, 600))
+      log('mod[1] FULL =', JSON.stringify(mods[1])?.slice(0, 600))
+    } catch { /* ignore */ }
+
+    const docId = kin?.document?.id
+    const lessonId = kin?.i
+    const probes: [string, any][] = [
+      ['/seqta/student/load/document', { id: docId }],
+      ['/seqta/student/load/document', { document: docId }],
+      ['/seqta/student/load/lesson', { id: lessonId }],
+      ['/seqta/student/load/lessons', { lesson: lessonId }],
+      ['/seqta/student/load/courses/document', { id: docId }],
+      ['/seqta/student/coneqt/document', { id: docId }],
+      ['/seqta/student/load/coneqt', { id: docId }],
+      ['/seqta/student/load/documents', { id: docId }]
+    ]
+    for (const [path, body] of probes) {
+      try {
+        const r = await (direct as any).apiRaw(path, body)
+        const keys = r && typeof r === 'object' ? Object.keys(r) : []
+        const size = JSON.stringify(r)?.length || 0
+        log(`probe ${path} ${JSON.stringify(body)} -> keys=${JSON.stringify(keys)} size=${size} sample=${JSON.stringify(r)?.slice(0, 200)}`)
+      } catch (e: any) {
+        log(`probe ${path} -> FAILED ${e?.message}`)
+      }
+    }
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'aioff') {
+    // Ground truth for "fully disable": with aiEnabled=false, every AI channel
+    // must refuse, and nothing may reach a model. Tested through the real IPC
+    // handlers, not by calling the services directly.
+    const st = await import('./store')
+    const { ipcMain } = await import('electron')
+    const { CH } = await import('../shared/channels')
+
+    const AI_CHANNELS: [string, any[]][] = [
+      [CH.claudePing, []],
+      [CH.claudeStatus, []],
+      [CH.claudeChat, [[{ role: 'user', content: 'hi' }]]],
+      [CH.claudeChatStream, [[{ role: 'user', content: 'hi' }]]],
+      [CH.agentChat, [[{ role: 'user', content: 'hi' }]]],
+      [CH.nbAsk, ['nope', 'q']],
+      [CH.nbSummarise, ['nope']],
+      [CH.nbStudyGuide, ['nope']],
+      [CH.deckGenerate, ['nope', 'topic', 2]]
+    ]
+
+    // Invoke a channel exactly as the renderer would.
+    const fakeEvent: any = { sender: { send: () => {} } }
+    const invoke = async (ch: string, args: any[]) => {
+      const handler = (ipcMain as any)._invokeHandlers?.get(ch)
+      if (!handler) return { ok: false, error: 'NO HANDLER REGISTERED' }
+      return handler(fakeEvent, ...args)
+    }
+
+    for (const enabled of [false, true]) {
+      st.setSettings({ aiEnabled: enabled })
+      log(`--- aiEnabled = ${enabled} ---`)
+      for (const [ch, args] of AI_CHANNELS) {
+        const r: any = await invoke(ch, args)
+        const blocked = !r.ok && /AI features are turned off/.test(r.error || '')
+        log(`  ${ch.padEnd(22)} ok=${String(r.ok).padEnd(5)} blocked=${blocked} ${(r.error || '').slice(0, 60)}`)
+      }
+    }
+
+    // And the global hotkey must be released while AI is off.
+    const { globalShortcut } = await import('electron')
+    const { refreshDesktop } = await import('./services/desktop')
+    const accel = st.getSettings().desktop.quickExplainShortcut
+    st.setSettings({ aiEnabled: false })
+    refreshDesktop(() => null)
+    log('AI off  -> quick-explain hotkey registered?', globalShortcut.isRegistered(accel))
+    st.setSettings({ aiEnabled: true })
+    refreshDesktop(() => null)
+    log('AI on   -> quick-explain hotkey registered?', globalShortcut.isRegistered(accel))
+    // setupQuickExplain returns the registration result directly, which
+    // distinguishes "refused because AI is off" from "the OS refused it".
+    const { setupQuickExplain } = await import('./services/desktop')
+    st.setSettings({ aiEnabled: false })
+    log('setupQuickExplain() with AI off ->', setupQuickExplain(() => null))
+    st.setSettings({ aiEnabled: true })
+    log('setupQuickExplain() with AI on  ->', setupQuickExplain(() => null))
+    log('accel string =', JSON.stringify(accel))
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'reports') {
+    const direct = await import('./services/seqtaDirect')
+    const id = await (direct as any).ensure()
+    const list = await seqta.reports()
+    log('reports =', list.length)
+    let allPdf = true
+    for (const r of list) {
+      const cfg = await seqta.reportUrl(r.uuid)
+      const res = await fetch(cfg.url, { headers: { Cookie: `JSESSIONID=${id.cookie}` }, redirect: 'follow' })
+      const buf = Buffer.from(await res.arrayBuffer())
+      const isPdf = buf.subarray(0, 4).toString('latin1') === '%PDF'
+      if (!isPdf) allPdf = false
+      log(`  ${String(r.types).padEnd(24)} ${r.terms} ${String(r.year).padEnd(4)} -> status=${res.status} bytes=${buf.length} PDF=${isPdf}`)
+    }
+    log('ALL REPORTS ARE REAL PDFs?', allPdf)
+    const cfg0 = await seqta.reportUrl(list[0].uuid)
+    log('viewer url =', cfg0.url.replace(id.base, ''), '| partition =', cfg0.partition)
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'webview') {
+    // Prove the embedded SEQTA browser opens ALREADY SIGNED IN. Seeding the
+    // cookie is not enough on its own — the real test is loading the page in a
+    // webview-equivalent window and checking it isn't the SSO login screen.
+    const { session, BrowserWindow: BW } = await import('electron')
+    const cfg = await seqta.prepareWebview()
+    log('url =', cfg.url, '| partition =', cfg.partition)
+
+    const ses = session.fromPartition(cfg.partition)
+    const cookies = await ses.cookies.get({ name: 'JSESSIONID' })
+    log('cookies in partition:', cookies.map((c) => `${c.name}@${c.domain} len=${c.value.length}`).join(', ') || '(none)')
+
+    const w = new BW({
+      show: false,
+      webPreferences: { partition: cfg.partition, sandbox: true, contextIsolation: true, nodeIntegration: false }
+    })
+    await w.loadURL(cfg.url).catch((e: any) => log('load error:', e?.message))
+    // SEQTA is a SPA — give it a moment to render past the initial shell.
+    await new Promise((r) => setTimeout(r, 6000))
+    const probe = await w.webContents
+      .executeJavaScript(
+        `({ url: location.href, title: document.title,
+            len: (document.body.innerText || '').length,
+            sample: (document.body.innerText || '').replace(/\\s+/g, ' ').slice(0, 200) })`,
+        true
+      )
+      .catch((e: any) => ({ error: e?.message }))
+    log('final url  =', (probe as any).url)
+    log('title      =', (probe as any).title)
+    log('text length=', (probe as any).len)
+    log('sample     =', (probe as any).sample)
+
+    const u = String((probe as any).url || '')
+    const signedIn = !/login\.microsoftonline\.com|\/login/i.test(u) && (probe as any).len > 200
+    log('SIGNED IN? ', signedIn)
+    w.destroy()
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'toggle') {
+    // Ground truth for every boolean setting: flip it through the same
+    // setSettings() the UI calls, then read settings.json back off disk and
+    // confirm the value actually landed — not just what getSettings() returns
+    // from its in-memory cache.
+    const st = await import('./store')
+    const fs = await import('fs')
+    const file = join(app.getPath('userData'), 'store', 'settings.json')
+    const onDisk = () => JSON.parse(fs.readFileSync(file, 'utf-8').replace(/^﻿/, ''))
+
+    const cases: { name: string; get: (s: any) => boolean; set: (v: boolean) => void; read: (d: any) => any }[] = [
+      { name: 'computerAccess', get: (s) => s.computerAccess, set: (v) => st.setSettings({ computerAccess: v }), read: (d) => d.computerAccess },
+      { name: 'notifications.enabled', get: (s) => s.notifications.enabled, set: (v) => st.setSettings({ notifications: { ...st.getSettings().notifications, enabled: v } }), read: (d) => d.notifications?.enabled },
+      { name: 'notifications.bells', get: (s) => s.notifications.bells, set: (v) => st.setSettings({ notifications: { ...st.getSettings().notifications, bells: v } }), read: (d) => d.notifications?.bells },
+      { name: 'notifications.assessments', get: (s) => s.notifications.assessments, set: (v) => st.setSettings({ notifications: { ...st.getSettings().notifications, assessments: v } }), read: (d) => d.notifications?.assessments },
+      { name: 'desktop.tray', get: (s) => s.desktop.tray, set: (v) => st.setSettings({ desktop: { ...st.getSettings().desktop, tray: v } }), read: (d) => d.desktop?.tray },
+      { name: 'desktop.autoLaunch', get: (s) => s.desktop.autoLaunch, set: (v) => st.setSettings({ desktop: { ...st.getSettings().desktop, autoLaunch: v } }), read: (d) => d.desktop?.autoLaunch }
+    ]
+
+    for (const c of cases) {
+      const original = c.get(st.getSettings())
+      let ok = true
+      // Toggling to false is the interesting direction: a merge bug that drops
+      // falsy values would still look fine when everything defaults to true.
+      for (const target of [!original, original]) {
+        c.set(target)
+        const mem = c.get(st.getSettings())
+        const disk = c.read(onDisk())
+        if (mem !== target || disk !== target) {
+          ok = false
+          log(`${c.name}: set ${target} -> memory=${mem} disk=${disk}  MISMATCH`)
+        }
+      }
+      log(`${c.name}: ${ok ? 'OK (both directions persisted to disk)' : 'BROKEN'} — restored to ${c.get(st.getSettings())}`)
+    }
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'desktop') {
+    const { Notification, globalShortcut } = await import('electron')
+    const fs = await import('fs')
+    const d = getSettings().desktop
+    log('notifications supported?', Notification.isSupported())
+
+    // The tray silently no-ops if the icon can't be found at runtime, so prove
+    // the packaged-and-dev paths actually resolve to a real file.
+    const { iconCandidates } = await import('./services/desktop')
+    const paths = iconCandidates()
+    paths.forEach((p) => log('icon candidate', fs.existsSync(p) ? 'FOUND  ' : 'missing', p))
+    log('icon resolved?', paths.some((p) => fs.existsSync(p)))
+
+    log('shortcut accelerator =', d.quickExplainShortcut)
+    log('shortcut registered? ', globalShortcut.isRegistered(d.quickExplainShortcut))
+
+    // Build a real .ics from the real timetable and check it against the spec's
+    // hard requirements (CRLF, matching BEGIN/END counts) rather than eyeballing it.
+    const seqta = await import('./services/seqta')
+    const { buildIcs } = await import('./services/ics')
+    let [lessons, assessments]: any[][] = await Promise.all([
+      seqta.timetableWeek().catch(() => []),
+      seqta.assessments().catch(() => [])
+    ])
+    // This harness runs under Electron's own userData, so a real session may not
+    // be present. Fall back to fixtures that exercise the tricky bits — a comma
+    // and a semicolon that must be escaped, and a title long enough to fold.
+    if (!lessons.length && !assessments.length) {
+      log('(no SEQTA session in this harness — using fixtures)')
+      lessons = [
+        { description: 'Science, Year 8', staff: 'Mr Smith; Ms Jones', room: 'S12', from: '09:05', until: '10:00', code: '8SCI', day: '2026-07-22' }
+      ]
+      assessments = [
+        { id: 1, title: 'Extended response on photosynthesis and cellular respiration in plants', subject: 'Science', code: '8SCI', due: '2026-07-31', status: 'PENDING' }
+      ]
+    }
+    const ics = buildIcs(lessons as any, assessments as any)
+    const begins = (ics.match(/BEGIN:VEVENT/g) || []).length
+    const ends = (ics.match(/END:VEVENT/g) || []).length
+    log(`ics: ${lessons.length} lessons + ${assessments.length} assessments -> ${begins} VEVENTs (END count ${ends})`)
+    log('ics: CRLF line endings?', ics.includes('\r\n') && !/[^\r]\n/.test(ics))
+    log('ics: no over-length lines?', ics.split('\r\n').every((l) => l.length <= 75))
+    log('ics sample:\n' + ics.split('\r\n').slice(0, 16).join('\n'))
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'ai') {
+    log('PATH has APPDATA/npm?', (process.env.PATH || '').toLowerCase().includes('roaming\\npm'))
+    log('findExecutable(claude) ->', findExecutable('claude'))
+    log('findExecutable(codex)  ->', findExecutable('codex'))
+    log('findExecutable(npm)    ->', findExecutable('npm'))
+    await step('ai.ping', () => ai.ping())
+    await step('ai.chat', () => ai.chat([{ role: 'user', content: 'Reply with exactly: AI_OK' }]))
+    log('DONE')
+    return
+  }
+  if (process.env.SCHOOLMOD_DIAG === 'concurrent') {
+    // Reproduce the dashboard's load: every call fires at once.
+    log('running all calls CONCURRENTLY (dashboard simulation)…')
+    const t0 = Date.now()
+    await Promise.all([
+      step('me', () => seqta.me()),
+      step('timetable', () => seqta.timetable()),
+      step('assessments', () => seqta.assessments()),
+      step('notices', () => seqta.notices()),
+      step('messages', () => seqta.messages()),
+      step('grades', () => seqta.grades()),
+      step('photo', () => seqta.photo())
+    ])
+    log(`concurrent burst finished in ${Math.round((Date.now() - t0) / 1000)}s`)
+    log('DONE')
+    return
+  }
+  await step('me', () => seqta.me())
+  await step('timetable(today)', () => seqta.timetable())
+  await step('timetableWeek', () => seqta.timetableWeek())
+  await step('assessments', () => seqta.assessments())
+  await step('notices', () => seqta.notices())
+  await step('homework', () => seqta.homework())
+  await step('grades', () => seqta.grades())
+  await step('messages', () => seqta.messages())
+  await step('reports', () => seqta.reports())
+  await step('photo', () => seqta.photo())
+  log('DONE')
+}
+
+let mainWindow: BrowserWindow | null = null
+
+function createWindow(): void {
+  mainWindow = new BrowserWindow({
+    width: 1280,
+    height: 820,
+    minWidth: 940,
+    minHeight: 640,
+    show: false,
+    autoHideMenuBar: true,
+    title: 'SchoolMod',
+    backgroundColor: '#0d0f16',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    titleBarOverlay: false,
+    frame: process.platform === 'darwin',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false,
+      contextIsolation: true,
+      nodeIntegration: false,
+      // Powers the embedded browser panels (OneNote/Mathspace/Education Perfect).
+      webviewTag: true
+    }
+  })
+
+  __mark('BrowserWindow constructed')
+  mainWindow.on('ready-to-show', () => {
+    __mark('ready-to-show (first paint) -> showing window')
+    // --hidden is passed by the start-on-login registration: boot with the app
+    // resident in the tray rather than stealing focus at every sign-in.
+    if (!process.argv.includes('--hidden')) mainWindow?.show()
+  })
+
+  // With the tray enabled, closing the window hides it so bell/assessment
+  // reminders keep firing. Quit explicitly from the tray menu.
+  mainWindow.on('close', (e) => {
+    if (getSettings().desktop.tray && !isQuitting()) {
+      e.preventDefault()
+      mainWindow?.hide()
+    }
+  })
+
+  // Surface renderer warnings/errors and crashes to the main log (useful for support).
+  mainWindow.webContents.on('console-message', (_e, level, message) => {
+    if (level >= 2) console.log(`[renderer] ${message}`)
+  })
+  mainWindow.webContents.on('render-process-gone', (_e, details) => {
+    console.log('[render-process-gone]', JSON.stringify(details))
+  })
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('[renderer] did-finish-load')
+    __mark('renderer did-finish-load')
+  })
+
+  mainWindow.webContents.setWindowOpenHandler((details) => {
+    shell.openExternal(details.url)
+    return { action: 'deny' }
+  })
+
+  // electron-vite: dev server URL in dev, built file in prod.
+  if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  } else {
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+}
+
+__mark('app.whenReady() registered, awaiting...')
+app.whenReady().then(() => {
+  __mark('app ready (Electron/Chromium engine init done)')
+  initStores()
+  __mark('initStores done')
+
+  // Renderer makes no direct network calls (all external I/O is via IPC in main),
+  // so a tight CSP is safe in packaged builds. Skipped in dev where Vite needs eval.
+  if (app.isPackaged) {
+    session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
+      cb({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'"
+          ]
+        }
+      })
+    })
+  }
+
+  const theme = getSettings().theme
+  nativeTheme.themeSource = theme === 'system' ? 'system' : theme
+
+  // Lock down the embedded browser panels (OneNote/Mathspace/Education
+  // Perfect): no Node access inside the guest page, and restrict navigation
+  // to the school-relevant domains we actually embed.
+  const ALLOWED_WEBVIEW_HOSTS =
+    /(\.|^)(onenote\.com|onenote\.cloud\.microsoft|sharepoint\.com|officeapps\.live\.com|office\.com|cloud\.microsoft|live\.com|microsoftonline\.com|microsoft\.com|mathspace\.co|educationperfect\.com)$/i
+
+  /**
+   * The school's SEQTA host can't be hardcoded — every school runs its own
+   * (Trinity's is students.trinity.wa.edu.au, nothing to do with seqta.com.au),
+   * so it's read from the configured base URL at check time.
+   */
+  const seqtaHostAllowed = (host: string): boolean => {
+    const base = getSettings().seqta.baseUrl
+    if (!base) return false
+    try {
+      const seqtaHost = new URL(base).hostname
+      return host === seqtaHost || host.endsWith('.' + seqtaHost)
+    } catch {
+      return false
+    }
+  }
+  app.on('web-contents-created', (_e, contents) => {
+    if (contents.getType() !== 'webview') return
+    contents.setWindowOpenHandler((details) => {
+      try {
+        const host = new URL(details.url).hostname
+        if (ALLOWED_WEBVIEW_HOSTS.test(host) || seqtaHostAllowed(host)) return { action: 'allow' }
+      } catch {
+        /* fall through to deny */
+      }
+      shell.openExternal(details.url).catch(() => {})
+      return { action: 'deny' }
+    })
+    contents.on('will-navigate', (e, url) => {
+      try {
+        const h = new URL(url).hostname
+        if (!ALLOWED_WEBVIEW_HOSTS.test(h) && !seqtaHostAllowed(h)) e.preventDefault()
+      } catch {
+        e.preventDefault()
+      }
+    })
+  })
+
+  registerIpc(() => mainWindow)
+  __mark('registerIpc done')
+  createWindow()
+  __mark('createWindow() returned')
+
+  setupTray(() => mainWindow)
+  applyAutoLaunch()
+  setupQuickExplain(() => mainWindow)
+  __mark('desktop integrations ready')
+
+  // Deferred so nothing about reminders is on the cold-start critical path.
+  setTimeout(async () => {
+    const { startNotifications } = await import('./services/notifications')
+    startNotifications(() => mainWindow)
+  }, 4000)
+
+  if (process.env.SCHOOLMOD_DIAG) runDiagnostics()
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    else {
+      mainWindow?.show()
+      mainWindow?.focus()
+    }
+  })
+})
+
+app.on('before-quit', () => markQuitting())
+app.on('will-quit', () => unregisterShortcuts())
+
+app.on('window-all-closed', () => {
+  // With the tray on, the window is hidden rather than destroyed, so this only
+  // fires on a real quit.
+  if (process.platform !== 'darwin') app.quit()
+})

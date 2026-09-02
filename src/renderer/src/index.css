@@ -1,0 +1,214 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f6f7fb;
+  --bg-elev: #ffffff;
+  --bg-sidebar: #ffffff;
+  --border: #e7e9f0;
+  --text: #171a21;
+  --text-dim: #5a6478;
+  --accent: #3366ff;
+  --accent-soft: rgba(51, 102, 255, 0.1);
+  --ring: rgba(51, 102, 255, 0.35);
+}
+
+.dark {
+  --bg: #0b0d13;
+  --bg-elev: #14171f;
+  --bg-sidebar: #101219;
+  --border: #232733;
+  --text: #eef1f7;
+  --text-dim: #9aa4bc;
+  --accent: #5b86ff;
+  --accent-soft: rgba(91, 134, 255, 0.14);
+  --ring: rgba(91, 134, 255, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+  background-clip: content-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border shadow-card;
+    background: var(--bg-elev);
+    border-color: var(--border);
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all
+      duration-150 outline-none disabled:opacity-50 disabled:pointer-events-none;
+    border: 1px solid var(--border);
+    background: var(--bg-elev);
+    color: var(--text);
+  }
+  .btn:hover {
+    border-color: var(--accent);
+  }
+  .btn-primary {
+    @apply text-white shadow-glow;
+    background: var(--accent);
+    border-color: transparent;
+  }
+  .btn-primary:hover {
+    filter: brightness(1.07);
+    border-color: transparent;
+  }
+  .btn-ghost {
+    border-color: transparent;
+    background: transparent;
+  }
+  .btn-ghost:hover {
+    background: var(--accent-soft);
+    border-color: transparent;
+  }
+
+  .input {
+    @apply w-full rounded-xl px-3.5 py-2.5 text-sm outline-none transition;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--ring);
+  }
+  .input::placeholder {
+    color: var(--text-dim);
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all;
+    color: var(--text-dim);
+  }
+  .sidebar-link:hover {
+    background: var(--accent-soft);
+    color: var(--text);
+  }
+  .sidebar-link.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .titlebar-btn {
+    @apply flex h-full w-12 items-center justify-center text-sm transition-colors;
+    color: var(--text-dim);
+    -webkit-app-region: no-drag;
+  }
+  .titlebar-btn:hover {
+    background: var(--accent-soft);
+    color: var(--text);
+  }
+}
+
+.drag {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Simple markdown styling for AI answers */
+.prose-sm p {
+  margin: 0.5rem 0;
+  line-height: 1.65;
+}
+.prose-sm h1,
+.prose-sm h2,
+.prose-sm h3 {
+  font-weight: 700;
+  margin: 0.9rem 0 0.4rem;
+}
+.prose-sm ul,
+.prose-sm ol {
+  margin: 0.5rem 0;
+  padding-left: 1.3rem;
+}
+.prose-sm li {
+  margin: 0.25rem 0;
+}
+.prose-sm code {
+  background: var(--accent-soft);
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.85em;
+}
+.prose-sm pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0.85rem;
+  border-radius: 12px;
+  overflow-x: auto;
+  margin: 0.6rem 0;
+}
+.prose-sm pre code {
+  background: transparent;
+  padding: 0;
+}
+.prose-sm strong {
+  font-weight: 700;
+}
+.prose-sm a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/*
+ * SEQTA lesson bodies are teacher-authored HTML with inline styles that assume
+ * a white page. They're rendered on a light surface, so only the structural
+ * bits need help: keep wide tables from bursting the panel, and stop images
+ * overflowing.
+ */
+.seqta-lesson table { max-width: 100%; border-collapse: collapse; }
+.seqta-lesson td,
+.seqta-lesson th { padding: 6px 8px; vertical-align: top; }
+.seqta-lesson img { max-width: 100%; height: auto; }
+.seqta-lesson a { color: #1a4fd6; text-decoration: underline; }
+.seqta-lesson p { margin: 0 0 0.6em; }
+.seqta-lesson ul,
+.seqta-lesson ol { margin: 0 0 0.6em 1.25em; list-style: revert; }
+.seqta-lesson h1,
+.seqta-lesson h2,
+.seqta-lesson h3 { font-weight: 700; margin: 0.8em 0 0.4em; }

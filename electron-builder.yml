@@ -1,0 +1,64 @@
+appId: com.zdstudios.schoolmod
+productName: SchoolMod
+copyright: Copyright © 2026 ZDStudios
+directories:
+  buildResources: build
+  output: release
+files:
+  - out/**/*
+  - package.json
+asarUnpack:
+  - "**/node_modules/pdfjs-dist/**"
+extraResources:
+  - from: resources
+    to: .
+    filter:
+      - "**/*"
+win:
+  # Pinned explicitly: the 1.x repo's Icons/ folder sits at the project root and
+  # Windows' case-insensitive paths made electron-builder mistake it for its own
+  # icon directory ("icon directory ...\icons doesn't contain icons").
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: SchoolMod
+  artifactName: ${productName}-${version}-Setup.${ext}
+portable:
+  artifactName: ${productName}-${version}-Portable.${ext}
+  # Fixed name (not the default per-build uuid) so the extracted app is reused
+  # across launches instead of self-extracting all ~100MB again every time —
+  # measured: first launch takes several seconds to extract, an installed or
+  # already-extracted app shows its window in well under a second.
+  unpackDirName: SchoolMod-portable-cache
+mac:
+  icon: build/icon.png
+  category: public.app-category.education
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  hardenedRuntime: true
+  gatekeeperAssess: false
+dmg:
+  title: ${productName} ${version}
+linux:
+  target:
+    - AppImage
+  category: Education
