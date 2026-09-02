@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         EP Ultimate Automation Helper (v34.0 Hybrid)
+// @name         EP Automation & Answer Fetcher
 // @namespace    http://tampermonkey.net/
-// @version      34.0
-// @description  Combines v31.4 component logic & modal bypass with advanced native typing.
+// @version      33.6
+// @description  Adds Beta Features gate, multi-target drag fix, and token-level sentence editing bypass.
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -11,52 +11,34 @@
 (function() {
     'use strict';
 
-    // ---- Settings State ----
     const settings = {
+        enableBeta: localStorage.getItem('ep_enable_beta') === 'true',
         autoSolve: true,
         autoSubmit: true,
         antiDetect: true,
         selfMarkBypass: true,
         autoHide: localStorage.getItem('ep_autohide') === 'true',
-        theme: 'dark'
+        theme: 'synthwave'
     };
 
-    // ---- Themes Configuration ----
     const themes = {
-        dark: { bg: 'rgba(15, 23, 42, 0.98)', text: '#ffffff', border: '#70B80B', header: '#1e293b', accent: '#38bdf8' },
-        light: { bg: 'rgba(248, 250, 252, 0.98)', text: '#0f172a', border: '#10b981', header: '#e2e8f0', accent: '#0284c7' },
-        cyberpunk: { bg: 'rgba(18, 16, 38, 0.98)', text: '#00ffcc', border: '#ff007f', header: '#2a1b4e', accent: '#ff007f' },
-        minimal: { bg: 'rgba(0, 0, 0, 0.9)', text: '#a3e635', border: '#a3e635', header: '#18181b', accent: '#a3e635' }
+        cyberpunk: { bg: 'rgba(18, 16, 38, 0.98)', text: '#00ffcc', border: '#ff007f', header: '#2a1b4e' },
+        synthwave: { bg: 'rgba(26, 11, 46, 0.98)', text: '#ff71ce', border: '#01cdfe', header: '#3a135e' },
+        nordic: { bg: 'rgba(15, 28, 44, 0.98)', text: '#e0f2fe', border: '#38bdf8', header: '#1e3a5f' },
+        dark: { bg: 'rgba(15, 23, 42, 0.98)', text: '#ffffff', border: '#70B80B', header: '#1e293b' },
+        light: { bg: 'rgba(248, 250, 252, 0.98)', text: '#0f172a', border: '#10b981', header: '#e2e8f0' },
+        minimal: { bg: 'rgba(0, 0, 0, 0.9)', text: '#a3e635', border: '#a3e635', header: '#18181b' }
     };
 
-    // ---- Anti-Detection Engine (From v31.4) ----
     (function initSpoofers() {
         try {
             Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
             Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
-            Object.defineProperty(document, 'webkitVisibilityState', { get: () => 'visible', configurable: true });
             document.hasFocus = () => true;
         } catch(e) {}
 
-        const focusEvents = ['blur', 'focusout', 'mouseleave', 'visibilitychange', 'webkitvisibilitychange', 'pagehide'];
+        const focusEvents = ['blur', 'focusout', 'mouseleave', 'visibilitychange', 'pagehide'];
         focusEvents.forEach(evt => {
-            window.addEventListener(evt, e => { if (settings.antiDetect) e.stopImmediatePropagation(); }, true);
-            document.addEventListener(evt, e => { if (settings.antiDetect) e.stopImmediatePropagation(); }, true);
-        });
-
-        try {
-            const fakeFsElement = document.documentElement;
-            Object.defineProperty(document, 'fullscreenElement', { get: () => fakeFsElement, configurable: true });
-            Object.defineProperty(document, 'webkitFullscreenElement', { get: () => fakeFsElement, configurable: true });
-            Object.defineProperty(document, 'mozFullScreenElement', { get: () => fakeFsElement, configurable: true });
-            Object.defineProperty(document, 'msFullscreenElement', { get: () => fakeFsElement, configurable: true });
-
-            Object.defineProperty(document, 'fullscreenEnabled', { get: () => true, configurable: true });
-            Object.defineProperty(document, 'webkitFullscreenEnabled', { get: () => true, configurable: true });
-        } catch(e) {}
-
-        const fsEvents = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
-        fsEvents.forEach(evt => {
             window.addEventListener(evt, e => { if (settings.antiDetect) e.stopImmediatePropagation(); }, true);
             document.addEventListener(evt, e => { if (settings.antiDetect) e.stopImmediatePropagation(); }, true);
         });
@@ -67,13 +49,69 @@
     let slideSettledTime = 0;
     let fillExecutedTime = 0;
     let filledSuccess = false;
-    let bypassed = false;
+    let isMinimized = false;
 
-    const LOOP_SPEED = 200;          
-    const SETTLE_DELAY = 400;        
-    const SUBMIT_DELAY = 500;        
+    const LOOP_SPEED = 200;         
+    const SETTLE_DELAY = 450;       
+    const SUBMIT_DELAY = 600;       
 
-    // ---- Build Modular UI Overlay ----
+    function cleanAnswerText(raw) {
+        if (raw === null || raw === undefined) return '';
+        let str = String(raw);
+        const temp = document.createElement('div');
+        temp.innerHTML = str;
+        str = temp.textContent || temp.innerText || '';
+        return str.replace(/\[block[^\n]*\n?/g, '').replace(/<[^>]*>?/gm, '').replace(/[\*\[\]]/g, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function cleanTargetForInput(raw) {
+        let txt = cleanAnswerText(raw);
+        return txt.replace(/^[:;\-–—\s]+/, '').trim();
+    }
+
+    function normalizeForComparison(str) {
+        return cleanAnswerText(str).toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
+    function isPromptText(text) {
+        if (!text) return true;
+        const lower = text.toLowerCase();
+        return (
+            lower.includes('you might think about') ||
+            lower.includes('including adjectives') ||
+            lower.includes('using commas to correctly') ||
+            lower.includes('write a description') ||
+            lower.includes('read the following passage')
+        );
+    }
+
+    function showBetaNoticeModal() {
+        let modal = document.getElementById('ep-beta-notice');
+        if (modal) modal.remove();
+
+        modal = document.createElement('div');
+        modal.id = 'ep-beta-notice';
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.75); z-index: 9999999;
+            display: flex; align-items: center; justify-content: center;
+            font-family: system-ui, -apple-system, sans-serif;
+        `;
+
+        modal.innerHTML = `
+            <div style="background: #1e1b2e; color: #f8fafc; padding: 24px; border-radius: 12px; width: 380px; border: 2px solid #ff71ce; box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center;">
+                <h3 style="margin: 0 0 12px 0; color: #ff71ce; font-size: 16px;">⚠️ Beta Features Notice</h3>
+                <p style="font-size: 13px; line-height: 1.5; opacity: 0.9; margin-bottom: 16px;">
+                    Some features may still be under development and need fine tuning. Contact the developer if you have issues or suggestions.
+                </p>
+                <button id="ep-beta-close-btn" style="background: #01cdfe; color: #000; font-weight: 700; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 12px;">I Understand</button>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        document.getElementById('ep-beta-close-btn').addEventListener('click', () => modal.remove());
+    }
+
     let overlay = document.getElementById('ep-ultimate-overlay');
     if (overlay) overlay.remove();
 
@@ -86,61 +124,57 @@
         font-size: 12px; font-weight: 600;
         box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
         font-family: system-ui, -apple-system, sans-serif;
-        pointer-events: auto; user-select: auto;
-        border-right: 5px solid #70B80B;
-        transition: background 0.2s, color 0.2s;
+        border-right: 5px solid #01cdfe;
         overflow: hidden;
         display: ${settings.autoHide ? 'none' : 'block'};
     `;
 
     overlay.innerHTML = `
-        <div id="ep-header" style="padding: 8px 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v34.0</span>
-            <span style="font-size: 10px; opacity: 0.7;">[Drag Me]</span>
+        <div id="ep-header" style="padding: 8px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
+            <span>🤖 EP Automation v33.6</span>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button id="ep-min-btn" style="background: transparent; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1;">▼</button>
+            </div>
         </div>
-        <div style="padding: 10px 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <label for="ep-theme-select" style="font-weight: 600;">Theme:</label>
-                <select id="ep-theme-select" style="background: rgba(255,255,255,0.1); color: inherit; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 6px; font-size: 11px; cursor: pointer;">
-                    <option value="dark" style="color:#000;">Dark Slate</option>
-                    <option value="light" style="color:#000;">Light Mode</option>
-                    <option value="cyberpunk" style="color:#000;">Cyberpunk</option>
-                    <option value="minimal" style="color:#000;">Minimal Lime</option>
-                </select>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; font-size: 11px;">
-                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; grid-column: span 2; background: rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.15);">
-                    <input type="checkbox" id="toggle-automode" style="cursor: pointer;"> 
-                    <span style="font-weight: 700;">🤖 Auto Mode Active</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                    <input type="checkbox" id="toggle-solve" checked style="cursor: pointer;"> Auto Solve
-                </label>
-                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                    <input type="checkbox" id="toggle-submit" checked style="cursor: pointer;"> Auto Submit
-                </label>
-                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                    <input type="checkbox" id="toggle-antidetect" checked style="cursor: pointer;"> Anti-Detect
-                </label>
-                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                    <input type="checkbox" id="toggle-selfmark" checked style="cursor: pointer;"> Self-Mark/Bypass
-                </label>
-                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; grid-column: span 2;">
-                    <input type="checkbox" id="toggle-autohide" ${settings.autoHide ? 'checked' : ''} style="cursor: pointer;"> Auto-Hide UI on Load
-                </label>
-            </div>
+        <div id="ep-body" style="padding: 10px 12px;">
+            <div id="ep-controls-area">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label for="ep-theme-select">Theme:</label>
+                    <select id="ep-theme-select" style="background: rgba(255,255,255,0.1); color: inherit; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 6px; font-size: 11px;">
+                        <option value="synthwave" style="color:#000;">Neon Synthwave</option>
+                        <option value="nordic" style="color:#000;">Nordic Frost</option>
+                        <option value="cyberpunk" style="color:#000;">Cyberpunk</option>
+                        <option value="dark" style="color:#000;">Dark Slate</option>
+                        <option value="light" style="color:#000;">Light Mode</option>
+                        <option value="minimal" style="color:#000;">Minimal Lime</option>
+                    </select>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; font-size: 11px;">
+                    <label style="grid-column: span 2; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 4px;">
+                        <input type="checkbox" id="toggle-beta" ${settings.enableBeta ? 'checked' : ''}> Enable Beta Features
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; grid-column: span 2; background: rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 5px;">
+                        <input type="checkbox" id="toggle-automode"> <span style="font-weight: 700;">🤖 Auto Mode Active</span>
+                    </label>
+                    <label><input type="checkbox" id="toggle-solve" checked> Auto Solve</label>
+                    <label><input type="checkbox" id="toggle-submit" checked> Auto Submit</label>
+                    <label><input type="checkbox" id="toggle-antidetect" checked> Anti-Detect</label>
+                    <label><input type="checkbox" id="toggle-selfmark" checked> Self-Mark/Bypass</label>
+                    <label style="grid-column: span 2; display: flex; align-items: center; gap: 4px;">
+                        <input type="checkbox" id="toggle-autohide" ${settings.autoHide ? 'checked' : ''}> Auto-Hide UI on Load
+                    </label>
+                </div>
 
-            <div style="font-size: 10px; opacity: 0.75; text-align: center; margin-bottom: 6px;">
-                Press <b style="color: inherit; text-decoration: underline;">Ctrl + U</b> (Menu) | <b style="color: inherit; text-decoration: underline;">Ctrl + Alt + L</b> (Auto)
+                <div style="font-size: 10px; opacity: 0.75; text-align: center; margin-bottom: 6px;">
+                    Press <b style="text-decoration: underline;">Ctrl + U</b> (Menu) | <b style="text-decoration: underline;">Ctrl + Alt + L</b> (Auto)
+                </div>
             </div>
 
             <div id="ep-status-box" style="
-                background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.1);
-                padding: 8px; border-radius: 6px; min-height: 48px; max-height: 120px;
-                overflow-y: auto; white-space: pre-wrap; word-break: break-word;
-                user-select: text; -webkit-user-select: text; cursor: text;
-                line-height: 1.4; font-size: 11px;
+                background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15);
+                padding: 8px; border-radius: 6px; min-height: 52px; max-height: 140px;
+                overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 11px;
             ">Initializing UI Controls...</div>
         </div>
     `;
@@ -148,142 +182,77 @@
     document.body.appendChild(overlay);
 
     const headerEl = overlay.querySelector('#ep-header');
+    let isDraggingUI = false, offsetX = 0, offsetY = 0;
+
+    headerEl.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        isDraggingUI = true;
+        offsetX = e.clientX - overlay.getBoundingClientRect().left;
+        offsetY = e.clientY - overlay.getBoundingClientRect().top;
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDraggingUI) return;
+        overlay.style.left = `${e.clientX - offsetX}px`;
+        overlay.style.top = `${e.clientY - offsetY}px`;
+        overlay.style.right = 'auto';
+    });
+
+    document.addEventListener('mouseup', () => { isDraggingUI = false; });
+
+    const minBtn = overlay.querySelector('#ep-min-btn');
+    const controlsArea = overlay.querySelector('#ep-controls-area');
+
+    minBtn.addEventListener('click', () => {
+        isMinimized = !isMinimized;
+        controlsArea.style.display = isMinimized ? 'none' : 'block';
+        minBtn.textContent = isMinimized ? '▲' : '▼';
+    });
+
     const statusBox = overlay.querySelector('#ep-status-box');
     const themeSelect = overlay.querySelector('#ep-theme-select');
     const autoModeToggle = overlay.querySelector('#toggle-automode');
+    const autoHideToggle = overlay.querySelector('#toggle-autohide');
+    const betaToggle = overlay.querySelector('#toggle-beta');
 
     function applyTheme(themeName) {
-        const t = themes[themeName] || themes.dark;
+        const t = themes[themeName] || themes.synthwave;
         settings.theme = themeName;
         overlay.style.background = t.bg;
         overlay.style.color = t.text;
-        overlay.style.borderRightColor = autoModeActive ? '#E11D48' : t.border;
+        overlay.style.borderRightColor = autoModeActive ? '#ff0055' : t.border;
         headerEl.style.background = t.header;
     }
-    applyTheme('dark');
+    applyTheme('synthwave');
+
+    betaToggle.addEventListener('change', (e) => {
+        settings.enableBeta = e.target.checked;
+        localStorage.setItem('ep_enable_beta', e.target.checked);
+        if (e.target.checked) {
+            showBetaNoticeModal();
+        } else if (autoModeActive) {
+            setAutoMode(false);
+        }
+    });
 
     function setAutoMode(state) {
+        if (state && !settings.enableBeta) {
+            alert("⚠️ Please enable 'Beta Features' first to unlock Auto Mode.");
+            if (autoModeToggle) autoModeToggle.checked = false;
+            return;
+        }
         autoModeActive = state;
         if (autoModeToggle) autoModeToggle.checked = autoModeActive;
-        const currentTheme = themes[settings.theme] || themes.dark;
-        overlay.style.borderRightColor = autoModeActive ? '#E11D48' : currentTheme.border;
+        const currentTheme = themes[settings.theme] || themes.synthwave;
+        overlay.style.borderRightColor = autoModeActive ? '#ff0055' : currentTheme.border;
     }
 
     themeSelect.addEventListener('change', (e) => applyTheme(e.target.value));
     autoModeToggle.addEventListener('change', (e) => setAutoMode(e.target.checked));
-    overlay.querySelector('#toggle-solve').addEventListener('change', (e) => settings.autoSolve = e.target.checked);
-    overlay.querySelector('#toggle-submit').addEventListener('change', (e) => settings.autoSubmit = e.target.checked);
-    overlay.querySelector('#toggle-antidetect').addEventListener('change', (e) => settings.antiDetect = e.target.checked);
-    overlay.querySelector('#toggle-selfmark').addEventListener('change', (e) => settings.selfMarkBypass = e.target.checked);
-    overlay.querySelector('#toggle-autohide').addEventListener('change', (e) => {
+    autoHideToggle.addEventListener('change', (e) => {
         settings.autoHide = e.target.checked;
         localStorage.setItem('ep_autohide', e.target.checked);
     });
-
-    let isDragging = false;
-    let dragOffsetX = 0;
-    let dragOffsetY = 0;
-
-    headerEl.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        dragOffsetX = e.clientX - overlay.offsetLeft;
-        dragOffsetY = e.clientY - overlay.offsetTop;
-        headerEl.style.cursor = 'grabbing';
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        overlay.style.left = `${e.clientX - dragOffsetX}px`;
-        overlay.style.top = `${e.clientY - dragOffsetY}px`;
-        overlay.style.right = 'auto'; 
-    });
-
-    document.addEventListener('mouseup', () => {
-        isDragging = false;
-        headerEl.style.cursor = 'grab';
-    });
-
-    // ---- Targeted Bypass Engine (From v31.4) ----
-    function dismissNoAnswerModal() {
-        if (!settings.selfMarkBypass) return false;
-        let closed = false;
-
-        const modalButtons = document.querySelectorAll('.stuck-button, [ng-click*="closeDialog"], .modal-footer div, .modal-footer button, .modal-dialog div, .modal-dialog button, button, a, span');
-        for (let btn of modalButtons) {
-            if (btn.offsetParent !== null) {
-                const txt = (btn.innerText || btn.textContent || '').trim().toLowerCase();
-                if (txt.includes('submit anyway') || txt.includes('yes, submit') || txt.includes('continue anyway')) {
-                    simulatePreciseClick(btn);
-                    closed = true;
-                }
-            }
-        }
-        return closed;
-    }
-
-    function triggerBypass() {
-        if (!settings.selfMarkBypass) return;
-        dismissNoAnswerModal();
-
-        if (bypassed) return;
-        let didBypass = false;
-
-        document.querySelectorAll('span, button, div, a').forEach(el => {
-            el.childNodes.forEach(node => {
-                if (node.nodeType === Node.TEXT_NODE && /got\s*it[!.]?/i.test(node.textContent)) {
-                    const btn = el.closest('button') || (el.tagName === 'BUTTON' ? el : null) || el;
-                    if (btn && (btn.hasAttribute('disabled') || btn.getAttribute('ng-disabled'))) {
-                        btn.removeAttribute('disabled');
-                        btn.removeAttribute('ng-disabled');
-                        node.textContent = node.textContent.replace(/Got\s*It[!.]?/gi, 'Bypass');
-                        didBypass = true;
-                    }
-                }
-            });
-        });
-
-        if (didBypass) {
-            bypassed = true;
-            document.querySelectorAll('[ng-disabled]').forEach(el => {
-                el.removeAttribute('ng-disabled');
-                el.removeAttribute('disabled');
-            });
-        }
-    }
-
-    // ---- Helper Utilities ----
-    function extractText(t) {
-        if (!t) return '';
-        return t.replace(/\[block[^\n]*\n/g,'').replace(/\*\*/g,'').trim();
-    }
-
-    function getTargetImageKeys(str) {
-        if (!str) return [];
-        const match = str.match(/url=["']?([^"'\s>]+)/i) || str.match(/src=["']?([^"'\s>]+)/i) || str.match(/(https?:\/\/[^\s"'\>]+\.(?:jpg|jpeg|png|gif|webp|svg))/i);
-        if (!match) return [];
-        const urlStr = match[1] || match[0];
-        const cleanUrl = urlStr.replace(/["'\>]/g, '');
-        const filename = cleanUrl.split('/').pop().split('?')[0];
-        
-        const keys = [filename];
-        const numMatches = filename.match(/\d{4,}/g);
-        if (numMatches) keys.push(...numMatches);
-        return keys.filter(k => k && k.length > 2);
-    }
-
-    function getTileText(el) {
-        if (!el) return '';
-        let txt = (typeof el === 'string') ? el : el.innerText || el.textContent || '';
-        return txt.replace(/^[\s:\u22EE\u2800-\u28FF\u2022\u25C0-\u25FF\u2630]+/g, '')
-                  .replace(/[\s:\u22EE\u2800-\u28FF\u2022\u25C0-\u25FF\u2630]+$/g, '')
-                  .trim();
-    }
-
-    function parseHighlight(c) {
-        const correct = c.CorrectOptions || [];
-        const matches = [...(c.TextTemplate || '').matchAll(/\[hl (\d+):([^:]+):/g)];
-        return matches.filter(m => correct.includes(parseInt(m[1]))).map(m => ({ index: parseInt(m[1]), text: m[2] }));
-    }
 
     function simulatePreciseClick(el) {
         if (!el) return;
@@ -301,68 +270,38 @@
 
     function findBestElement(targetText) {
         if (!targetText) return null;
-
-        const imgKeys = getTargetImageKeys(targetText);
-        if (imgKeys.length > 0) {
-            const allElements = Array.from(document.querySelectorAll('img, [style*="background"], div, span, label, button, .option, [class*="option"]'));
-            for (let key of imgKeys) {
-                const keyLower = key.toLowerCase();
-                for (let el of allElements) {
-                    if (el.offsetParent === null) continue;
-                    let found = false;
-                    if (el.tagName === 'IMG') {
-                        const src = el.src || el.getAttribute('ng-src') || el.getAttribute('data-src') || '';
-                        if (src.toLowerCase().includes(keyLower)) found = true;
-                    }
-                    if (!found) {
-                        const bg = el.style.backgroundImage || (window.getComputedStyle ? window.getComputedStyle(el).backgroundImage : '');
-                        if (bg && bg.toLowerCase().includes(keyLower)) found = true;
-                    }
-                    if (found) {
-                        return el.closest('button, label, [role="radio"], [role="checkbox"], .option, .mc-option, [class*="option"], [class*="choice"], li') || el;
-                    }
-                }
-            }
-        }
+        const targetClean = cleanAnswerText(targetText);
+        const targetNorm = normalizeForComparison(targetText);
         
-        const targetExact = targetText.trim();
-        const rawCandidates = document.querySelectorAll('span, button, div, label, p, [role="checkbox"], [role="radio"], .option, .mc-option, .tile, [class*="tile"], mark');
-        const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null && el.innerText.length <= targetText.length + 60);
+        const rawCandidates = document.querySelectorAll('li, label, span, button, div, [role="checkbox"], [role="radio"], .option, .mc-option, .drag-item, .sequence-item, .draggable');
+        const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null);
 
-        return candidates.find(el => getTileText(el) === targetExact) || candidates.find(el => el.innerText.trim() === targetExact) || null;
+        let found = candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetClean);
+        if (found) return found;
+
+        found = candidates.find(el => normalizeForComparison(el.innerText || el.textContent) === targetNorm);
+        return found || null;
     }
 
-    // ---- Upgraded Native Typist (Hybrid v31.4 + v33.10) ----
-    function robustType(inputEl, text) {
-        if (!inputEl) return;
-        inputEl.focus();
+    function forceNativeInput(el, val) {
+        if (!el) return;
+        el.focus();
 
-        if (inputEl.isContentEditable || inputEl.getAttribute('contenteditable') === 'true') {
-            try { document.execCommand('selectAll', false, null); } catch(e) {}
-            try { document.execCommand('insertText', false, text); } catch(e) { inputEl.innerText = text; }
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+            nativeSetter.call(el, val);
         } else {
-            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-            if (nativeSetter && inputEl.tagName === 'INPUT') {
-                nativeSetter.call(inputEl, text);
-            } else {
-                inputEl.value = text;
-            }
+            el.innerText = val;
+            el.innerHTML = `<p>${val}</p>`;
         }
 
-        try { inputEl.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: text })); } catch(e) {}
-        ['input', 'change', 'keydown', 'keypress', 'keyup', 'blur'].forEach(evt => {
-            try { inputEl.dispatchEvent(new Event(evt, { bubbles: true })); } catch(e) {}
-        });
-
         try {
-            if (window.angular) {
-                const ngModel = window.angular.element(inputEl).controller('ngModel');
-                if (ngModel) {
-                    ngModel.$setViewValue(text);
-                    ngModel.$render();
-                }
-            }
+            el.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: val }));
         } catch(e) {}
+
+        ['input', 'change', 'keydown', 'keypress', 'keyup', 'blur'].forEach(evt => {
+            try { el.dispatchEvent(new Event(evt, { bubbles: true })); } catch(e) {}
+        });
     }
 
     function getGameScope() {
@@ -383,19 +322,103 @@
         if (!q?.questionDef?.Components) return answers;
         
         q.questionDef.Components.forEach(c => {
-            if (c.Gaps) c.Gaps.forEach(g => { if (g.CorrectOptions?.[0]) answers.push(g.CorrectOptions[0]); });
+            if (c.Gaps) c.Gaps.forEach(g => { 
+                if (g.CorrectOptions?.[0]) answers.push(cleanAnswerText(g.CorrectOptions[0])); 
+            });
+            if (c.OrderedSequence) {
+                c.OrderedSequence.forEach(item => {
+                    const txt = item.Text || item.Label || item.Value;
+                    if (txt) answers.push(cleanAnswerText(txt));
+                });
+            }
+            if (c.Targets) {
+                c.Targets.forEach(t => {
+                    if (t.CorrectValue) answers.push(cleanAnswerText(t.CorrectValue));
+                });
+            }
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
                     if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
                         const t = o.TextTemplate || o.Text || o.Label || o.Description;
-                        if (t) answers.push(extractText(t));
+                        if (t) answers.push(cleanAnswerText(t));
                     }
                 });
             }
-            if (c.ComponentTypeCode === 'HIGHLIGHT_COMPONENT') answers.push(...parseHighlight(c).map(d => d.text));
-            if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) answers.push(c.Options[0].trim());
+            if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) answers.push(cleanAnswerText(c.Options[0]));
+            if (c.CorrectAnswer) answers.push(cleanAnswerText(c.CorrectAnswer));
+            if (c.ModelAnswerHTML && !isPromptText(cleanAnswerText(c.ModelAnswerHTML))) answers.push(cleanAnswerText(c.ModelAnswerHTML));
+            if (c.SampleAnswer && !isPromptText(cleanAnswerText(c.SampleAnswer))) answers.push(cleanAnswerText(c.SampleAnswer));
         });
-        return answers;
+        return [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
+    }
+
+    function solveSentenceEditingAndDiffs(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let updated = false;
+
+        q.questionDef.Components.forEach(c => {
+            const fullTarget = cleanAnswerText(c.CorrectAnswer || c.ModelAnswerHTML || c.SampleAnswer);
+            const inputTarget = cleanTargetForInput(c.CorrectAnswer || c.ModelAnswerHTML || c.SampleAnswer);
+            if (!fullTarget || isPromptText(fullTarget)) return;
+
+            c.UserAnswer = fullTarget;
+            c.Value = fullTarget;
+            c.SentenceHTML = fullTarget;
+            c.EditingTokens = fullTarget;
+            
+            // Bypass fix for tokenized strings
+            if (c.DiffTokens && Array.isArray(c.DiffTokens)) {
+                c.DiffTokens = [{ text: fullTarget, type: 'normal' }];
+            }
+            updated = true;
+
+            const targetEls = document.querySelectorAll('.sentence-editing, .inline-editor, [contenteditable="true"], .fr-element, input[type="text"]:not([hidden]), textarea');
+            targetEls.forEach(el => {
+                if (el.offsetParent !== null) forceNativeInput(el, inputTarget);
+            });
+        });
+
+        if (updated && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+        return updated;
+    }
+
+    function solveClozeGaps(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let solvedAny = false;
+
+        q.questionDef.Components.forEach(c => {
+            if (c.Gaps) {
+                c.Gaps.forEach((g, idx) => {
+                    if (g.CorrectOptions && g.CorrectOptions[0]) {
+                        const rawAns = g.CorrectOptions[0];
+                        const inputVal = cleanTargetForInput(rawAns);
+                        const cleanVal = cleanAnswerText(rawAns);
+
+                        g.Value = cleanVal;
+                        g.UserAnswer = cleanVal;
+
+                        const gapEls = document.querySelectorAll('.cloze-gap, [class*="gap"], .drop-zone, input[type="text"]:not([hidden])');
+                        if (gapEls[idx]) {
+                            forceNativeInput(gapEls[idx], inputVal);
+                            
+                            const tileEl = findBestElement(inputVal) || findBestElement(cleanVal);
+                            if (tileEl) {
+                                simulatePreciseClick(tileEl);
+                                simulatePreciseClick(gapEls[idx]);
+                            }
+                        }
+                        solvedAny = true;
+                    }
+                });
+            }
+        });
+
+        if (solvedAny && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+        return solvedAny;
     }
 
     function solveCurrentQuestion() {
@@ -405,80 +428,38 @@
         const q = gs.game.model.currentQuestion;
         if (!q?.questionDef?.Components) return true;
 
-        let scopeUpdated = false;
+        let scopeUpdated = solveSentenceEditingAndDiffs(gs, q) || solveClozeGaps(gs, q);
+        const cleanAnsList = getAnswers(q);
 
         q.questionDef.Components.forEach(c => {
-            // ---- 1. Cloze / Gap Fill & Tile Handler ----
-            if (c.Gaps && c.Gaps.length > 0) {
-                c.Gaps.forEach((g, idx) => {
-                    if (g.CorrectOptions && g.CorrectOptions[0]) {
-                        const ans = g.CorrectOptions[0];
-                        g.UserAnswer = ans;
-                        g.SelectedOption = ans;
-                        g.Value = ans;
-
-                        if (g.Options) {
-                            const opt = g.Options.find(o => (o.Text || o.Value || o.Label || '').trim() === ans.trim());
-                            if (opt) {
-                                g.SelectedOption = opt;
-                                g.SelectedOptionId = opt.ID || opt.Id;
-                            }
-                        }
-                        scopeUpdated = true;
-
-                        const tileEl = findBestElement(ans);
-                        if (tileEl) simulatePreciseClick(tileEl);
-
-                        const gapInputs = document.querySelectorAll('.cloze-gap input, ep-gap input, input.gap-input, .gap-element input, .gap input');
-                        if (gapInputs[idx]) {
-                            robustType(gapInputs[idx], ans);
-                        } else {
-                            gapInputs.forEach(inp => robustType(inp, ans));
-                        }
-                    }
-                });
-            }
-
-            // ---- 2. Multiple Choice Handler ----
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
                     if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
-                        const targetEl = findBestElement(extractText(o.TextTemplate || o.Text || o.Label || o.Description));
-                        if (targetEl) simulatePreciseClick(targetEl);
+                        const targetText = cleanAnswerText(o.TextTemplate || o.Text || o.Label || o.Description);
+                        o.Selected = true;
+                        scopeUpdated = true;
+                        
+                        const targetEl = findBestElement(targetText);
+                        if (targetEl) {
+                            simulatePreciseClick(targetEl);
+                            const radio = targetEl.querySelector('input[type="radio"]') || targetEl.closest('label')?.querySelector('input[type="radio"]');
+                            if (radio) simulatePreciseClick(radio);
+                        }
                     }
                 });
             }
 
-            // ---- 3. Highlight Component Handler ----
-            if (c.ComponentTypeCode === 'HIGHLIGHT_COMPONENT') {
-                if (c.CorrectOptions && Array.isArray(c.CorrectOptions)) {
-                    c.SelectedIndices = [...c.CorrectOptions];
-                    c.UserAnswers = [...c.CorrectOptions];
-                    if (c.Tokens) {
-                        c.Tokens.forEach((tok, idx) => {
-                            if (c.CorrectOptions.includes(idx)) tok.Selected = true;
-                        });
+            // Fix for sequential multi-target drag & drop
+            if (c.OrderedSequence || c.Targets) {
+                const dropZones = Array.from(document.querySelectorAll('.drop-zone, .target-zone, .sequence-target')).filter(el => el.offsetParent !== null);
+                cleanAnsList.forEach((ansText, idx) => {
+                    const el = findBestElement(ansText);
+                    const targetZone = dropZones[idx] || dropZones[0];
+                    if (el && targetZone) {
+                        simulatePreciseClick(el);
+                        simulatePreciseClick(targetZone);
                     }
-                    scopeUpdated = true;
-                }
-
-                const highlightItems = parseHighlight(c);
-                highlightItems.forEach(item => {
-                    const txt = item.text.trim();
-                    if (!txt) return;
-
-                    const wordTokens = Array.from(document.querySelectorAll('.highlight-component span, .highlightable span, span.token, span.word, mark, [ng-click*="select"]'));
-                    let match = wordTokens.find(el => el.offsetParent !== null && el.innerText.trim() === txt);
-                    if (!match) match = findBestElement(txt);
-
-                    if (match) simulatePreciseClick(match);
                 });
-            }
-
-            // ---- 4. Text Box Handler ----
-            if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) {
-                const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, [contenteditable="true"], .fr-element, .sentence-editing')).filter(i => i.offsetParent !== null);
-                inputs.forEach(inp => robustType(inp, c.Options[0].trim()));
             }
         });
 
@@ -491,17 +472,14 @@
 
     function pressSubmitOrContinue() {
         if (!settings.autoSubmit) return false;
-        dismissNoAnswerModal();
-        triggerBypass();
 
         const candidates = document.querySelectorAll('button, .button, .ep-button, a, div[role="button"], span[role="button"]');
         for (let b of candidates) {
             if (b.offsetParent === null) continue;
-            const txt = (b.innerText || b.textContent || '').trim().toLowerCase();
-            if (txt.includes('continue') || txt.includes('submit') || txt.includes('next section') || 
-                txt.includes('next task') || txt.includes('start section') || txt.includes('finish task') || 
-                txt.includes('done') || txt.includes('start') || txt.includes('next') || 
-                txt.includes('check') || txt.includes('got it') || txt.includes('bypass')) {
+            const txt = cleanAnswerText(b.innerText || b.textContent || '').toLowerCase();
+            if (txt.includes('submit') || txt.includes('check answer') || txt.includes('continue') || 
+                txt.includes('next section') || txt.includes('next task') || txt.includes('done') || 
+                txt.includes('next') || txt.includes('got it')) {
                 simulatePreciseClick(b);
                 return true;
             }
@@ -509,30 +487,32 @@
         return false;
     }
 
-    // ---- Core Loop ----
     setInterval(() => {
         const now = Date.now();
         try {
-            dismissNoAnswerModal();
-            triggerBypass();
-
             const gs = getGameScope();
             if (!gs) {
-                statusBox.innerText = autoModeActive ? '🤖 Waiting for active lesson...' : '⏳ ENGINE STANDBY (Toggle UI or Ctrl+Alt+L)';
+                statusBox.innerHTML = autoModeActive ? '🤖 Searching for active lesson...' : '⏳ ENGINE STANDBY';
                 if (autoModeActive) pressSubmitOrContinue();
                 return;
             }
 
             const q = gs.game.model.currentQuestion;
-            const rawAnswers = getAnswers(q);
+            const cleanAns = getAnswers(q);
 
-            const displayAnswers = rawAnswers.map(ans => {
-                const keys = getTargetImageKeys(ans);
-                return keys.length > 0 ? `[Img: ${keys[0]}]` : ans;
-            });
+            let statusHTML = (autoModeActive ? '<span style="color: #ff71ce; font-weight: 700;">🤖 AUTO ACTIVE</span>\n' : '<span style="color: #01cdfe; font-weight: 700;">⏳ ENGINE STANDBY</span>\n');
 
-            statusBox.innerText = (autoModeActive ? '🤖 AUTO ACTIVE\n' : '⏳ ENGINE STANDBY\n') +
-                (displayAnswers.length ? 'Answers: ' + displayAnswers.join(' / ') : 'Slide loaded / Ready');
+            if (cleanAns.length > 0) {
+                statusHTML += '<div style="margin-top: 4px;">';
+                cleanAns.forEach((ans, i) => {
+                    statusHTML += `<div style="background: rgba(250, 204, 21, 0.25); color: #fef08a; border: 1px solid #eab308; padding: 4px 6px; border-radius: 4px; margin-top: 4px; font-weight: 700; font-size: 11px;">💡 Answer ${i + 1}: ${ans}</div>`;
+                });
+                statusHTML += '</div>';
+            } else {
+                statusHTML += '<span style="opacity: 0.8;">Slide loaded / Manual grading area</span>';
+            }
+
+            statusBox.innerHTML = statusHTML;
 
             if (!autoModeActive) return;
 
