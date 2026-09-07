@@ -1,8 +1,7 @@
-```javascript
 // ==UserScript==
 // @name         Mathspace Customizer
 // @namespace    MythicOverlay.MSCustomizer
-// @version      1.8
+// @version      1.9
 // @description  Replace avatars, background thumbnail, applied background, UI text, and summon a monkey every 20 minutes
 // @author       Zayn
 // @match        https://*.mathspace.co/*
@@ -53,10 +52,8 @@
       }
     });
 
-    document.querySelectorAll("*").forEach(el => {
-      const style = window.getComputedStyle(el);
-      const bgImage = style.getPropertyValue("background-image");
-
+    document.querySelectorAll("[style*='background-image']").forEach(el => {
+      const bgImage = el.style.backgroundImage;
       avatarOriginals.forEach(original => {
         if (bgImage.includes(original)) {
           el.style.backgroundImage = `url("${avatarReplacement}")`;
@@ -66,23 +63,45 @@
   };
 
   // ============================================================
-  // TEXT REPLACEMENT
+  // TEXT REPLACEMENT (Loop-Safe)
   // ============================================================
 
   const replaceTextNodes = () => {
+    if (!document.body) return;
+
     const walker = document.createTreeWalker(
       document.body,
       NodeFilter.SHOW_TEXT,
-      null,
-      false
+      {
+        acceptNode: (node) => {
+          // Avoid targeting script/style elements to prevent UI crashes
+          const parent = node.parentElement;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+          const tag = parent.tagName.toLowerCase();
+          if (tag === 'script' || tag === 'style' || tag === 'textarea') {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
     );
 
     let node;
-
     while ((node = walker.nextNode())) {
+      let val = node.nodeValue;
+      let modified = false;
+
       textReplacements.forEach(({ from, to }) => {
-        node.textContent = node.textContent.replace(from, to);
+        if (from.test(val)) {
+          val = val.replace(from, to);
+          modified = true;
+        }
       });
+
+      // Only re-assign if a change occurred to prevent mutation loops
+      if (modified) {
+        node.nodeValue = val;
+      }
     }
   };
 
@@ -92,7 +111,6 @@
 
   const overrideTitleElement = () => {
     const title = document.querySelector('h3.css-1ng2lf3');
-
     if (title && title.textContent.includes('Mathspace')) {
       title.textContent = "Cosmic Piggy (Limited time)";
     }
@@ -103,10 +121,7 @@
   // ============================================================
 
   const replaceBackgroundThumbnail = () => {
-    const bgImg = document.querySelector(
-      `img[src="${defaultThumbnailSrc}"]`
-    );
-
+    const bgImg = document.querySelector(`img[src="${defaultThumbnailSrc}"]`);
     if (bgImg) {
       bgImg.src = customThumbnailSrc;
       bgImg.alt = "John Pork Background";
@@ -114,35 +129,16 @@
   };
 
   // ============================================================
-  // APPLIED BACKGROUND
+  // APPLIED & MODAL BACKGROUND
   // ============================================================
 
   const replaceAppliedBackground = () => {
-    document
-      .querySelectorAll('div[style*="background-image"]')
-      .forEach(el => {
-        const style = el.getAttribute("style");
-
-        if (style && style.includes(originalBgURL)) {
-          el.style.backgroundImage = `url("${customBgURL}")`;
-        }
-      });
-  };
-
-  // ============================================================
-  // MODAL BACKGROUND
-  // ============================================================
-
-  const replaceModalBackground = () => {
-    document
-      .querySelectorAll('div[style*="background-image"]')
-      .forEach(el => {
-        const style = el.getAttribute("style");
-
-        if (style && style.includes(modalBgURL)) {
-          el.style.backgroundImage = `url("${customBgURL}")`;
-        }
-      });
+    document.querySelectorAll('div[style*="background-image"]').forEach(el => {
+      const style = el.getAttribute("style");
+      if (style && (style.includes(originalBgURL) || style.includes(modalBgURL))) {
+        el.style.backgroundImage = `url("${customBgURL}")`;
+      }
+    });
   };
 
   // ============================================================
@@ -153,11 +149,11 @@
     "https://media.istockphoto.com/id/182149744/photo/scary-looking-vintage-monkey-in-clothes-playing-cymbals.jpg?s=612x612&w=0&k=20&c=-Ko7hiuH5qWMomnnUZTR_bE-RlRJLL80-JFfJy5J908=";
 
   const summonMonkey = () => {
-    const monkey = document.createElement("img");
+    if (!document.body) return;
 
+    const monkey = document.createElement("img");
     monkey.src = monkeyURL;
 
-    // Make it cover the entire screen
     Object.assign(monkey.style, {
       position: "fixed",
       top: "0",
@@ -171,75 +167,62 @@
 
     document.body.appendChild(monkey);
 
-    // Remove after 0.5 seconds
     setTimeout(() => {
       monkey.remove();
     }, 500);
   };
 
-  // Every 20 minutes
+  // Every 20 minutes (1200000 ms)
   setInterval(summonMonkey, 20 * 60 * 1000);
 
   // ============================================================
-  // RUN EVERYTHING
+  // RUN EVERYTHING WITH DEBOUNCE / MUTATION GUARD
   // ============================================================
 
+  let isRunning = false;
+
   const runAllReplacements = () => {
+    if (isRunning) return;
+    isRunning = true;
+
+    // Temporarily disconnect observer while mutating DOM
+    observer.disconnect();
+
     replaceAvatars();
     replaceTextNodes();
     overrideTitleElement();
     replaceBackgroundThumbnail();
     replaceAppliedBackground();
-    replaceModalBackground();
+
+    // Re-enable observer after DOM changes settle
+    observer.observe(document.body || document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+
+    isRunning = false;
   };
 
-  runAllReplacements();
-
-  // ============================================================
-  // MUTATION OBSERVER
-  // ============================================================
-
+  // Setup Observer
   const observer = new MutationObserver(runAllReplacements);
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
+  // Initialize once the document is ready
+  const init = () => {
+    runAllReplacements();
 
-  // ============================================================
-  // EXTERNAL SCRIPT
-  // ============================================================
+    // Inject external script safely
+    const injectScript = document.createElement('script');
+    injectScript.src = 'https://zdstudios.github.io/SchoolMod/Mathspace/inject.js';
+    injectScript.type = 'text/javascript';
+    injectScript.onload = () => console.log('[MSC] External inject.js loaded successfully');
+    injectScript.onerror = () => console.warn('[MSC] Failed to load inject.js');
+    (document.head || document.documentElement).appendChild(injectScript);
+  };
 
-  const injectScript = document.createElement('script');
-
-  injectScript.src =
-    'https://zdstudios.github.io/SchoolMod/Mathspace/inject.js';
-
-  injectScript.type = 'text/javascript';
-
-  injectScript.onload = () =>
-    console.log('[MSC] External inject.js loaded successfully');
-
-  injectScript.onerror = () =>
-    console.warn('[MSC] Failed to load inject.js');
-
-  document.head.appendChild(injectScript);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 
 })();
-```
-
-**Behaviour:** the page loads normally → waits **20 minutes** → monkey covers the screen → **500 ms later** it vanishes → repeats every 20 minutes.
-
-If you want to test it without waiting 20 minutes, temporarily change:
-
-```javascript
-setInterval(summonMonkey, 20 * 60 * 1000);
-```
-
-to:
-
-```javascript
-setInterval(summonMonkey, 5 * 1000);
-```
-
-That'll make the monkey appear every **5 seconds**. 🐒
