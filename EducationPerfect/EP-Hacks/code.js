@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         EP Automation & Answer Fetcher
+// @name         EP Automation & Answer Fetcher (Fixed)
 // @namespace    http://tampermonkey.net/
-// @version      33.6
-// @description  Adds Beta Features gate, multi-target drag fix, and token-level sentence editing bypass.
+// @version      33.7
+// @description  Adds Beta Features gate, multi-target drag fix, proper touch simulation, and token-level editing.
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -131,7 +131,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v33.6</span>
+            <span>🤖 EP Automation v33.7</span>
             <div style="display: flex; gap: 8px; align-items: center;">
                 <button id="ep-min-btn" style="background: transparent; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1;">▼</button>
             </div>
@@ -254,6 +254,7 @@
         localStorage.setItem('ep_autohide', e.target.checked);
     });
 
+    // --- REPAIRED INTERACTION ENGINE ---
     function simulatePreciseClick(el) {
         if (!el) return;
         const rect = el.getBoundingClientRect();
@@ -262,10 +263,48 @@
         const props = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, screenX: x, screenY: y, which: 1, buttons: 1 };
 
         try { el.focus(); } catch(e) {}
-        try { el.click(); } catch(e) {}
+
         ['pointerdown', 'touchstart', 'mousedown', 'pointerup', 'touchend', 'mouseup', 'click'].forEach(evt => {
-            try { el.dispatchEvent(new MouseEvent(evt, props)); } catch (e) {}
+            try {
+                if (evt.startsWith('touch')) {
+                    // Proper TouchEvent implementation from v24 diff
+                    const touch = new Touch({ identifier: Date.now(), target: el, clientX: x, clientY: y });
+                    el.dispatchEvent(new TouchEvent(evt, { bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
+                } else {
+                    el.dispatchEvent(new MouseEvent(evt, props));
+                }
+            } catch (e) {}
         });
+    }
+
+    function simulateComplexDrag(sourceEl, targetEl) {
+        if (!sourceEl || !targetEl) return;
+        const srcRect = sourceEl.getBoundingClientRect();
+        const tgtRect = targetEl.getBoundingClientRect();
+        const srcX = srcRect.left + srcRect.width / 2;
+        const srcY = srcRect.top + srcRect.height / 2;
+        const tgtX = tgtRect.left + tgtRect.width / 2;
+        const tgtY = tgtRect.top + tgtRect.height / 2;
+
+        const dataTransfer = new DataTransfer();
+
+        function fireMouse(type, el, x, y) {
+            el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, screenX: x, screenY: y, buttons: 1 }));
+        }
+        function fireDrag(type, el, x, y) {
+            el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, screenX: x, screenY: y, dataTransfer: dataTransfer }));
+        }
+
+        fireDrag('dragstart', sourceEl, srcX, srcY);
+        fireMouse('mousedown', sourceEl, srcX, srcY);
+
+        setTimeout(() => {
+            fireDrag('dragenter', targetEl, tgtX, tgtY);
+            fireDrag('dragover', targetEl, tgtX, tgtY);
+            fireDrag('drop', targetEl, tgtX, tgtY);
+            fireMouse('mouseup', targetEl, tgtX, tgtY);
+            fireDrag('dragend', sourceEl, tgtX, tgtY);
+        }, 40);
     }
 
     function findBestElement(targetText) {
@@ -273,8 +312,16 @@
         const targetClean = cleanAnswerText(targetText);
         const targetNorm = normalizeForComparison(targetText);
         
-        const rawCandidates = document.querySelectorAll('li, label, span, button, div, [role="checkbox"], [role="radio"], .option, .mc-option, .drag-item, .sequence-item, .draggable');
-        const candidates = Array.from(rawCandidates).filter(el => el.offsetParent !== null);
+        // Expanded selectors from older version to find option tiles effectively
+        const rawCandidates = document.querySelectorAll('li, label, span, button, div, [role="checkbox"], [role="radio"], .option, .mc-option, .drag-item, .sequence-item, .draggable, .cloze-option, .draggable-option, .option-tile, .token, .cloze-item, .choice, .item');
+        
+        // Ensure we don't grab elements already placed inside a gap
+        const candidates = Array.from(rawCandidates).filter(el => 
+            el.offsetParent !== null && 
+            !el.closest('.gap, .cloze-gap, .drop-target, .drop-zone, .blank') &&
+            !el.classList.contains('used') && 
+            !el.classList.contains('placed')
+        );
 
         let found = candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetClean);
         if (found) return found;
@@ -366,7 +413,6 @@
             c.SentenceHTML = fullTarget;
             c.EditingTokens = fullTarget;
             
-            // Bypass fix for tokenized strings
             if (c.DiffTokens && Array.isArray(c.DiffTokens)) {
                 c.DiffTokens = [{ text: fullTarget, type: 'normal' }];
             }
@@ -405,8 +451,10 @@
                             
                             const tileEl = findBestElement(inputVal) || findBestElement(cleanVal);
                             if (tileEl) {
+                                // Execute full event stack: Click > Touch > Complex Drag
                                 simulatePreciseClick(tileEl);
                                 simulatePreciseClick(gapEls[idx]);
+                                simulateComplexDrag(tileEl, gapEls[idx]);
                             }
                         }
                         solvedAny = true;
@@ -449,7 +497,6 @@
                 });
             }
 
-            // Fix for sequential multi-target drag & drop
             if (c.OrderedSequence || c.Targets) {
                 const dropZones = Array.from(document.querySelectorAll('.drop-zone, .target-zone, .sequence-target')).filter(el => el.offsetParent !== null);
                 cleanAnsList.forEach((ansText, idx) => {
@@ -458,6 +505,7 @@
                     if (el && targetZone) {
                         simulatePreciseClick(el);
                         simulatePreciseClick(targetZone);
+                        simulateComplexDrag(el, targetZone);
                     }
                 });
             }
