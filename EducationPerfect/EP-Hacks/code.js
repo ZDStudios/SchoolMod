@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         EP Ultimate Automation Helper (v12.0)
+// @name         EP Automation & Answer Fetcher (Fixed v33.8)
 // @namespace    http://tampermonkey.net/
-// @version      12.0
-// @description  Layout Settling Buffer State Machine with native HTML5 DragEvent Simulation.
-// @match        https://app.educationperfect.com/*
+// @version      33.8
+// @description  Adds Beta Features gate, multi-target drag fix, proper touch simulation, and Angular scope injection for drag-and-drop.
+// @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
@@ -11,15 +11,80 @@
 (function() {
     'use strict';
 
+    const settings = {
+        enableBeta: localStorage.getItem('ep_enable_beta') === 'true',
+        autoSolve: true,
+        autoSubmit: true,
+        antiDetect: true,
+        selfMarkBypass: true,
+        autoHide: localStorage.getItem('ep_autohide') === 'true',
+        theme: 'synthwave'
+    };
+
+    const themes = {
+        cyberpunk: { bg: 'rgba(18, 16, 38, 0.98)', text: '#00ffcc', border: '#ff007f', header: '#2a1b4e' },
+        synthwave: { bg: 'rgba(26, 11, 46, 0.98)', text: '#ff71ce', border: '#01cdfe', header: '#3a135e' },
+        nordic: { bg: 'rgba(15, 28, 44, 0.98)', text: '#e0f2fe', border: '#38bdf8', header: '#1e3a5f' },
+        dark: { bg: 'rgba(15, 23, 42, 0.98)', text: '#ffffff', border: '#70B80B', header: '#1e293b' },
+        light: { bg: 'rgba(248, 250, 252, 0.98)', text: '#0f172a', border: '#10b981', header: '#e2e8f0' },
+        minimal: { bg: 'rgba(0, 0, 0, 0.9)', text: '#a3e635', border: '#a3e635', header: '#18181b' }
+    };
+
+    (function initSpoofers() {
+        try {
+            Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+            Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+            document.hasFocus = () => true;
+        } catch(e) {}
+
+        const focusEvents = ['blur', 'focusout', 'mouseleave', 'visibilitychange', 'pagehide'];
+        focusEvents.forEach(evt => {
+            window.addEventListener(evt, e => { if (settings.antiDetect) e.stopImmediatePropagation(); }, true);
+            document.addEventListener(evt, e => { if (settings.antiDetect) e.stopImmediatePropagation(); }, true);
+        });
+    })();
+
     let autoModeActive = false;
     let currentQuestionID = null;
     let slideSettledTime = 0;
     let fillExecutedTime = 0;
     let filledSuccess = false;
+    let isMinimized = false;
 
-    const LOOP_SPEED = 200; // High-frequency polling loop
+    const LOOP_SPEED = 200;         
+    const SETTLE_DELAY = 450;       
+    const SUBMIT_DELAY = 600;       
 
-    // ---- UI Overlay Setup ----
+    function cleanAnswerText(raw) {
+        if (raw === null || raw === undefined) return '';
+        let str = String(raw);
+        const temp = document.createElement('div');
+        temp.innerHTML = str;
+        str = temp.textContent || temp.innerText || '';
+        return str.replace(/\[block[^\n]*\n?/g, '').replace(/<[^>]*>?/gm, '').replace(/[\*\[\]]/g, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function cleanTargetForInput(raw) {
+        let txt = cleanAnswerText(raw);
+        return txt.replace(/^[:;\-–—\s]+/, '').trim();
+    }
+
+    function normalizeForComparison(str) {
+        return cleanAnswerText(str).toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
+    function isPromptText(text) {
+        if (!text) return true;
+        const lower = text.toLowerCase();
+        return (
+            lower.includes('you might think about') ||
+            lower.includes('including adjectives') ||
+            lower.includes('using commas to correctly') ||
+            lower.includes('write a description') ||
+            lower.includes('read the following passage')
+        );
+    }
+
     let overlay = document.getElementById('ep-ultimate-overlay');
     if (overlay) overlay.remove();
 
@@ -27,106 +92,182 @@
     overlay.id = 'ep-ultimate-overlay';
     overlay.style.cssText = `
         position: fixed; top: 12px; right: 12px;
-        background: rgba(15, 23, 42, 0.96); color: #ffffff;
-        padding: 8px 14px; border-radius: 6px;
+        z-index: 999999; width: 340px;
+        padding: 0; border-radius: 10px;
         font-size: 12px; font-weight: 600;
-        z-index: 999999; max-width: 290px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
         font-family: system-ui, -apple-system, sans-serif;
-        pointer-events: none; word-wrap: break-word;
-        border-right: 4px solid #70B80B;
-        line-height: 1.4;
+        border-right: 5px solid #01cdfe;
+        overflow: hidden;
+        display: ${settings.autoHide ? 'none' : 'block'};
+    `;
+
+    overlay.innerHTML = `
+        <div id="ep-header" style="padding: 8px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
+            <span>🤖 EP Automation v33.8</span>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button id="ep-min-btn" style="background: transparent; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1;">▼</button>
+            </div>
+        </div>
+        <div id="ep-body" style="padding: 10px 12px;">
+            <div id="ep-controls-area">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label for="ep-theme-select">Theme:</label>
+                    <select id="ep-theme-select" style="background: rgba(255,255,255,0.1); color: inherit; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 6px; font-size: 11px;">
+                        <option value="synthwave" style="color:#000;">Neon Synthwave</option>
+                        <option value="nordic" style="color:#000;">Nordic Frost</option>
+                        <option value="cyberpunk" style="color:#000;">Cyberpunk</option>
+                        <option value="dark" style="color:#000;">Dark Slate</option>
+                        <option value="light" style="color:#000;">Light Mode</option>
+                        <option value="minimal" style="color:#000;">Minimal Lime</option>
+                    </select>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; font-size: 11px;">
+                    <label style="grid-column: span 2; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 4px;">
+                        <input type="checkbox" id="toggle-beta" ${settings.enableBeta ? 'checked' : ''}> Enable Beta Features
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; grid-column: span 2; background: rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 5px;">
+                        <input type="checkbox" id="toggle-automode"> <span style="font-weight: 700;">🤖 Auto Mode Active</span>
+                    </label>
+                    <label><input type="checkbox" id="toggle-solve" checked> Auto Solve</label>
+                    <label><input type="checkbox" id="toggle-submit" checked> Auto Submit</label>
+                    <label><input type="checkbox" id="toggle-autohide" ${settings.autoHide ? 'checked' : ''}> Auto-Hide UI</label>
+                </div>
+                <div style="font-size: 10px; opacity: 0.75; text-align: center; margin-bottom: 6px;">
+                    Press <b style="text-decoration: underline;">Ctrl + U</b> (Menu) | <b style="text-decoration: underline;">Ctrl + Alt + L</b> (Auto)
+                </div>
+            </div>
+
+            <div id="ep-status-box" style="
+                background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15);
+                padding: 8px; border-radius: 6px; min-height: 52px; max-height: 140px;
+                overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 11px;
+            ">Initializing...</div>
+        </div>
     `;
     document.body.appendChild(overlay);
-    overlay.innerText = 'Ready (v12.0)';
 
-    // ---- Normalizer Utilities ----
-    function extractText(t) {
-        if (!t) return '';
-        return t.replace(/\[block[^\n]*\n/g,'').replace(/\]/g,'').replace(/\*\*/g,'').trim();
+    const headerEl = overlay.querySelector('#ep-header');
+    let isDraggingUI = false, offsetX = 0, offsetY = 0;
+    headerEl.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        isDraggingUI = true;
+        offsetX = e.clientX - overlay.getBoundingClientRect().left;
+        offsetY = e.clientY - overlay.getBoundingClientRect().top;
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!isDraggingUI) return;
+        overlay.style.left = `${e.clientX - offsetX}px`;
+        overlay.style.top = `${e.clientY - offsetY}px`;
+        overlay.style.right = 'auto';
+    });
+    document.addEventListener('mouseup', () => { isDraggingUI = false; });
+
+    const minBtn = overlay.querySelector('#ep-min-btn');
+    const controlsArea = overlay.querySelector('#ep-controls-area');
+    minBtn.addEventListener('click', () => {
+        isMinimized = !isMinimized;
+        controlsArea.style.display = isMinimized ? 'none' : 'block';
+        minBtn.textContent = isMinimized ? '▲' : '▼';
+    });
+
+    const statusBox = overlay.querySelector('#ep-status-box');
+    const themeSelect = overlay.querySelector('#ep-theme-select');
+    const autoModeToggle = overlay.querySelector('#toggle-automode');
+
+    function applyTheme(themeName) {
+        const t = themes[themeName] || themes.synthwave;
+        settings.theme = themeName;
+        overlay.style.background = t.bg;
+        overlay.style.color = t.text;
+        overlay.style.borderRightColor = autoModeActive ? '#ff0055' : t.border;
+        headerEl.style.background = t.header;
     }
+    applyTheme('synthwave');
 
-    function normalizeStr(str) {
-        if (!str) return '';
-        return str.toLowerCase().replace(/[\n\r\s]+/g, ' ').replace(/[^a-z0-9 ]/g, '').trim();
-    }
-
-    function parseHighlight(c) {
-        const correct = c.CorrectOptions || [];
-        const matches = [...(c.TextTemplate || '').matchAll(/\[hl (\d+):([^:]+):/g)];
-        return matches.filter(m => correct.includes(parseInt(m[1]))).map(m => ({
-            index: parseInt(m[1]),
-            text: m[2]
-        }));
-    }
-
-    // ---- DOM Selection Engine ----
-    function findBestElement(targetText) {
-        const targetClean = normalizeStr(targetText);
-        if (!targetClean) return null;
-
-        let bestEl = null;
-        let bestScore = Infinity;
-
-        const candidates = document.querySelectorAll('span, button, div, label, p, [role="checkbox"], [role="radio"], .option, .mc-option, .highlight-word, .hl-word, [class*="drag"], .word');
-        candidates.forEach(el => {
-            if (el.offsetParent === null || el.innerText.length > targetText.length + 50) return;
-
-            const elClean = normalizeStr(el.innerText);
-            if (elClean === targetClean || elClean.includes(targetClean)) {
-                let score = el.innerText.length + (el.children.length * 15);
-                if (elClean === targetClean) score -= 200;
-
-                if (score < bestScore) {
-                    bestScore = score;
-                    bestEl = el;
-                }
-            }
-        });
-        return bestEl;
-    }
-
-    function isAlreadySelected(el) {
-        if (!el) return false;
-        if (el.checked || el.classList.contains('selected') || el.classList.contains('active') || el.classList.contains('checked') || el.classList.contains('is-correct')) return true;
-
-        let parent = el.parentElement;
-        for (let i = 0; i < 4 && parent; i++) {
-            if (parent.classList.contains('selected') || parent.classList.contains('active') || parent.classList.contains('checked')) return true;
-            parent = parent.parentElement;
+    function setAutoMode(state) {
+        if (state && !settings.enableBeta) {
+            alert("⚠️ Please enable 'Beta Features' first.");
+            if (autoModeToggle) autoModeToggle.checked = false;
+            return;
         }
-        return false;
+        autoModeActive = state;
+        if (autoModeToggle) autoModeToggle.checked = autoModeActive;
+        applyTheme(settings.theme);
     }
+    themeSelect.addEventListener('change', (e) => applyTheme(e.target.value));
+    autoModeToggle.addEventListener('change', (e) => setAutoMode(e.target.checked));
 
-    // ---- Event Simulators ----
-    function triggerFullClickSequence(el) {
+    function simulatePreciseClick(el) {
         if (!el) return;
-        ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach(evt => {
+        const rect = el.getBoundingClientRect();
+        const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+        const props = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, screenX: x, screenY: y, buttons: 1 };
+        try { el.focus(); } catch(e) {}
+        ['pointerdown', 'touchstart', 'mousedown', 'pointerup', 'touchend', 'mouseup', 'click'].forEach(evt => {
             try {
-                const eventObj = evt.startsWith('mouse') ? new MouseEvent(evt, { bubbles: true }) : new Event(evt, { bubbles: true });
-                el.dispatchEvent(eventObj);
+                if (evt.startsWith('touch')) {
+                    const touch = new Touch({ identifier: Date.now(), target: el, clientX: x, clientY: y });
+                    el.dispatchEvent(new TouchEvent(evt, { bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
+                } else {
+                    el.dispatchEvent(new MouseEvent(evt, props));
+                }
             } catch (e) {}
         });
     }
 
-    function robustType(inputEl, text) {
-        if (!inputEl) return;
-        inputEl.focus();
-        inputEl.value = text;
-        if (inputEl.getAttribute('contenteditable') === 'true') {
-            inputEl.innerText = text;
-        }
-        inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-        inputEl.dispatchEvent(new Event('change', { bubbles: true }));
-        inputEl.dispatchEvent(new Event('blur', { bubbles: true }));
+    function simulateComplexDrag(sourceEl, targetEl) {
+        if (!sourceEl || !targetEl) return;
+        const srcRect = sourceEl.getBoundingClientRect(), tgtRect = targetEl.getBoundingClientRect();
+        const srcX = srcRect.left + srcRect.width / 2, srcY = srcRect.top + srcRect.height / 2;
+        const tgtX = tgtRect.left + tgtRect.width / 2, tgtY = tgtRect.top + tgtRect.height / 2;
+        const dataTransfer = new DataTransfer();
+        function fireMouse(type, el, x, y) { el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, screenX: x, screenY: y, buttons: 1 })); }
+        function fireDrag(type, el, x, y) { el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, screenX: x, screenY: y, dataTransfer: dataTransfer })); }
+
+        fireDrag('dragstart', sourceEl, srcX, srcY);
+        fireMouse('mousedown', sourceEl, srcX, srcY);
+        setTimeout(() => {
+            fireDrag('dragenter', targetEl, tgtX, tgtY);
+            fireDrag('dragover', targetEl, tgtX, tgtY);
+            fireDrag('drop', targetEl, tgtX, tgtY);
+            fireMouse('mouseup', targetEl, tgtX, tgtY);
+            fireDrag('dragend', sourceEl, tgtX, tgtY);
+        }, 40);
+    }
+
+    // --- NEW: Tracks used options to prevent grabbing the same word twice ---
+    function findUnusedTile(targetText, usedSet) {
+        if (!targetText) return null;
+        const targetClean = cleanAnswerText(targetText);
+        const targetNorm = normalizeForComparison(targetText);
+        
+        const rawCandidates = document.querySelectorAll('li, label, span, button, div, .option, .mc-option, .drag-item, .sequence-item, .draggable, .cloze-option, .draggable-option, .option-tile, .token, .cloze-item, .choice, .item');
+        
+        const candidates = Array.from(rawCandidates).filter(el => {
+            if (el.offsetParent === null) return false;
+            if (usedSet && usedSet.has(el)) return false;
+            if (el.closest('.gap, .cloze-gap, .drop-target, .drop-zone, .blank')) return false;
+            if (el.classList.contains('used') || el.classList.contains('placed') || el.classList.contains('disabled')) return false;
+            return true;
+        });
+
+        let found = candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetClean);
+        if (found) return found;
+
+        found = candidates.find(el => normalizeForComparison(el.innerText || el.textContent) === targetNorm);
+        return found || null;
     }
 
     function getGameScope() {
         let gs = null;
         document.querySelectorAll('*').forEach(el => {
             try {
-                const s = angular.element(el).scope();
-                if (s && s.game && s.game.model) gs = s;
+                if (window.angular) {
+                    const s = window.angular.element(el).scope();
+                    if (s && s.game && s.game.model) gs = s;
+                }
             } catch(e) {}
         });
         return gs;
@@ -135,198 +276,165 @@
     function getAnswers(q) {
         const answers = [];
         if (!q?.questionDef?.Components) return answers;
+        
+        q.questionDef.Components.forEach(c => {
+            if (c.Gaps) c.Gaps.forEach(g => { if (g.CorrectOptions?.[0]) answers.push(cleanAnswerText(g.CorrectOptions[0])); });
+            if (c.OrderedSequence) c.OrderedSequence.forEach(item => { const txt = item.Text || item.Label || item.Value; if (txt) answers.push(cleanAnswerText(txt)); });
+            if (c.Targets) c.Targets.forEach(t => { if (t.CorrectValue) answers.push(cleanAnswerText(t.CorrectValue)); });
+            if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
+                c.Options.forEach(o => { if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) { const t = o.TextTemplate || o.Text || o.Label || o.Description; if (t) answers.push(cleanAnswerText(t)); } });
+            }
+            if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) answers.push(cleanAnswerText(c.Options[0]));
+            if (c.CorrectAnswer) answers.push(cleanAnswerText(c.CorrectAnswer));
+            if (c.ModelAnswerHTML && !isPromptText(cleanAnswerText(c.ModelAnswerHTML))) answers.push(cleanAnswerText(c.ModelAnswerHTML));
+            if (c.SampleAnswer && !isPromptText(cleanAnswerText(c.SampleAnswer))) answers.push(cleanAnswerText(c.SampleAnswer));
+        });
+        return [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
+    }
+
+    function solveClozeGaps(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let solvedAny = false;
+        const usedTiles = new Set(); // Stores tiles already placed in this iteration
 
         q.questionDef.Components.forEach(c => {
             if (c.Gaps) {
-                c.Gaps.forEach(g => {
-                    if (g.CorrectOptions?.[0]) answers.push(g.CorrectOptions[0]);
-                });
-            }
-            if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
-                c.Options.forEach(o => {
-                    if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true || o.IsCorrect === 'true') {
-                        const t = o.TextTemplate || o.Text || o.Label || o.Description;
-                        if (t) answers.push(extractText(t));
+                c.Gaps.forEach((g, idx) => {
+                    if (g.CorrectOptions && g.CorrectOptions[0]) {
+                        const rawAns = g.CorrectOptions[0];
+                        const cleanVal = cleanAnswerText(rawAns);
+                        g.Value = cleanVal;
+                        g.UserAnswer = cleanVal;
+
+                        const gapEls = document.querySelectorAll('.cloze-gap, [class*="gap"], .drop-zone');
+                        if (gapEls[idx]) {
+                            const tileEl = findUnusedTile(cleanVal, usedTiles);
+                            if (tileEl) {
+                                usedTiles.add(tileEl); // Ensure this tile is not selected again
+                                simulatePreciseClick(tileEl);
+                                simulatePreciseClick(gapEls[idx]);
+                                simulateComplexDrag(tileEl, gapEls[idx]);
+                                
+                                // Direct Angular scope bypass to inject tile data
+                                try {
+                                    if (window.angular) {
+                                        const tileScope = angular.element(tileEl).scope() || angular.element(tileEl).isolateScope();
+                                        const gapScope = angular.element(gapEls[idx]).scope() || angular.element(gapEls[idx]).isolateScope();
+                                        
+                                        // Pull the actual option object from the tile's scope and give it to the gap
+                                        let optionObject = null;
+                                        if (tileScope) optionObject = tileScope.option || tileScope.item || tileScope.token;
+                                        
+                                        if (gapScope && gapScope.gap && optionObject) {
+                                            gapScope.gap.Value = optionObject;
+                                            gapScope.gap.UserAnswer = optionObject;
+                                        }
+                                    }
+                                } catch (e) {}
+                            }
+                        }
+                        solvedAny = true;
                     }
                 });
-            }
-            if (c.ComponentTypeCode === 'DROPDOWN_COMPONENT' && c.Options) {
-                c.Options.forEach(o => {
-                    if (o.Correct === 'true' || o.Correct === true) {
-                        answers.push(o.Description || o.Text);
-                    }
-                });
-            }
-            if (c.ComponentTypeCode === 'HIGHLIGHT_COMPONENT') {
-                answers.push(...parseHighlight(c).map(d => d.text));
-            }
-            if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) {
-                answers.push(c.Options[0].trim());
             }
         });
-        return answers;
+
+        if (solvedAny && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+        return solvedAny;
     }
 
-    // ---- Core Auto-Solver Engine ----
     function solveCurrentQuestion() {
+        if (!settings.autoSolve) return true;
         const gs = getGameScope();
         if (!gs) return false;
         const q = gs.game.model.currentQuestion;
-        if (!q?.questionDef?.Components) return false;
+        if (!q?.questionDef?.Components) return true;
 
-        let filledAny = false;
+        let scopeUpdated = solveClozeGaps(gs, q);
+        const cleanAnsList = getAnswers(q);
+        const usedSequenceTiles = new Set();
 
         q.questionDef.Components.forEach(c => {
-            // Drag and Drop Summary Boxes & Sorting Layouts
-            if (c.Gaps) {
-                const textInputs = Array.from(document.querySelectorAll('input[type="text"], textarea, [contenteditable="true"]')).filter(i => !i.readOnly && i.offsetParent !== null);
-
-                const gapSelectors = ['.gap', '[class*="gap"]', '.drop-zone', '.placeholder', '.target-zone', '.word-gap-container', '[class*="placeholder"]', '.blank', 'ep-gap', '.drop-target', '.cloze-gap', '.drag-target'];
-                const visualGaps = Array.from(document.querySelectorAll(gapSelectors.join(',')))
-                    .filter(el => el.offsetParent !== null)
-                    .sort((a, b) => {
-                        const rA = a.getBoundingClientRect();
-                        const rB = b.getBoundingClientRect();
-                        if (Math.abs(rA.top - rB.top) < 25) return rA.left - rB.left;
-                        return rA.top - rB.top;
-                    });
-
-                c.Gaps.forEach((g, index) => {
-                    const ans = g.CorrectOptions?.[0];
-                    if (!ans) return;
-
-                    // Layer 1: Directly mutate the AngularJS model representation
-                    try {
-                        g.value = ans; g.Value = ans; g.studentAnswer = ans; g.userAnswer = ans;
-                    } catch(e) {}
-
-                    if (textInputs.length > 0 && textInputs[index]) {
-                        robustType(textInputs[index], ans);
-                        filledAny = true;
-                    } else {
-                        const tokenButton = findBestElement(ans);
-                        const targetGap = visualGaps[index];
-                        if (tokenButton && targetGap) {
-                            // Layer 2: Click Simulation Sequence
-                            triggerFullClickSequence(tokenButton);
-                            setTimeout(() => triggerFullClickSequence(targetGap), 40);
-
-                            // Layer 3: High-Fidelity Native HTML5 Drag and Drop Event Descriptors Simulation
-                            try {
-                                const dataTransfer = new DataTransfer();
-                                tokenButton.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer }));
-                                targetGap.dispatchEvent(new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer }));
-                                targetGap.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer }));
-                                targetGap.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
-                                tokenButton.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true, dataTransfer }));
-                            } catch(err) {}
-
-                            filledAny = true;
-                        }
-                    }
-                });
-                try { gs.$apply(); } catch(e) {}
-            }
-
-            // Multiple Choice Cards
             if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
                 c.Options.forEach(o => {
-                    if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true || o.IsCorrect === 'true') {
-                        const rawText = o.TextTemplate || o.Text || o.Label || o.Description;
-                        const targetEl = findBestElement(extractText(rawText));
-                        if (targetEl && !isAlreadySelected(targetEl)) {
-                            triggerFullClickSequence(targetEl);
-                            filledAny = true;
+                    if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
+                        const targetText = cleanAnswerText(o.TextTemplate || o.Text || o.Label || o.Description);
+                        o.Selected = true;
+                        scopeUpdated = true;
+                        const targetEl = findUnusedTile(targetText, new Set());
+                        if (targetEl) {
+                            simulatePreciseClick(targetEl);
+                            const radio = targetEl.querySelector('input[type="radio"]') || targetEl.closest('label')?.querySelector('input[type="radio"]');
+                            if (radio) simulatePreciseClick(radio);
                         }
                     }
                 });
             }
 
-            // Text Highlight Phrases
-            if (c.ComponentTypeCode === 'HIGHLIGHT_COMPONENT') {
-                const correctData = parseHighlight(c);
-                const explicitWords = document.querySelectorAll('.highlight-word, .hl-word, span[class*="word"]');
-                correctData.forEach(data => {
-                    const normalizedTargetText = normalizeStr(data.text);
-                    let target = [...explicitWords].find(w => normalizeStr(w.innerText) === normalizedTargetText);
-                    if (!target) {
-                        target = [...document.querySelectorAll('span, label, p')].find(el => normalizeStr(el.innerText) === normalizedTargetText && el.offsetParent !== null);
+            if (c.OrderedSequence || c.Targets) {
+                const dropZones = Array.from(document.querySelectorAll('.drop-zone, .target-zone, .sequence-target')).filter(el => el.offsetParent !== null);
+                cleanAnsList.forEach((ansText, idx) => {
+                    const el = findUnusedTile(ansText, usedSequenceTiles);
+                    const targetZone = dropZones[idx] || dropZones[0];
+                    if (el && targetZone) {
+                        usedSequenceTiles.add(el);
+                        simulatePreciseClick(el);
+                        simulatePreciseClick(targetZone);
+                        simulateComplexDrag(el, targetZone);
                     }
-                    if (target && !isAlreadySelected(target)) {
-                        triggerFullClickSequence(target);
-                        filledAny = true;
-                    }
-                });
-            }
-
-            // Standard Input Workspaces
-            if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) {
-                const inputs = Array.from(document.querySelectorAll('input[type="text"], textarea, [contenteditable="true"]')).filter(i => !i.readOnly && i.offsetParent !== null);
-                inputs.forEach(inp => {
-                    robustType(inp, c.Options[0].trim());
-                    filledAny = true;
                 });
             }
         });
 
-        return filledAny;
+        if (scopeUpdated && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+        return true;
     }
 
     function pressSubmitOrContinue() {
-        const btn = document.querySelector('.submit-btn, .continue-btn, [class*="submit"], [class*="continue"], [ng-click*="submit"], [ng-click*="continue"], [ng-click*="next"]');
-        if (btn && btn.offsetParent !== null && btn.tagName !== 'BODY') {
-            triggerFullClickSequence(btn);
-            return true;
-        }
-
-        const genericBtn = [...document.querySelectorAll('button, .button, .ep-button, a')].find(b => {
-            if (b.offsetParent === null) return false;
-            const txt = b.innerText?.toLowerCase() || '';
-            return txt.includes('submit') || txt.includes('continue') || txt.includes('next') || txt.includes('check');
-        });
-
-        if (genericBtn) {
-            triggerFullClickSequence(genericBtn);
-            return true;
+        if (!settings.autoSubmit) return false;
+        const candidates = document.querySelectorAll('button, .button, .ep-button, a, div[role="button"], span[role="button"]');
+        for (let b of candidates) {
+            if (b.offsetParent === null) continue;
+            const txt = cleanAnswerText(b.innerText || b.textContent || '').toLowerCase();
+            if (txt.includes('submit') || txt.includes('check answer') || txt.includes('continue') || 
+                txt.includes('next section') || txt.includes('next task') || txt.includes('done') || 
+                txt.includes('next') || txt.includes('got it')) {
+                simulatePreciseClick(b);
+                return true;
+            }
         }
         return false;
     }
 
-    function isTimerGateActive() {
-        const genericBtn = [...document.querySelectorAll('button, .button, .ep-button')].find(b => b.offsetParent !== null);
-        if (genericBtn) {
-            return /^\d+\s+second/.test(genericBtn.innerText?.toLowerCase() || '');
-        }
-        return false;
-    }
-
-    // ---- Main Sync Lifecycle State Machine Loop ----
     setInterval(() => {
         const now = Date.now();
         try {
             const gs = getGameScope();
-
             if (!gs) {
-                currentQuestionID = null;
-                filledSuccess = false;
+                statusBox.innerHTML = autoModeActive ? '🤖 Searching for active lesson...' : '⏳ ENGINE STANDBY';
                 if (autoModeActive) pressSubmitOrContinue();
                 return;
             }
 
             const q = gs.game.model.currentQuestion;
-            const answers = getAnswers(q);
+            const cleanAns = getAnswers(q);
 
-            overlay.innerText = (autoModeActive ? '🤖 FULL AUTO RUNNING (v12.0)\n' : '⏳ READY\n') + (answers.length ? 'Ans: ' + answers.join(' / ') : 'Syncing workflow...');
+            let statusHTML = (autoModeActive ? '<span style="color: #ff71ce; font-weight: 700;">🤖 AUTO ACTIVE</span>\n' : '<span style="color: #01cdfe; font-weight: 700;">⏳ ENGINE STANDBY</span>\n');
 
+            if (cleanAns.length > 0) {
+                statusHTML += '<div style="margin-top: 4px;">';
+                cleanAns.forEach((ans, i) => { statusHTML += `<div style="background: rgba(250, 204, 21, 0.25); color: #fef08a; border: 1px solid #eab308; padding: 4px 6px; border-radius: 4px; margin-top: 4px; font-weight: 700; font-size: 11px;">💡 Answer ${i + 1}: ${ans}</div>`; });
+                statusHTML += '</div>';
+            } else { statusHTML += '<span style="opacity: 0.8;">Slide loaded / Manual grading area</span>'; }
+
+            statusBox.innerHTML = statusHTML;
             if (!autoModeActive) return;
 
-            if (isTimerGateActive()) {
-                pressSubmitOrContinue();
-                return;
-            }
-
             if (q && q.contentID) {
-                // Step 1: Initialize New Slide State Variables
                 if (q.contentID !== currentQuestionID) {
                     currentQuestionID = q.contentID;
                     filledSuccess = false;
@@ -334,52 +442,21 @@
                     return;
                 }
 
-                // Step 2: Layout Settling Phase (Wait 250ms for elements to construct on screen)
-                if (!filledSuccess && (now - slideSettledTime > 250)) {
-                    const success = solveCurrentQuestion();
-                    if (success || answers.length > 0) {
-                        filledSuccess = true;
-                        fillExecutedTime = now;
-                    }
+                if (!filledSuccess && (now - slideSettledTime > SETTLE_DELAY)) {
+                    solveCurrentQuestion();
+                    filledSuccess = true;
+                    fillExecutedTime = now;
                     return;
                 }
-
-                // Step 3: Buffered Submission Phase (Wait 450ms for values to register with Angular)
-                if (filledSuccess && (now - fillExecutedTime > 450)) {
-                    pressSubmitOrContinue();
-                }
-
-                // Step 4: Self-Healing Safeguard (If stuck on a slide for over 3.5 seconds, clear and retry)
-                if (now - slideSettledTime > 3500) {
-                    filledSuccess = false;
-                    slideSettledTime = now;
-                }
+                if (filledSuccess && (now - fillExecutedTime > SUBMIT_DELAY)) pressSubmitOrContinue();
             } else {
-                // Instantly wipe intermediate points screens and feedback flags
-                const feedbackActive = document.querySelector('.points-feedback, .feedback-container, [class*="feedback"], .correct-feedback, .incorrect-feedback');
-                if (feedbackActive || !q) {
-                    pressSubmitOrContinue();
-                    currentQuestionID = null;
-                    filledSuccess = false;
-                }
+                pressSubmitOrContinue();
             }
         } catch(e) {}
     }, LOOP_SPEED);
 
-    // Command Configurations (Ctrl+U view panel toggler, Ctrl+Alt+L toggle Auto loop)
     window.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.key.toLowerCase() === 'u') {
-            e.preventDefault();
-            overlay.style.display = overlay.style.display === 'none' ? 'block' : 'none';
-        }
-        if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'l') {
-            e.preventDefault();
-            autoModeActive = !autoModeActive;
-            overlay.style.borderRightColor = autoModeActive ? '#E11D48' : '#70B80B';
-            if (!autoModeActive) {
-                currentQuestionID = null;
-                filledSuccess = false;
-            }
-        }
+        if (e.ctrlKey && e.key.toLowerCase() === 'u') { e.preventDefault(); overlay.style.display = overlay.style.display === 'none' ? 'block' : 'none'; }
+        if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'l') { e.preventDefault(); setAutoMode(!autoModeActive); }
     });
 })();
