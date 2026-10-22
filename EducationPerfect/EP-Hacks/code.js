@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         EP Automation & Answer Fetcher (Fixed)
+// @name         EP Hacks
 // @namespace    http://tampermonkey.net/
-// @version      33.7
-// @description  Adds Beta Features gate, multi-target drag fix, proper touch simulation, and token-level editing.
+// @version      33.9
+// @description  Adds Beta Features gate, multi-target drag fix, proper touch simulation, token-level editing, and dropdown support.
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -51,9 +51,9 @@
     let filledSuccess = false;
     let isMinimized = false;
 
-    const LOOP_SPEED = 200;         
-    const SETTLE_DELAY = 450;       
-    const SUBMIT_DELAY = 600;       
+    const LOOP_SPEED = 200;
+    const SETTLE_DELAY = 450;
+    const SUBMIT_DELAY = 600;
 
     function cleanAnswerText(raw) {
         if (raw === null || raw === undefined) return '';
@@ -131,7 +131,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v33.7</span>
+            <span>🤖 EP Automation v33.9</span>
             <div style="display: flex; gap: 8px; align-items: center;">
                 <button id="ep-min-btn" style="background: transparent; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1;">▼</button>
             </div>
@@ -149,7 +149,7 @@
                         <option value="minimal" style="color:#000;">Minimal Lime</option>
                     </select>
                 </div>
-                
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; font-size: 11px;">
                     <label style="grid-column: span 2; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 4px;">
                         <input type="checkbox" id="toggle-beta" ${settings.enableBeta ? 'checked' : ''}> Enable Beta Features
@@ -254,7 +254,8 @@
         localStorage.setItem('ep_autohide', e.target.checked);
     });
 
-    // --- REPAIRED INTERACTION ENGINE ---
+    // --- INTERACTION ENGINE ---
+
     function simulatePreciseClick(el) {
         if (!el) return;
         const rect = el.getBoundingClientRect();
@@ -267,7 +268,6 @@
         ['pointerdown', 'touchstart', 'mousedown', 'pointerup', 'touchend', 'mouseup', 'click'].forEach(evt => {
             try {
                 if (evt.startsWith('touch')) {
-                    // Proper TouchEvent implementation from v24 diff
                     const touch = new Touch({ identifier: Date.now(), target: el, clientX: x, clientY: y });
                     el.dispatchEvent(new TouchEvent(evt, { bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
                 } else {
@@ -311,15 +311,19 @@
         if (!targetText) return null;
         const targetClean = cleanAnswerText(targetText);
         const targetNorm = normalizeForComparison(targetText);
-        
-        // Expanded selectors from older version to find option tiles effectively
-        const rawCandidates = document.querySelectorAll('li, label, span, button, div, [role="checkbox"], [role="radio"], .option, .mc-option, .drag-item, .sequence-item, .draggable, .cloze-option, .draggable-option, .option-tile, .token, .cloze-item, .choice, .item');
-        
-        // Ensure we don't grab elements already placed inside a gap
-        const candidates = Array.from(rawCandidates).filter(el => 
-            el.offsetParent !== null && 
+
+        const rawCandidates = document.querySelectorAll(
+            'li, label, span, button, div, [role="checkbox"], [role="radio"], ' +
+            '.option, .mc-option, .drag-item, .sequence-item, .draggable, ' +
+            '.cloze-option, .draggable-option, .option-tile, .token, .cloze-item, ' +
+            '.choice, .item, [class*="option"], [class*="answer"], [class*="choice"], ' +
+            '[class*="tile"], [class*="word"], [class*="drag"]'
+        );
+
+        const candidates = Array.from(rawCandidates).filter(el =>
+            el.offsetParent !== null &&
             !el.closest('.gap, .cloze-gap, .drop-target, .drop-zone, .blank') &&
-            !el.classList.contains('used') && 
+            !el.classList.contains('used') &&
             !el.classList.contains('placed')
         );
 
@@ -367,10 +371,10 @@
     function getAnswers(q) {
         const answers = [];
         if (!q?.questionDef?.Components) return answers;
-        
+
         q.questionDef.Components.forEach(c => {
-            if (c.Gaps) c.Gaps.forEach(g => { 
-                if (g.CorrectOptions?.[0]) answers.push(cleanAnswerText(g.CorrectOptions[0])); 
+            if (c.Gaps) c.Gaps.forEach(g => {
+                if (g.CorrectOptions?.[0]) answers.push(cleanAnswerText(g.CorrectOptions[0]));
             });
             if (c.OrderedSequence) {
                 c.OrderedSequence.forEach(item => {
@@ -391,6 +395,15 @@
                     }
                 });
             }
+            // Dropdown: correct answer is in Options[].Description where Correct === "true" (string)
+            if (c.ComponentTypeCode === 'DROPDOWN_COMPONENT' && c.Options) {
+                c.Options.forEach(o => {
+                    if (String(o.Correct) === 'true') {
+                        const t = o.Description || o.TextTemplate || o.Text || o.Label;
+                        if (t) answers.push(cleanAnswerText(t));
+                    }
+                });
+            }
             if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) answers.push(cleanAnswerText(c.Options[0]));
             if (c.CorrectAnswer) answers.push(cleanAnswerText(c.CorrectAnswer));
             if (c.ModelAnswerHTML && !isPromptText(cleanAnswerText(c.ModelAnswerHTML))) answers.push(cleanAnswerText(c.ModelAnswerHTML));
@@ -398,6 +411,8 @@
         });
         return [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
     }
+
+    // --- SOLVERS ---
 
     function solveSentenceEditingAndDiffs(gs, q) {
         if (!q?.questionDef?.Components) return false;
@@ -412,7 +427,7 @@
             c.Value = fullTarget;
             c.SentenceHTML = fullTarget;
             c.EditingTokens = fullTarget;
-            
+
             if (c.DiffTokens && Array.isArray(c.DiffTokens)) {
                 c.DiffTokens = [{ text: fullTarget, type: 'normal' }];
             }
@@ -448,10 +463,9 @@
                         const gapEls = document.querySelectorAll('.cloze-gap, [class*="gap"], .drop-zone, input[type="text"]:not([hidden])');
                         if (gapEls[idx]) {
                             forceNativeInput(gapEls[idx], inputVal);
-                            
+
                             const tileEl = findBestElement(inputVal) || findBestElement(cleanVal);
                             if (tileEl) {
-                                // Execute full event stack: Click > Touch > Complex Drag
                                 simulatePreciseClick(tileEl);
                                 simulatePreciseClick(gapEls[idx]);
                                 simulateComplexDrag(tileEl, gapEls[idx]);
@@ -469,6 +483,83 @@
         return solvedAny;
     }
 
+    // NEW: Dropdown / <select> solver
+    function solveDropdowns(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let solvedAny = false;
+
+        // Collect all visible <select> elements on the page
+        const selects = Array.from(document.querySelectorAll('select')).filter(s => s.offsetParent !== null);
+        if (selects.length === 0) return false;
+
+        // Build ordered list of correct answers across all components/gaps
+        const correctAnswers = [];
+
+        q.questionDef.Components.forEach(c => {
+            // DROPDOWN_COMPONENT: one component per <select>, answer in Options[].Description
+            if (c.ComponentTypeCode === 'DROPDOWN_COMPONENT' && c.Options) {
+                c.Options.forEach(o => {
+                    if (String(o.Correct) === 'true') {
+                        const t = o.Description || o.TextTemplate || o.Text || o.Label;
+                        if (t) correctAnswers.push(cleanAnswerText(t));
+                    }
+                });
+                return; // skip fallbacks for this component
+            }
+            // Gaps-based (cloze-style dropdowns)
+            if (c.Gaps) {
+                c.Gaps.forEach(g => {
+                    if (g.CorrectOptions?.[0]) correctAnswers.push(cleanAnswerText(g.CorrectOptions[0]));
+                });
+            }
+            // Generic Options fallback
+            if (!c.Gaps && c.Options) {
+                c.Options.forEach(o => {
+                    if (String(o.Correct) === 'true' || o.IsCorrect === true) {
+                        const t = o.TextTemplate || o.Text || o.Label || o.Description;
+                        if (t) correctAnswers.push(cleanAnswerText(t));
+                    }
+                });
+            }
+        });
+
+        selects.forEach((sel, idx) => {
+            const answer = correctAnswers[idx];
+            if (!answer) return;
+
+            const normAnswer = normalizeForComparison(answer);
+
+            // Try to find the matching <option> by text or value
+            const matchingOption = Array.from(sel.options).find(o =>
+                normalizeForComparison(o.text) === normAnswer ||
+                normalizeForComparison(o.value) === normAnswer
+            );
+
+            if (matchingOption) {
+                sel.value = matchingOption.value;
+
+                // Fire all events so Angular/React picks it up
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                sel.dispatchEvent(new Event('input', { bubbles: true }));
+
+                // Angular scope apply
+                if (window.angular) {
+                    try {
+                        const scope = window.angular.element(sel).scope();
+                        if (scope) scope.$apply();
+                    } catch(e) {}
+                }
+
+                solvedAny = true;
+            }
+        });
+
+        if (solvedAny && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+        return solvedAny;
+    }
+
     function solveCurrentQuestion() {
         if (!settings.autoSolve) return true;
         const gs = getGameScope();
@@ -476,7 +567,12 @@
         const q = gs.game.model.currentQuestion;
         if (!q?.questionDef?.Components) return true;
 
-        let scopeUpdated = solveSentenceEditingAndDiffs(gs, q) || solveClozeGaps(gs, q);
+        // Run all solvers — dropdown is now included
+        let scopeUpdated =
+            solveSentenceEditingAndDiffs(gs, q) ||
+            solveClozeGaps(gs, q) ||
+            solveDropdowns(gs, q);
+
         const cleanAnsList = getAnswers(q);
 
         q.questionDef.Components.forEach(c => {
@@ -486,7 +582,7 @@
                         const targetText = cleanAnswerText(o.TextTemplate || o.Text || o.Label || o.Description);
                         o.Selected = true;
                         scopeUpdated = true;
-                        
+
                         const targetEl = findBestElement(targetText);
                         if (targetEl) {
                             simulatePreciseClick(targetEl);
@@ -525,8 +621,8 @@
         for (let b of candidates) {
             if (b.offsetParent === null) continue;
             const txt = cleanAnswerText(b.innerText || b.textContent || '').toLowerCase();
-            if (txt.includes('submit') || txt.includes('check answer') || txt.includes('continue') || 
-                txt.includes('next section') || txt.includes('next task') || txt.includes('done') || 
+            if (txt.includes('submit') || txt.includes('check answer') || txt.includes('continue') ||
+                txt.includes('next section') || txt.includes('next task') || txt.includes('done') ||
                 txt.includes('next') || txt.includes('got it')) {
                 simulatePreciseClick(b);
                 return true;
@@ -548,7 +644,9 @@
             const q = gs.game.model.currentQuestion;
             const cleanAns = getAnswers(q);
 
-            let statusHTML = (autoModeActive ? '<span style="color: #ff71ce; font-weight: 700;">🤖 AUTO ACTIVE</span>\n' : '<span style="color: #01cdfe; font-weight: 700;">⏳ ENGINE STANDBY</span>\n');
+            let statusHTML = (autoModeActive
+                ? '<span style="color: #ff71ce; font-weight: 700;">🤖 AUTO ACTIVE</span>\n'
+                : '<span style="color: #01cdfe; font-weight: 700;">⏳ ENGINE STANDBY</span>\n');
 
             if (cleanAns.length > 0) {
                 statusHTML += '<div style="margin-top: 4px;">';
