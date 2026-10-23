@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         EP Hacks
 // @namespace    http://tampermonkey.net/
-// @version      33.9
-// @description  Adds Beta Features gate, multi-target drag fix, proper touch simulation, token-level editing, and dropdown support.
+// @version      34.9
+// @description  Adds Beta Features gate, multi-target drag fix, proper touch simulation, token-level editing, dropdown support, and Got It bypass.
 // @match        *://*.educationperfect.com/*
 // @grant        none
 // @run-at       document-idle
@@ -10,6 +10,61 @@
 
 (function() {
     'use strict';
+
+    // ── GOT IT! BYPASS (merged from EP-Blue Bypass v4.0) ──────────────────────
+    (function initGotItBypass() {
+        let bypassed = false;
+
+        function resetButtons() { bypassed = false; }
+
+        function triggerBypass() {
+            if (bypassed) return;
+            let didBypass = false;
+
+            document.querySelectorAll('span, button').forEach(el => {
+                el.childNodes.forEach(node => {
+                    if (node.nodeType === Node.TEXT_NODE && /got\s*it[!.]?/i.test(node.textContent)) {
+                        const btn = el.closest('button') || (el.tagName === 'BUTTON' ? el : null);
+                        if (btn && btn.hasAttribute('disabled')) {
+                            btn.removeAttribute('disabled');
+                            btn.removeAttribute('ng-disabled');
+                            node.textContent = node.textContent.replace(/Got\s*It[!.]?/gi, 'Bypass');
+                            didBypass = true;
+                            btn.addEventListener('click', () => {
+                                setTimeout(resetButtons, 300);
+                            }, { once: true });
+                        }
+                    }
+                });
+            });
+
+            if (didBypass) {
+                bypassed = true;
+                document.querySelectorAll('[ng-disabled]').forEach(el => el.removeAttribute('ng-disabled'));
+            }
+        }
+
+        const bypassObserver = new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                if (mutation.type === 'characterData') {
+                    if (/got\s*it[!.]?/i.test(mutation.target.textContent)) { triggerBypass(); return; }
+                }
+                if (mutation.type === 'childList') {
+                    for (const node of mutation.addedNodes) {
+                        if (/got\s*it[!.]?/i.test(node.textContent || '')) { triggerBypass(); return; }
+                    }
+                }
+            }
+        });
+
+        function startBypassObserver() {
+            bypassObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+        }
+
+        if (document.body) startBypassObserver();
+        else document.addEventListener('DOMContentLoaded', startBypassObserver);
+    })();
+    // ──────────────────────────────────────────────────────────────────────────
 
     const settings = {
         enableBeta: localStorage.getItem('ep_enable_beta') === 'true',
@@ -131,7 +186,7 @@
 
     overlay.innerHTML = `
         <div id="ep-header" style="padding: 8px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
-            <span>🤖 EP Automation v33.9</span>
+            <span>🤖 EP Automation v34.8</span>
             <div style="display: flex; gap: 8px; align-items: center;">
                 <button id="ep-min-btn" style="background: transparent; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1;">▼</button>
             </div>
@@ -312,6 +367,20 @@
         const targetClean = cleanAnswerText(targetText);
         const targetNorm = normalizeForComparison(targetText);
 
+        // EP fitg drag-drop: text is in .drag-label, but we must drag the parent .draggable
+        const dragLabels = Array.from(document.querySelectorAll('.drag-label')).filter(el =>
+            el.offsetParent !== null &&
+            !el.closest('.fitg-inline-dropzone, .dropzone-answer')
+        );
+        const fitgMatch = dragLabels.find(el =>
+            normalizeForComparison(el.innerText || el.textContent) === targetNorm
+        );
+        if (fitgMatch) {
+            // Return the draggable ancestor EP actually listens to drag events on
+            return fitgMatch.closest('.draggable') || fitgMatch;
+        }
+
+        // General fallback candidates
         const rawCandidates = document.querySelectorAll(
             'li, label, span, button, div, [role="checkbox"], [role="radio"], ' +
             '.option, .mc-option, .drag-item, .sequence-item, .draggable, ' +
@@ -322,7 +391,7 @@
 
         const candidates = Array.from(rawCandidates).filter(el =>
             el.offsetParent !== null &&
-            !el.closest('.gap, .cloze-gap, .drop-target, .drop-zone, .blank') &&
+            !el.closest('.gap, .cloze-gap, .drop-target, .drop-zone, .blank, .fitg-inline-dropzone, .dropzone-answer') &&
             !el.classList.contains('used') &&
             !el.classList.contains('placed')
         );
@@ -405,6 +474,19 @@
                 });
             }
             if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) answers.push(cleanAnswerText(c.Options[0]));
+            // HIGHLIGHT_COMPONENT: parse [hl N:word:bool] from TextTemplate, pick CorrectOptions indices
+            if (c.ComponentTypeCode === 'HIGHLIGHT_COMPONENT' && c.TextTemplate && Array.isArray(c.CorrectOptions)) {
+                const hlRegex = /\[hl\s+(\d+):([^:]+):[^\]]+\]/g;
+                const tokenMap = {};
+                let m;
+                while ((m = hlRegex.exec(c.TextTemplate)) !== null) {
+                    tokenMap[parseInt(m[1], 10)] = m[2].trim();
+                }
+                c.CorrectOptions.forEach(i => {
+                    const w = tokenMap[Number(i)];
+                    if (w) answers.push(cleanAnswerText(w));
+                });
+            }
             if (c.CorrectAnswer) answers.push(cleanAnswerText(c.CorrectAnswer));
             if (c.ModelAnswerHTML && !isPromptText(cleanAnswerText(c.ModelAnswerHTML))) answers.push(cleanAnswerText(c.ModelAnswerHTML));
             if (c.SampleAnswer && !isPromptText(cleanAnswerText(c.SampleAnswer))) answers.push(cleanAnswerText(c.SampleAnswer));
@@ -560,6 +642,166 @@
         return solvedAny;
     }
 
+    // HIGHLIGHT_COMPONENT solver — parses [hl N:word:bool] template, clicks correct indices
+    function solveHighlight(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let solvedAny = false;
+
+        q.questionDef.Components.forEach(c => {
+            if (c.ComponentTypeCode !== 'HIGHLIGHT_COMPONENT') return;
+            if (!c.TextTemplate || !Array.isArray(c.CorrectOptions)) return;
+
+            // Parse all [hl N:word:bool] tokens from TextTemplate
+            // e.g. [hl 1:drinks:true]
+            const hlRegex = /\[hl\s+(\d+):([^:]+):[^\]]+\]/g;
+            const tokenMap = {}; // index -> word text
+            let m;
+            while ((m = hlRegex.exec(c.TextTemplate)) !== null) {
+                tokenMap[parseInt(m[1], 10)] = m[2].trim();
+            }
+
+            // CorrectOptions is an array of correct indices
+            const correctIndices = c.CorrectOptions.map(Number);
+            const correctWords = correctIndices
+                .map(i => tokenMap[i])
+                .filter(Boolean)
+                .map(w => normalizeForComparison(w));
+
+            if (correctWords.length === 0) return;
+
+            // Find visible highlight/token spans — EP renders these as spans in the sentence
+            const hlEls = Array.from(document.querySelectorAll(
+                '.highlight-word, .hl-token, .sentence-word, .word-highlight, ' +
+                '[class*="highlight"], span[ng-click], span[ng-class]'
+            )).filter(el => {
+                if (el.offsetParent === null) return false;
+                const txt = (el.innerText || el.textContent || '').trim();
+                return txt.length > 0 && txt.length < 60;
+            });
+
+            // Also try plain spans inside common sentence containers
+            const sentenceSpans = Array.from(document.querySelectorAll(
+                '.sentence span, .content-text span, .question-text span, ' +
+                '.ep-sentence span, .highlight-sentence span, p span'
+            )).filter(el => el.offsetParent !== null);
+
+            const allCandidates = [...new Set([...hlEls, ...sentenceSpans])];
+
+            // Track which correct words we've already clicked (avoid double-clicking duplicates)
+            const clicked = new Set();
+
+            allCandidates.forEach(el => {
+                const norm = normalizeForComparison(el.innerText || el.textContent || '');
+                if (correctWords.includes(norm) && !clicked.has(norm)) {
+                    simulatePreciseClick(el);
+                    clicked.add(norm);
+                    solvedAny = true;
+                }
+            });
+
+            // Fallback: also update scope directly
+            if (c.SelectedOptions === undefined) c.SelectedOptions = [];
+            correctIndices.forEach(i => {
+                if (!c.SelectedOptions.includes(i)) c.SelectedOptions.push(i);
+            });
+            c.UserAnswer = correctIndices;
+        });
+
+        if (solvedAny && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+        return solvedAny;
+    }
+
+    // EP fitg (fill-in-the-gap) drag-drop solver — handles FILL_IN_GAPS_COMPONENT (InputType 2)
+    // Key insight: dropzones use isolate scope with `self.model` binding; they only listen to
+    // `mousedown` (not drag events). Fix: set self.model on each zone scope + mousedown on tile.
+    function solveFitgDragDrop(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let solvedAny = false;
+
+        q.questionDef.Components.forEach(c => {
+            if (!c.Gaps) return;
+
+            const dropZones = Array.from(document.querySelectorAll('.dropzone-answer'))
+                .filter(el => el.offsetParent !== null);
+
+            const allTiles = Array.from(document.querySelectorAll('.draggable'))
+                .filter(el => el.offsetParent !== null && !el.classList.contains('used-answer'));
+
+            c.Gaps.forEach((g, idx) => {
+                const ans = cleanAnswerText(g.CorrectOptions?.[0]);
+                if (!ans) return;
+                const zone = dropZones[idx];
+                if (!zone) return;
+
+                // Write into gap data model
+                g.Value = ans;
+                g.UserAnswer = ans;
+
+                // The dropzone directive uses an isolate scope where `self` is the controller.
+                // `self.model` is the binding that holds the placed answer value.
+                if (window.angular) {
+                    try {
+                        const zoneScope = window.angular.element(zone).scope();
+                        if (zoneScope) {
+                            // Primary: set via self.model (isolate binding confirmed by console)
+                            if (zoneScope.self && 'model' in zoneScope.self) {
+                                zoneScope.self.model = ans;
+                            }
+                            // Fallback: direct scope props in case directive varies
+                            if ('model' in zoneScope) zoneScope.model = ans;
+                            if ('answer' in zoneScope) zoneScope.answer = ans;
+                            if ('gap' in zoneScope) { zoneScope.gap.Value = ans; zoneScope.gap.UserAnswer = ans; }
+                            zoneScope.$apply();
+                        }
+                    } catch(e) {}
+                }
+
+                // Find the matching tile and fire mousedown on it (the only event the zone listens to)
+                const tile = allTiles.find(el => {
+                    const label = el.querySelector('.drag-label');
+                    return normalizeForComparison(label?.innerText || el.innerText || '') === normalizeForComparison(ans);
+                });
+
+                if (tile) {
+                    tile.classList.add('used-answer');
+                    // Fire mousedown on the tile — this is what the component actually handles
+                    const rect = tile.getBoundingClientRect();
+                    const cx = rect.left + rect.width / 2;
+                    const cy = rect.top + rect.height / 2;
+                    const mdEvt = new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: cx, clientY: cy });
+                    tile.dispatchEvent(mdEvt);
+                    // Also fire mousedown on the zone so it knows a tile landed on it
+                    const zRect = zone.getBoundingClientRect();
+                    const zx = zRect.left + zRect.width / 2;
+                    const zy = zRect.top + zRect.height / 2;
+                    const zMdEvt = new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: zx, clientY: zy });
+                    zone.dispatchEvent(zMdEvt);
+                    // Mouseup to complete the interaction
+                    const muEvt = new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: zx, clientY: zy });
+                    zone.dispatchEvent(muEvt);
+                    // Click to finalize
+                    simulatePreciseClick(zone);
+                }
+
+                solvedAny = true;
+            });
+
+            // Set top-level userAnswer on the question scope
+            const answerMap = {};
+            c.Gaps.forEach(g => { answerMap[g.ID] = cleanAnswerText(g.CorrectOptions?.[0]); });
+            if (q.userAnswer === undefined || q.userAnswer === null) q.userAnswer = answerMap;
+            else Object.assign(q.userAnswer, answerMap);
+        });
+
+        if (solvedAny && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+            setTimeout(() => { try { gs.$apply(); } catch(e) {} }, 200);
+        }
+        return solvedAny;
+    }
+
     function solveCurrentQuestion() {
         if (!settings.autoSolve) return true;
         const gs = getGameScope();
@@ -567,11 +809,13 @@
         const q = gs.game.model.currentQuestion;
         if (!q?.questionDef?.Components) return true;
 
-        // Run all solvers — dropdown is now included
+        // Run all solvers
         let scopeUpdated =
             solveSentenceEditingAndDiffs(gs, q) ||
             solveClozeGaps(gs, q) ||
-            solveDropdowns(gs, q);
+            solveDropdowns(gs, q) ||
+            solveFitgDragDrop(gs, q) ||
+            solveHighlight(gs, q);
 
         const cleanAnsList = getAnswers(q);
 
@@ -617,13 +861,25 @@
     function pressSubmitOrContinue() {
         if (!settings.autoSubmit) return false;
 
+        // Dismiss "Is this your best answer?" popup first
+        const allEls = document.querySelectorAll('button, a, span, div');
+        for (let el of allEls) {
+            if (el.offsetParent === null) continue;
+            const txt = cleanAnswerText(el.innerText || el.textContent || '').toLowerCase();
+            if (txt.includes("i'm happy with my work") || txt.includes('happy with my work') || txt.includes('show me the answer')) {
+                simulatePreciseClick(el);
+                return true;
+            }
+        }
+
         const candidates = document.querySelectorAll('button, .button, .ep-button, a, div[role="button"], span[role="button"]');
         for (let b of candidates) {
             if (b.offsetParent === null) continue;
             const txt = cleanAnswerText(b.innerText || b.textContent || '').toLowerCase();
             if (txt.includes('submit') || txt.includes('check answer') || txt.includes('continue') ||
                 txt.includes('next section') || txt.includes('next task') || txt.includes('done') ||
-                txt.includes('next') || txt.includes('got it')) {
+                txt.includes('next') || txt.includes('got it') ||
+                txt.includes('self mark') || txt.includes('self-mark') || txt.includes('mark answer')) {
                 simulatePreciseClick(b);
                 return true;
             }
