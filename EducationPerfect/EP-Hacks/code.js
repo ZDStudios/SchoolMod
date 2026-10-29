@@ -1,52 +1,955 @@
 // ==UserScript==
-// @name         EP Hacks Disabled Notice
+// @name         EP Hacks
 // @namespace    http://tampermonkey.net/
-// @version      1.1
-// @description  Displays a temporary notice regarding EP hacks during beta testing and remembers dismissal
-// @author       You
+// @version      34.9
+// @description  Adds Beta Features gate, multi-target drag fix, proper touch simulation, token-level editing, dropdown support, and Got It bypass.
 // @match        *://*.educationperfect.com/*
 // @grant        none
+// @run-at       document-idle
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    // Check if the notice was already dismissed
-    if (localStorage.getItem('ep_hacks_notice_dismissed') === 'true') {
-        return;
+    // ── GOT IT! BYPASS (merged from EP-Blue Bypass v4.0) ──────────────────────
+    (function initGotItBypass() {
+        let bypassed = false;
+
+        function resetButtons() { bypassed = false; }
+
+        function triggerBypass() {
+            if (bypassed) return;
+            let didBypass = false;
+
+            document.querySelectorAll('span, button').forEach(el => {
+                el.childNodes.forEach(node => {
+                    if (node.nodeType === Node.TEXT_NODE && /got\s*it[!.]?/i.test(node.textContent)) {
+                        const btn = el.closest('button') || (el.tagName === 'BUTTON' ? el : null);
+                        if (btn && btn.hasAttribute('disabled')) {
+                            btn.removeAttribute('disabled');
+                            btn.removeAttribute('ng-disabled');
+                            node.textContent = node.textContent.replace(/Got\s*It[!.]?/gi, 'Bypass');
+                            didBypass = true;
+                            btn.addEventListener('click', () => {
+                                setTimeout(resetButtons, 300);
+                            }, { once: true });
+                        }
+                    }
+                });
+            });
+
+            if (didBypass) {
+                bypassed = true;
+                document.querySelectorAll('[ng-disabled]').forEach(el => el.removeAttribute('ng-disabled'));
+            }
+        }
+
+        const bypassObserver = new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                if (mutation.type === 'characterData') {
+                    if (/got\s*it[!.]?/i.test(mutation.target.textContent)) { triggerBypass(); return; }
+                }
+                if (mutation.type === 'childList') {
+                    for (const node of mutation.addedNodes) {
+                        if (/got\s*it[!.]?/i.test(node.textContent || '')) { triggerBypass(); return; }
+                    }
+                }
+            }
+        });
+
+        function startBypassObserver() {
+            bypassObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+        }
+
+        if (document.body) startBypassObserver();
+        else document.addEventListener('DOMContentLoaded', startBypassObserver);
+    })();
+    // ──────────────────────────────────────────────────────────────────────────
+
+    const settings = {
+        enableBeta: localStorage.getItem('ep_enable_beta') === 'true',
+        autoSolve: true,
+        autoSubmit: true,
+        antiDetect: true,
+        selfMarkBypass: true,
+        autoHide: localStorage.getItem('ep_autohide') === 'true',
+        theme: 'synthwave'
+    };
+
+    const themes = {
+        cyberpunk: { bg: 'rgba(18, 16, 38, 0.98)', text: '#00ffcc', border: '#ff007f', header: '#2a1b4e' },
+        synthwave: { bg: 'rgba(26, 11, 46, 0.98)', text: '#ff71ce', border: '#01cdfe', header: '#3a135e' },
+        nordic: { bg: 'rgba(15, 28, 44, 0.98)', text: '#e0f2fe', border: '#38bdf8', header: '#1e3a5f' },
+        dark: { bg: 'rgba(15, 23, 42, 0.98)', text: '#ffffff', border: '#70B80B', header: '#1e293b' },
+        light: { bg: 'rgba(248, 250, 252, 0.98)', text: '#0f172a', border: '#10b981', header: '#e2e8f0' },
+        minimal: { bg: 'rgba(0, 0, 0, 0.9)', text: '#a3e635', border: '#a3e635', header: '#18181b' }
+    };
+
+    (function initSpoofers() {
+        try {
+            Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+            Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+            document.hasFocus = () => true;
+        } catch(e) {}
+
+        const focusEvents = ['blur', 'focusout', 'mouseleave', 'visibilitychange', 'pagehide'];
+        focusEvents.forEach(evt => {
+            window.addEventListener(evt, e => { if (settings.antiDetect) e.stopImmediatePropagation(); }, true);
+            document.addEventListener(evt, e => { if (settings.antiDetect) e.stopImmediatePropagation(); }, true);
+        });
+    })();
+
+    let autoModeActive = false;
+    let currentQuestionID = null;
+    let slideSettledTime = 0;
+    let fillExecutedTime = 0;
+    let filledSuccess = false;
+    let isMinimized = false;
+
+    const LOOP_SPEED = 200;
+    const SETTLE_DELAY = 450;
+    const SUBMIT_DELAY = 600;
+
+    function cleanAnswerText(raw) {
+        if (raw === null || raw === undefined) return '';
+        let str = String(raw);
+        const temp = document.createElement('div');
+        temp.innerHTML = str;
+        str = temp.textContent || temp.innerText || '';
+        return str.replace(/\[block[^\n]*\n?/g, '').replace(/<[^>]*>?/gm, '').replace(/[\*\[\]]/g, '').replace(/\s+/g, ' ').trim();
     }
 
-    window.addEventListener('load', () => {
-        // Create overlay container
-        const banner = document.createElement('div');
-        banner.style.position = 'fixed';
-        banner.style.top = '20px';
-        banner.style.left = '50%';
-        banner.style.transform = 'translateX(-50%)';
-        banner.style.backgroundColor = '#1e1e2e';
-        banner.style.color = '#f38ba8';
-        banner.style.border = '2px solid #f38ba8';
-        banner.style.padding = '16px 24px';
-        banner.style.borderRadius = '8px';
-        banner.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
-        banner.style.zIndex = '999999';
-        banner.style.fontFamily = 'Arial, sans-serif';
-        banner.style.fontSize = '15px';
-        banner.style.fontWeight = 'bold';
-        banner.style.textAlign = 'center';
+    function cleanTargetForInput(raw) {
+        let txt = cleanAnswerText(raw);
+        return txt.replace(/^[:;\-–—\s]+/, '').trim();
+    }
 
-        banner.innerHTML = `
-            <span>Sorry, but EP hacks have been temporarily disabled for beta testing. They will be turned on at the end of the day.</span>
-            <br>
-            <button id="close-ep-notice" style="margin-top: 10px; padding: 4px 12px; background: #f38ba8; color: #1e1e2e; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">OK</button>
+    function normalizeForComparison(str) {
+        return cleanAnswerText(str).toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
+    function isPromptText(text) {
+        if (!text) return true;
+        const lower = text.toLowerCase();
+        return (
+            lower.includes('you might think about') ||
+            lower.includes('including adjectives') ||
+            lower.includes('using commas to correctly') ||
+            lower.includes('write a description') ||
+            lower.includes('read the following passage')
+        );
+    }
+
+    function showBetaNoticeModal() {
+        let modal = document.getElementById('ep-beta-notice');
+        if (modal) modal.remove();
+
+        modal = document.createElement('div');
+        modal.id = 'ep-beta-notice';
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.75); z-index: 9999999;
+            display: flex; align-items: center; justify-content: center;
+            font-family: system-ui, -apple-system, sans-serif;
         `;
 
-        document.body.appendChild(banner);
+        modal.innerHTML = `
+            <div style="background: #1e1b2e; color: #f8fafc; padding: 24px; border-radius: 12px; width: 380px; border: 2px solid #ff71ce; box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center;">
+                <h3 style="margin: 0 0 12px 0; color: #ff71ce; font-size: 16px;">⚠️ Beta Features Notice</h3>
+                <p style="font-size: 13px; line-height: 1.5; opacity: 0.9; margin-bottom: 16px;">
+                    Some features may still be under development and need fine tuning. Contact the developer if you have issues or suggestions.
+                </p>
+                <button id="ep-beta-close-btn" style="background: #01cdfe; color: #000; font-weight: 700; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 12px;">I Understand</button>
+            </div>
+        `;
 
-        // Add dismiss action and save state to memory
-        document.getElementById('close-ep-notice').addEventListener('click', () => {
-            localStorage.setItem('ep_hacks_notice_dismissed', 'true');
-            banner.remove();
+        document.body.appendChild(modal);
+        document.getElementById('ep-beta-close-btn').addEventListener('click', () => modal.remove());
+    }
+
+    let overlay = document.getElementById('ep-ultimate-overlay');
+    if (overlay) overlay.remove();
+
+    overlay = document.createElement('div');
+    overlay.id = 'ep-ultimate-overlay';
+    overlay.style.cssText = `
+        position: fixed; top: 12px; right: 12px;
+        z-index: 999999; width: 340px;
+        padding: 0; border-radius: 10px;
+        font-size: 12px; font-weight: 600;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+        font-family: system-ui, -apple-system, sans-serif;
+        border-right: 5px solid #01cdfe;
+        overflow: hidden;
+        display: ${settings.autoHide ? 'none' : 'block'};
+    `;
+
+    overlay.innerHTML = `
+        <div id="ep-header" style="padding: 8px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center; user-select: none; font-weight: 700;">
+            <span>🤖 EP Automation v34.8</span>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button id="ep-min-btn" style="background: transparent; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1;">▼</button>
+            </div>
+        </div>
+        <div id="ep-body" style="padding: 10px 12px;">
+            <div id="ep-controls-area">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label for="ep-theme-select">Theme:</label>
+                    <select id="ep-theme-select" style="background: rgba(255,255,255,0.1); color: inherit; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 6px; font-size: 11px;">
+                        <option value="synthwave" style="color:#000;">Neon Synthwave</option>
+                        <option value="nordic" style="color:#000;">Nordic Frost</option>
+                        <option value="cyberpunk" style="color:#000;">Cyberpunk</option>
+                        <option value="dark" style="color:#000;">Dark Slate</option>
+                        <option value="light" style="color:#000;">Light Mode</option>
+                        <option value="minimal" style="color:#000;">Minimal Lime</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; font-size: 11px;">
+                    <label style="grid-column: span 2; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 4px;">
+                        <input type="checkbox" id="toggle-beta" ${settings.enableBeta ? 'checked' : ''}> Enable Beta Features
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; grid-column: span 2; background: rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 5px;">
+                        <input type="checkbox" id="toggle-automode"> <span style="font-weight: 700;">🤖 Auto Mode Active</span>
+                    </label>
+                    <label><input type="checkbox" id="toggle-solve" checked> Auto Solve</label>
+                    <label><input type="checkbox" id="toggle-submit" checked> Auto Submit</label>
+                    <label><input type="checkbox" id="toggle-antidetect" checked> Anti-Detect</label>
+                    <label><input type="checkbox" id="toggle-selfmark" checked> Self-Mark/Bypass</label>
+                    <label style="grid-column: span 2; display: flex; align-items: center; gap: 4px;">
+                        <input type="checkbox" id="toggle-autohide" ${settings.autoHide ? 'checked' : ''}> Auto-Hide UI on Load
+                    </label>
+                </div>
+
+                <div style="font-size: 10px; opacity: 0.75; text-align: center; margin-bottom: 6px;">
+                    Press <b style="text-decoration: underline;">Ctrl + U</b> (Menu) | <b style="text-decoration: underline;">Ctrl + Alt + L</b> (Auto)
+                </div>
+            </div>
+
+            <div id="ep-status-box" style="
+                background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15);
+                padding: 8px; border-radius: 6px; min-height: 52px; max-height: 140px;
+                overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 11px;
+            ">Initializing UI Controls...</div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const headerEl = overlay.querySelector('#ep-header');
+    let isDraggingUI = false, offsetX = 0, offsetY = 0;
+
+    headerEl.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        isDraggingUI = true;
+        offsetX = e.clientX - overlay.getBoundingClientRect().left;
+        offsetY = e.clientY - overlay.getBoundingClientRect().top;
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDraggingUI) return;
+        overlay.style.left = `${e.clientX - offsetX}px`;
+        overlay.style.top = `${e.clientY - offsetY}px`;
+        overlay.style.right = 'auto';
+    });
+
+    document.addEventListener('mouseup', () => { isDraggingUI = false; });
+
+    const minBtn = overlay.querySelector('#ep-min-btn');
+    const controlsArea = overlay.querySelector('#ep-controls-area');
+
+    minBtn.addEventListener('click', () => {
+        isMinimized = !isMinimized;
+        controlsArea.style.display = isMinimized ? 'none' : 'block';
+        minBtn.textContent = isMinimized ? '▲' : '▼';
+    });
+
+    const statusBox = overlay.querySelector('#ep-status-box');
+    const themeSelect = overlay.querySelector('#ep-theme-select');
+    const autoModeToggle = overlay.querySelector('#toggle-automode');
+    const autoHideToggle = overlay.querySelector('#toggle-autohide');
+    const betaToggle = overlay.querySelector('#toggle-beta');
+
+    function applyTheme(themeName) {
+        const t = themes[themeName] || themes.synthwave;
+        settings.theme = themeName;
+        overlay.style.background = t.bg;
+        overlay.style.color = t.text;
+        overlay.style.borderRightColor = autoModeActive ? '#ff0055' : t.border;
+        headerEl.style.background = t.header;
+    }
+    applyTheme('synthwave');
+
+    betaToggle.addEventListener('change', (e) => {
+        settings.enableBeta = e.target.checked;
+        localStorage.setItem('ep_enable_beta', e.target.checked);
+        if (e.target.checked) {
+            showBetaNoticeModal();
+        } else if (autoModeActive) {
+            setAutoMode(false);
+        }
+    });
+
+    function setAutoMode(state) {
+        if (state && !settings.enableBeta) {
+            alert("⚠️ Please enable 'Beta Features' first to unlock Auto Mode.");
+            if (autoModeToggle) autoModeToggle.checked = false;
+            return;
+        }
+        autoModeActive = state;
+        if (autoModeToggle) autoModeToggle.checked = autoModeActive;
+        const currentTheme = themes[settings.theme] || themes.synthwave;
+        overlay.style.borderRightColor = autoModeActive ? '#ff0055' : currentTheme.border;
+    }
+
+    themeSelect.addEventListener('change', (e) => applyTheme(e.target.value));
+    autoModeToggle.addEventListener('change', (e) => setAutoMode(e.target.checked));
+    autoHideToggle.addEventListener('change', (e) => {
+        settings.autoHide = e.target.checked;
+        localStorage.setItem('ep_autohide', e.target.checked);
+    });
+
+    // --- INTERACTION ENGINE ---
+
+    function simulatePreciseClick(el) {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const props = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, screenX: x, screenY: y, which: 1, buttons: 1 };
+
+        try { el.focus(); } catch(e) {}
+
+        ['pointerdown', 'touchstart', 'mousedown', 'pointerup', 'touchend', 'mouseup', 'click'].forEach(evt => {
+            try {
+                if (evt.startsWith('touch')) {
+                    const touch = new Touch({ identifier: Date.now(), target: el, clientX: x, clientY: y });
+                    el.dispatchEvent(new TouchEvent(evt, { bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
+                } else {
+                    el.dispatchEvent(new MouseEvent(evt, props));
+                }
+            } catch (e) {}
         });
+    }
+
+    function simulateComplexDrag(sourceEl, targetEl) {
+        if (!sourceEl || !targetEl) return;
+        const srcRect = sourceEl.getBoundingClientRect();
+        const tgtRect = targetEl.getBoundingClientRect();
+        const srcX = srcRect.left + srcRect.width / 2;
+        const srcY = srcRect.top + srcRect.height / 2;
+        const tgtX = tgtRect.left + tgtRect.width / 2;
+        const tgtY = tgtRect.top + tgtRect.height / 2;
+
+        const dataTransfer = new DataTransfer();
+
+        function fireMouse(type, el, x, y) {
+            el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, screenX: x, screenY: y, buttons: 1 }));
+        }
+        function fireDrag(type, el, x, y) {
+            el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, screenX: x, screenY: y, dataTransfer: dataTransfer }));
+        }
+
+        fireDrag('dragstart', sourceEl, srcX, srcY);
+        fireMouse('mousedown', sourceEl, srcX, srcY);
+
+        setTimeout(() => {
+            fireDrag('dragenter', targetEl, tgtX, tgtY);
+            fireDrag('dragover', targetEl, tgtX, tgtY);
+            fireDrag('drop', targetEl, tgtX, tgtY);
+            fireMouse('mouseup', targetEl, tgtX, tgtY);
+            fireDrag('dragend', sourceEl, tgtX, tgtY);
+        }, 40);
+    }
+
+    function findBestElement(targetText) {
+        if (!targetText) return null;
+        const targetClean = cleanAnswerText(targetText);
+        const targetNorm = normalizeForComparison(targetText);
+
+        // EP fitg drag-drop: text is in .drag-label, but we must drag the parent .draggable
+        const dragLabels = Array.from(document.querySelectorAll('.drag-label')).filter(el =>
+            el.offsetParent !== null &&
+            !el.closest('.fitg-inline-dropzone, .dropzone-answer')
+        );
+        const fitgMatch = dragLabels.find(el =>
+            normalizeForComparison(el.innerText || el.textContent) === targetNorm
+        );
+        if (fitgMatch) {
+            // Return the draggable ancestor EP actually listens to drag events on
+            return fitgMatch.closest('.draggable') || fitgMatch;
+        }
+
+        // General fallback candidates
+        const rawCandidates = document.querySelectorAll(
+            'li, label, span, button, div, [role="checkbox"], [role="radio"], ' +
+            '.option, .mc-option, .drag-item, .sequence-item, .draggable, ' +
+            '.cloze-option, .draggable-option, .option-tile, .token, .cloze-item, ' +
+            '.choice, .item, [class*="option"], [class*="answer"], [class*="choice"], ' +
+            '[class*="tile"], [class*="word"], [class*="drag"]'
+        );
+
+        const candidates = Array.from(rawCandidates).filter(el =>
+            el.offsetParent !== null &&
+            !el.closest('.gap, .cloze-gap, .drop-target, .drop-zone, .blank, .fitg-inline-dropzone, .dropzone-answer') &&
+            !el.classList.contains('used') &&
+            !el.classList.contains('placed')
+        );
+
+        let found = candidates.find(el => cleanAnswerText(el.innerText || el.textContent) === targetClean);
+        if (found) return found;
+
+        found = candidates.find(el => normalizeForComparison(el.innerText || el.textContent) === targetNorm);
+        return found || null;
+    }
+
+    function forceNativeInput(el, val) {
+        if (!el) return;
+        el.focus();
+
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+            nativeSetter.call(el, val);
+        } else {
+            el.innerText = val;
+            el.innerHTML = `<p>${val}</p>`;
+        }
+
+        try {
+            el.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: val }));
+        } catch(e) {}
+
+        ['input', 'change', 'keydown', 'keypress', 'keyup', 'blur'].forEach(evt => {
+            try { el.dispatchEvent(new Event(evt, { bubbles: true })); } catch(e) {}
+        });
+    }
+
+    function getGameScope() {
+        let gs = null;
+        document.querySelectorAll('*').forEach(el => {
+            try {
+                if (window.angular) {
+                    const s = window.angular.element(el).scope();
+                    if (s && s.game && s.game.model) gs = s;
+                }
+            } catch(e) {}
+        });
+        return gs;
+    }
+
+    function getAnswers(q) {
+        const answers = [];
+        if (!q?.questionDef?.Components) return answers;
+
+        q.questionDef.Components.forEach(c => {
+            if (c.Gaps) c.Gaps.forEach(g => {
+                if (g.CorrectOptions?.[0]) answers.push(cleanAnswerText(g.CorrectOptions[0]));
+            });
+            if (c.OrderedSequence) {
+                c.OrderedSequence.forEach(item => {
+                    const txt = item.Text || item.Label || item.Value;
+                    if (txt) answers.push(cleanAnswerText(txt));
+                });
+            }
+            if (c.Targets) {
+                c.Targets.forEach(t => {
+                    if (t.CorrectValue) answers.push(cleanAnswerText(t.CorrectValue));
+                });
+            }
+            if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
+                c.Options.forEach(o => {
+                    if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
+                        const t = o.TextTemplate || o.Text || o.Label || o.Description;
+                        if (t) answers.push(cleanAnswerText(t));
+                    }
+                });
+            }
+            // Dropdown: correct answer is in Options[].Description where Correct === "true" (string)
+            if (c.ComponentTypeCode === 'DROPDOWN_COMPONENT' && c.Options) {
+                c.Options.forEach(o => {
+                    if (String(o.Correct) === 'true') {
+                        const t = o.Description || o.TextTemplate || o.Text || o.Label;
+                        if (t) answers.push(cleanAnswerText(t));
+                    }
+                });
+            }
+            if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) answers.push(cleanAnswerText(c.Options[0]));
+            // HIGHLIGHT_COMPONENT: parse [hl N:word:bool] from TextTemplate, pick CorrectOptions indices
+            if (c.ComponentTypeCode === 'HIGHLIGHT_COMPONENT' && c.TextTemplate && Array.isArray(c.CorrectOptions)) {
+                const hlRegex = /\[hl\s+(\d+):([^:]+):[^\]]+\]/g;
+                const tokenMap = {};
+                let m;
+                while ((m = hlRegex.exec(c.TextTemplate)) !== null) {
+                    tokenMap[parseInt(m[1], 10)] = m[2].trim();
+                }
+                c.CorrectOptions.forEach(i => {
+                    const w = tokenMap[Number(i)];
+                    if (w) answers.push(cleanAnswerText(w));
+                });
+            }
+            if (c.CorrectAnswer) answers.push(cleanAnswerText(c.CorrectAnswer));
+            if (c.ModelAnswerHTML && !isPromptText(cleanAnswerText(c.ModelAnswerHTML))) answers.push(cleanAnswerText(c.ModelAnswerHTML));
+            if (c.SampleAnswer && !isPromptText(cleanAnswerText(c.SampleAnswer))) answers.push(cleanAnswerText(c.SampleAnswer));
+        });
+        return [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
+    }
+
+    // --- SOLVERS ---
+
+    function solveSentenceEditingAndDiffs(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let updated = false;
+
+        q.questionDef.Components.forEach(c => {
+            const fullTarget = cleanAnswerText(c.CorrectAnswer || c.ModelAnswerHTML || c.SampleAnswer);
+            const inputTarget = cleanTargetForInput(c.CorrectAnswer || c.ModelAnswerHTML || c.SampleAnswer);
+            if (!fullTarget || isPromptText(fullTarget)) return;
+
+            c.UserAnswer = fullTarget;
+            c.Value = fullTarget;
+            c.SentenceHTML = fullTarget;
+            c.EditingTokens = fullTarget;
+
+            if (c.DiffTokens && Array.isArray(c.DiffTokens)) {
+                c.DiffTokens = [{ text: fullTarget, type: 'normal' }];
+            }
+            updated = true;
+
+            const targetEls = document.querySelectorAll('.sentence-editing, .inline-editor, [contenteditable="true"], .fr-element, input[type="text"]:not([hidden]), textarea');
+            targetEls.forEach(el => {
+                if (el.offsetParent !== null) forceNativeInput(el, inputTarget);
+            });
+        });
+
+        if (updated && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+        return updated;
+    }
+
+    function solveClozeGaps(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let solvedAny = false;
+
+        q.questionDef.Components.forEach(c => {
+            if (c.Gaps) {
+                c.Gaps.forEach((g, idx) => {
+                    if (g.CorrectOptions && g.CorrectOptions[0]) {
+                        const rawAns = g.CorrectOptions[0];
+                        const inputVal = cleanTargetForInput(rawAns);
+                        const cleanVal = cleanAnswerText(rawAns);
+
+                        g.Value = cleanVal;
+                        g.UserAnswer = cleanVal;
+
+                        const gapEls = document.querySelectorAll('.cloze-gap, [class*="gap"], .drop-zone, input[type="text"]:not([hidden])');
+                        if (gapEls[idx]) {
+                            forceNativeInput(gapEls[idx], inputVal);
+
+                            const tileEl = findBestElement(inputVal) || findBestElement(cleanVal);
+                            if (tileEl) {
+                                simulatePreciseClick(tileEl);
+                                simulatePreciseClick(gapEls[idx]);
+                                simulateComplexDrag(tileEl, gapEls[idx]);
+                            }
+                        }
+                        solvedAny = true;
+                    }
+                });
+            }
+        });
+
+        if (solvedAny && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+        return solvedAny;
+    }
+
+    // NEW: Dropdown / <select> solver
+    function solveDropdowns(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let solvedAny = false;
+
+        // Collect all visible <select> elements on the page
+        const selects = Array.from(document.querySelectorAll('select')).filter(s => s.offsetParent !== null);
+        if (selects.length === 0) return false;
+
+        // Build ordered list of correct answers across all components/gaps
+        const correctAnswers = [];
+
+        q.questionDef.Components.forEach(c => {
+            // DROPDOWN_COMPONENT: one component per <select>, answer in Options[].Description
+            if (c.ComponentTypeCode === 'DROPDOWN_COMPONENT' && c.Options) {
+                c.Options.forEach(o => {
+                    if (String(o.Correct) === 'true') {
+                        const t = o.Description || o.TextTemplate || o.Text || o.Label;
+                        if (t) correctAnswers.push(cleanAnswerText(t));
+                    }
+                });
+                return; // skip fallbacks for this component
+            }
+            // Gaps-based (cloze-style dropdowns)
+            if (c.Gaps) {
+                c.Gaps.forEach(g => {
+                    if (g.CorrectOptions?.[0]) correctAnswers.push(cleanAnswerText(g.CorrectOptions[0]));
+                });
+            }
+            // Generic Options fallback
+            if (!c.Gaps && c.Options) {
+                c.Options.forEach(o => {
+                    if (String(o.Correct) === 'true' || o.IsCorrect === true) {
+                        const t = o.TextTemplate || o.Text || o.Label || o.Description;
+                        if (t) correctAnswers.push(cleanAnswerText(t));
+                    }
+                });
+            }
+        });
+
+        selects.forEach((sel, idx) => {
+            const answer = correctAnswers[idx];
+            if (!answer) return;
+
+            const normAnswer = normalizeForComparison(answer);
+
+            // Try to find the matching <option> by text or value
+            const matchingOption = Array.from(sel.options).find(o =>
+                normalizeForComparison(o.text) === normAnswer ||
+                normalizeForComparison(o.value) === normAnswer
+            );
+
+            if (matchingOption) {
+                sel.value = matchingOption.value;
+
+                // Fire all events so Angular/React picks it up
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                sel.dispatchEvent(new Event('input', { bubbles: true }));
+
+                // Angular scope apply
+                if (window.angular) {
+                    try {
+                        const scope = window.angular.element(sel).scope();
+                        if (scope) scope.$apply();
+                    } catch(e) {}
+                }
+
+                solvedAny = true;
+            }
+        });
+
+        if (solvedAny && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+        return solvedAny;
+    }
+
+    // HIGHLIGHT_COMPONENT solver — parses [hl N:word:bool] template, clicks correct indices
+    function solveHighlight(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let solvedAny = false;
+
+        q.questionDef.Components.forEach(c => {
+            if (c.ComponentTypeCode !== 'HIGHLIGHT_COMPONENT') return;
+            if (!c.TextTemplate || !Array.isArray(c.CorrectOptions)) return;
+
+            // Parse all [hl N:word:bool] tokens from TextTemplate
+            // e.g. [hl 1:drinks:true]
+            const hlRegex = /\[hl\s+(\d+):([^:]+):[^\]]+\]/g;
+            const tokenMap = {}; // index -> word text
+            let m;
+            while ((m = hlRegex.exec(c.TextTemplate)) !== null) {
+                tokenMap[parseInt(m[1], 10)] = m[2].trim();
+            }
+
+            // CorrectOptions is an array of correct indices
+            const correctIndices = c.CorrectOptions.map(Number);
+            const correctWords = correctIndices
+                .map(i => tokenMap[i])
+                .filter(Boolean)
+                .map(w => normalizeForComparison(w));
+
+            if (correctWords.length === 0) return;
+
+            // Find visible highlight/token spans — EP renders these as spans in the sentence
+            const hlEls = Array.from(document.querySelectorAll(
+                '.highlight-word, .hl-token, .sentence-word, .word-highlight, ' +
+                '[class*="highlight"], span[ng-click], span[ng-class]'
+            )).filter(el => {
+                if (el.offsetParent === null) return false;
+                const txt = (el.innerText || el.textContent || '').trim();
+                return txt.length > 0 && txt.length < 60;
+            });
+
+            // Also try plain spans inside common sentence containers
+            const sentenceSpans = Array.from(document.querySelectorAll(
+                '.sentence span, .content-text span, .question-text span, ' +
+                '.ep-sentence span, .highlight-sentence span, p span'
+            )).filter(el => el.offsetParent !== null);
+
+            const allCandidates = [...new Set([...hlEls, ...sentenceSpans])];
+
+            // Track which correct words we've already clicked (avoid double-clicking duplicates)
+            const clicked = new Set();
+
+            allCandidates.forEach(el => {
+                const norm = normalizeForComparison(el.innerText || el.textContent || '');
+                if (correctWords.includes(norm) && !clicked.has(norm)) {
+                    simulatePreciseClick(el);
+                    clicked.add(norm);
+                    solvedAny = true;
+                }
+            });
+
+            // Fallback: also update scope directly
+            if (c.SelectedOptions === undefined) c.SelectedOptions = [];
+            correctIndices.forEach(i => {
+                if (!c.SelectedOptions.includes(i)) c.SelectedOptions.push(i);
+            });
+            c.UserAnswer = correctIndices;
+        });
+
+        if (solvedAny && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+        return solvedAny;
+    }
+
+    // EP fitg (fill-in-the-gap) drag-drop solver — handles FILL_IN_GAPS_COMPONENT (InputType 2)
+    // Key insight: dropzones use isolate scope with `self.model` binding; they only listen to
+    // `mousedown` (not drag events). Fix: set self.model on each zone scope + mousedown on tile.
+    function solveFitgDragDrop(gs, q) {
+        if (!q?.questionDef?.Components) return false;
+        let solvedAny = false;
+
+        q.questionDef.Components.forEach(c => {
+            if (!c.Gaps) return;
+
+            const dropZones = Array.from(document.querySelectorAll('.dropzone-answer'))
+                .filter(el => el.offsetParent !== null);
+
+            const allTiles = Array.from(document.querySelectorAll('.draggable'))
+                .filter(el => el.offsetParent !== null && !el.classList.contains('used-answer'));
+
+            c.Gaps.forEach((g, idx) => {
+                const ans = cleanAnswerText(g.CorrectOptions?.[0]);
+                if (!ans) return;
+                const zone = dropZones[idx];
+                if (!zone) return;
+
+                // Write into gap data model
+                g.Value = ans;
+                g.UserAnswer = ans;
+
+                // The dropzone directive uses an isolate scope where `self` is the controller.
+                // `self.model` is the binding that holds the placed answer value.
+                if (window.angular) {
+                    try {
+                        const zoneScope = window.angular.element(zone).scope();
+                        if (zoneScope) {
+                            // Primary: set via self.model (isolate binding confirmed by console)
+                            if (zoneScope.self && 'model' in zoneScope.self) {
+                                zoneScope.self.model = ans;
+                            }
+                            // Fallback: direct scope props in case directive varies
+                            if ('model' in zoneScope) zoneScope.model = ans;
+                            if ('answer' in zoneScope) zoneScope.answer = ans;
+                            if ('gap' in zoneScope) { zoneScope.gap.Value = ans; zoneScope.gap.UserAnswer = ans; }
+                            zoneScope.$apply();
+                        }
+                    } catch(e) {}
+                }
+
+                // Find the matching tile and fire mousedown on it (the only event the zone listens to)
+                const tile = allTiles.find(el => {
+                    const label = el.querySelector('.drag-label');
+                    return normalizeForComparison(label?.innerText || el.innerText || '') === normalizeForComparison(ans);
+                });
+
+                if (tile) {
+                    tile.classList.add('used-answer');
+                    // Fire mousedown on the tile — this is what the component actually handles
+                    const rect = tile.getBoundingClientRect();
+                    const cx = rect.left + rect.width / 2;
+                    const cy = rect.top + rect.height / 2;
+                    const mdEvt = new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: cx, clientY: cy });
+                    tile.dispatchEvent(mdEvt);
+                    // Also fire mousedown on the zone so it knows a tile landed on it
+                    const zRect = zone.getBoundingClientRect();
+                    const zx = zRect.left + zRect.width / 2;
+                    const zy = zRect.top + zRect.height / 2;
+                    const zMdEvt = new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: zx, clientY: zy });
+                    zone.dispatchEvent(zMdEvt);
+                    // Mouseup to complete the interaction
+                    const muEvt = new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: zx, clientY: zy });
+                    zone.dispatchEvent(muEvt);
+                    // Click to finalize
+                    simulatePreciseClick(zone);
+                }
+
+                solvedAny = true;
+            });
+
+            // Set top-level userAnswer on the question scope
+            const answerMap = {};
+            c.Gaps.forEach(g => { answerMap[g.ID] = cleanAnswerText(g.CorrectOptions?.[0]); });
+            if (q.userAnswer === undefined || q.userAnswer === null) q.userAnswer = answerMap;
+            else Object.assign(q.userAnswer, answerMap);
+        });
+
+        if (solvedAny && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+            setTimeout(() => { try { gs.$apply(); } catch(e) {} }, 200);
+        }
+        return solvedAny;
+    }
+
+    function solveCurrentQuestion() {
+        if (!settings.autoSolve) return true;
+        const gs = getGameScope();
+        if (!gs) return false;
+        const q = gs.game.model.currentQuestion;
+        if (!q?.questionDef?.Components) return true;
+
+        // Run all solvers
+        let scopeUpdated =
+            solveSentenceEditingAndDiffs(gs, q) ||
+            solveClozeGaps(gs, q) ||
+            solveDropdowns(gs, q) ||
+            solveFitgDragDrop(gs, q) ||
+            solveHighlight(gs, q);
+
+        const cleanAnsList = getAnswers(q);
+
+        q.questionDef.Components.forEach(c => {
+            if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
+                c.Options.forEach(o => {
+                    if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
+                        const targetText = cleanAnswerText(o.TextTemplate || o.Text || o.Label || o.Description);
+                        o.Selected = true;
+                        scopeUpdated = true;
+
+                        const targetEl = findBestElement(targetText);
+                        if (targetEl) {
+                            simulatePreciseClick(targetEl);
+                            const radio = targetEl.querySelector('input[type="radio"]') || targetEl.closest('label')?.querySelector('input[type="radio"]');
+                            if (radio) simulatePreciseClick(radio);
+                        }
+                    }
+                });
+            }
+
+            if (c.OrderedSequence || c.Targets) {
+                const dropZones = Array.from(document.querySelectorAll('.drop-zone, .target-zone, .sequence-target')).filter(el => el.offsetParent !== null);
+                cleanAnsList.forEach((ansText, idx) => {
+                    const el = findBestElement(ansText);
+                    const targetZone = dropZones[idx] || dropZones[0];
+                    if (el && targetZone) {
+                        simulatePreciseClick(el);
+                        simulatePreciseClick(targetZone);
+                        simulateComplexDrag(el, targetZone);
+                    }
+                });
+            }
+        });
+
+        if (scopeUpdated && window.angular) {
+            try { gs.$apply(); } catch(e) {}
+        }
+
+        return true;
+    }
+
+    function pressSubmitOrContinue() {
+        if (!settings.autoSubmit) return false;
+
+        // Dismiss "Is this your best answer?" popup first
+        const allEls = document.querySelectorAll('button, a, span, div');
+        for (let el of allEls) {
+            if (el.offsetParent === null) continue;
+            const txt = cleanAnswerText(el.innerText || el.textContent || '').toLowerCase();
+            if (txt.includes("i'm happy with my work") || txt.includes('happy with my work') || txt.includes('show me the answer')) {
+                simulatePreciseClick(el);
+                return true;
+            }
+        }
+
+        const candidates = document.querySelectorAll('button, .button, .ep-button, a, div[role="button"], span[role="button"]');
+        for (let b of candidates) {
+            if (b.offsetParent === null) continue;
+            const txt = cleanAnswerText(b.innerText || b.textContent || '').toLowerCase();
+            if (txt.includes('submit') || txt.includes('check answer') || txt.includes('continue') ||
+                txt.includes('next section') || txt.includes('next task') || txt.includes('done') ||
+                txt.includes('next') || txt.includes('got it') ||
+                txt.includes('self mark') || txt.includes('self-mark') || txt.includes('mark answer')) {
+                simulatePreciseClick(b);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    setInterval(() => {
+        const now = Date.now();
+        try {
+            const gs = getGameScope();
+            if (!gs) {
+                statusBox.innerHTML = autoModeActive ? '🤖 Searching for active lesson...' : '⏳ ENGINE STANDBY';
+                if (autoModeActive) pressSubmitOrContinue();
+                return;
+            }
+
+            const q = gs.game.model.currentQuestion;
+            const cleanAns = getAnswers(q);
+
+            let statusHTML = (autoModeActive
+                ? '<span style="color: #ff71ce; font-weight: 700;">🤖 AUTO ACTIVE</span>\n'
+                : '<span style="color: #01cdfe; font-weight: 700;">⏳ ENGINE STANDBY</span>\n');
+
+            if (cleanAns.length > 0) {
+                statusHTML += '<div style="margin-top: 4px;">';
+                cleanAns.forEach((ans, i) => {
+                    statusHTML += `<div style="background: rgba(250, 204, 21, 0.25); color: #fef08a; border: 1px solid #eab308; padding: 4px 6px; border-radius: 4px; margin-top: 4px; font-weight: 700; font-size: 11px;">💡 Answer ${i + 1}: ${ans}</div>`;
+                });
+                statusHTML += '</div>';
+            } else {
+                statusHTML += '<span style="opacity: 0.8;">Slide loaded / Manual grading area</span>';
+            }
+
+            statusBox.innerHTML = statusHTML;
+
+            if (!autoModeActive) return;
+
+            if (q && q.contentID) {
+                if (q.contentID !== currentQuestionID) {
+                    currentQuestionID = q.contentID;
+                    filledSuccess = false;
+                    slideSettledTime = now;
+                    return;
+                }
+
+                if (!filledSuccess && (now - slideSettledTime > SETTLE_DELAY)) {
+                    solveCurrentQuestion();
+                    filledSuccess = true;
+                    fillExecutedTime = now;
+                    return;
+                }
+
+                if (filledSuccess && (now - fillExecutedTime > SUBMIT_DELAY)) {
+                    pressSubmitOrContinue();
+                }
+            } else {
+                pressSubmitOrContinue();
+            }
+        } catch(e) {}
+    }, LOOP_SPEED);
+
+    window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key.toLowerCase() === 'u') {
+            e.preventDefault();
+            overlay.style.display = overlay.style.display === 'none' ? 'block' : 'none';
+        }
+        if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'l') {
+            e.preventDefault();
+            setAutoMode(!autoModeActive);
+        }
     });
 })();
