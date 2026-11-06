@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         EP Hacks
+// @name         bob
 // @namespace    http://tampermonkey.net/
-// @version      34.9
+// @version      35.0
 // @description  Adds Beta Features gate, multi-target drag fix, proper touch simulation, token-level editing, dropdown support, and Got It bypass.
 // @match        *://*.educationperfect.com/*
 // @grant        none
@@ -73,7 +73,7 @@
         antiDetect: true,
         selfMarkBypass: true,
         autoHide: localStorage.getItem('ep_autohide') === 'true',
-        theme: 'synthwave'
+        theme: localStorage.getItem('ep_theme') || 'synthwave'
     };
 
     const themes = {
@@ -273,12 +273,14 @@
     function applyTheme(themeName) {
         const t = themes[themeName] || themes.synthwave;
         settings.theme = themeName;
+        localStorage.setItem('ep_theme', themeName);
         overlay.style.background = t.bg;
         overlay.style.color = t.text;
         overlay.style.borderRightColor = autoModeActive ? '#ff0055' : t.border;
         headerEl.style.background = t.header;
     }
-    applyTheme('synthwave');
+    themeSelect.value = settings.theme;
+    applyTheme(settings.theme);
 
     betaToggle.addEventListener('change', (e) => {
         settings.enableBeta = e.target.checked;
