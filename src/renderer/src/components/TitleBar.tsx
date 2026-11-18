@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Minus, Square, X, Copy } from 'lucide-react'
+import logo from '../assets/logo.svg'
 
 const isMac = navigator.userAgent.includes('Macintosh')
 
@@ -16,18 +17,13 @@ export default function TitleBar() {
       style={{ borderColor: 'var(--border)', background: 'var(--bg-sidebar)' }}
     >
       <div className="flex items-center gap-2.5" style={{ paddingLeft: isMac ? 64 : 0 }}>
-        <div
-          className="grid h-5 w-5 place-items-center rounded-md text-[11px] font-black text-on-accent"
-          style={{ background: 'var(--accent)' }}
-        >
-          S
-        </div>
+        <img src={logo} alt="" className="h-6 w-6 object-contain" draggable={false} />
         <span className="text-[13px] font-semibold tracking-tight">SchoolMod</span>
         <span
           className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
           style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
         >
-          2.0
+          {__APP_VERSION__}
         </span>
       </div>
 
