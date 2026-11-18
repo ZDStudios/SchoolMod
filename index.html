@@ -1,549 +1,537 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SchoolMod — your whole school day, running on your desktop</title>
-<meta name="description" content="SchoolMod is a free, open-source desktop app that brings your timetable, homework, notes and AI study tools into one fast, private place. Windows, macOS and Linux.">
-<meta property="og:title" content="SchoolMod — your whole school day, running on your desktop">
-<meta property="og:description" content="A free, open-source study hub: timetable, AI assistant, notebooks, flashcards and more, running locally.">
-<meta property="og:image" content="https://repository-images.githubusercontent.com/1094849753/251141e6-a433-4a1a-a28a-731fccebccc6">
-<meta property="og:type" content="website">
+<title>SchoolMod</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,440;9..144,560;9..144,650&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#202D27;
-    --bg-deep:#16211C;
-    --panel:#283A32;
-    --panel-line:rgba(243,239,228,0.14);
-    --ink:#F3EFE4;
-    --ink-muted:#B6C2B8;
-    --yellow:#EFB238;
-    --blue:#8FB4CC;
-    --red:#C97B6B;
-    --font-display:'Fraunces', Georgia, serif;
-    --font-body:'IBM Plex Sans', system-ui, sans-serif;
-    --font-mono:'IBM Plex Mono', ui-monospace, monospace;
-    --wrap:920px;
-  }
-  *,*::before,*::after{box-sizing:border-box;}
-  html{background:var(--bg);}
-  @media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth;} }
-  body{
-    margin:0;
-    background:var(--bg);
-    color:var(--ink);
-    font-family:var(--font-body);
-    font-size:1rem;
-    line-height:1.6;
-    -webkit-font-smoothing:antialiased;
-  }
-  h1,h2,h3{font-family:var(--font-display);font-weight:650;line-height:1.12;margin:0;}
-  p{margin:0;}
-  a{color:inherit;}
-  .wrap{max-width:var(--wrap);margin-inline:auto;padding-inline:24px;}
-  .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
-  .skip-link{position:absolute;left:-999px;top:auto;background:var(--yellow);color:#1b2420;padding:10px 16px;border-radius:6px;z-index:100;font-weight:600;}
-  .skip-link:focus{left:16px;top:16px;}
-  :focus-visible{outline:2px solid var(--blue);outline-offset:3px;}
+/* Layout idea: flat school-object shapes on a dark floor (hero), then ruled lists and a real-looking app window. Catppuccin Mocha, one swappable accent. */
+:root{
+  --crust:#11111b;
+  --mantle:#181825;
+  --base:#1e1e2e;
+  --line:#313244;
+  --text:#cdd6f4;
+  --sub:#a6adc8;
+  --accent:#fab387;
+  --mauve:#cba6f7;
+  --green:#a6e3a1;
+  --yellow:#f9e2af;
+  --red:#f38ba8;
+  --blue:#89b4fa;
+  --display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--crust);scroll-padding-top:24px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+body{margin:0;background:var(--crust);color:var(--text);font:400 17px/1.55 var(--display);-webkit-font-smoothing:antialiased}
+::selection{background:var(--accent);color:var(--crust)}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+.tag{font:500 12px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--sub)}
+h1,h2,h3,p{margin:0}
+h2{font-size:clamp(32px,4.4vw,56px);font-weight:800;line-height:1.02;letter-spacing:-.028em;text-wrap:balance}
+.band{padding:112px 0}
+.band.alt{background:var(--mantle)}
 
-  /* icons */
-  .icon{width:1.15em;height:1.15em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-0.22em;flex-shrink:0;}
-  .icon--lg{width:1.6em;height:1.6em;}
+/* header */
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:24px;padding-top:28px;padding-bottom:8px}
+.mark{display:flex;align-items:center;gap:10px;font-weight:800;font-size:21px;letter-spacing:-.02em;text-decoration:none}
+.mark svg{width:30px;height:30px;display:block}
+nav{display:flex;align-items:center;gap:30px;font-size:15px}
+nav a{text-decoration:none;color:var(--sub)}
+nav a:hover{color:var(--text)}
+.kbd{font:500 12px var(--mono);color:var(--sub);background:none;border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+.kbd:hover{color:var(--text);border-color:var(--sub)}
 
-  /* nav */
-  header.site{position:sticky;top:0;z-index:50;background:rgba(22,33,28,0.86);backdrop-filter:blur(6px);border-bottom:1px solid var(--panel-line);}
-  .nav{display:flex;align-items:center;justify-content:space-between;padding-block:16px;}
-  .brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:650;font-size:1.15rem;text-decoration:none;color:var(--ink);}
-  .brand .icon{color:var(--yellow);}
-  .nav__links{display:flex;align-items:center;gap:28px;list-style:none;margin:0;padding:0;font-size:0.94rem;}
-  .nav__links a{text-decoration:none;color:var(--ink-muted);}
-  .nav__links a:hover{color:var(--ink);}
-  .nav__links .btn{padding:9px 16px;font-size:0.88rem;}
-  @media (max-width:640px){ .nav__links span.nav-hide{display:none;} }
+/* hero */
+.hero{padding-top:56px}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:48px;align-items:end}
+.hero .tag{color:var(--accent);margin-bottom:22px;display:block}
+h1{font-size:clamp(46px,7.2vw,96px);font-weight:800;line-height:.95;letter-spacing:-.04em;max-width:11ch}
+.lead{color:var(--sub);font-size:18px;max-width:34ch;margin-bottom:26px}
+.btns{display:flex;flex-wrap:wrap;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:8px;font:600 15px var(--display);text-decoration:none;border-radius:999px;padding:13px 22px;border:1.5px solid var(--text);color:var(--text)}
+.btn:hover{background:var(--text);color:var(--crust)}
+.btn.fill{background:var(--accent);border-color:var(--accent);color:var(--crust)}
+.btn.fill:hover{filter:brightness(1.08);background:var(--accent)}
+.fine{margin-top:16px;font:400 12px var(--mono);color:var(--sub)}
+.stage{display:block;width:100%;height:auto;margin-top:40px}
 
-  /* buttons */
-  .btn{display:inline-flex;align-items:center;gap:9px;padding:14px 22px;border-radius:8px;font-family:var(--font-body);font-weight:600;font-size:0.98rem;text-decoration:none;border:1px solid transparent;cursor:pointer;transition:transform .15s ease,border-color .15s ease,color .15s ease;background:transparent;}
-  .btn--primary{background:var(--yellow);color:#1b2420;}
-  .btn--primary:hover{transform:translateY(-1px);}
-  .btn--primary.is-loading{opacity:.75;pointer-events:none;transform:none;}
-  .btn--ghost{color:var(--ink);border-color:var(--panel-line);}
-  .btn--ghost:hover{border-color:var(--blue);color:var(--blue);}
-  @media (prefers-reduced-motion:no-preference){
-    .btn--primary.is-loading span{animation:pulse 1.6s ease-in-out infinite;}
-  }
-  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.55;}}
+/* app window */
+.show-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:24px;margin-bottom:40px}
+.show-head p{color:var(--sub);max-width:38ch}
+figure{margin:0}
+.win{background:var(--base);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 40px 90px rgba(0,0,0,.55)}
+.titlebar{display:flex;justify-content:space-between;align-items:center;background:var(--mantle);border-bottom:1px solid var(--line);padding:0 14px;height:38px;font:400 12px var(--mono);color:var(--sub)}
+.titlebar span:last-child{letter-spacing:.3em}
+.win-body{display:grid;grid-template-columns:200px minmax(0,1fr)}
+.side{background:var(--mantle);border-right:1px solid var(--line);padding:16px 0;display:flex;flex-direction:column;font-size:14px}
+.side div{padding:8px 20px;color:var(--sub);border-left:3px solid transparent}
+.side div.on{color:var(--text);border-left-color:var(--accent);background:var(--base)}
+.side .gap{height:12px;padding:0;border:0}
+.main{padding:28px;display:grid;gap:22px}
+.main h3{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.panels{display:grid;grid-template-columns:1.3fr 1.3fr 1fr;gap:16px}
+.panel{border:1px solid var(--line);border-radius:10px;padding:18px;background:var(--mantle);min-width:0}
+.panel .tag{display:block;margin-bottom:12px}
+.big{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.meta{color:var(--sub);font-size:14px;margin-top:4px}
+.track{height:6px;border-radius:3px;background:var(--line);margin-top:18px;overflow:hidden}
+.track i{display:block;height:100%;width:62%;background:var(--accent);border-radius:3px}
+.due{list-style:none;margin:0;padding:0;display:grid;gap:10px;font-size:14px}
+.due li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.due li:last-child{border:0;padding:0}
+.due b{font:500 12px var(--mono);color:var(--accent);white-space:nowrap}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.actions span{font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--text)}
+.actions span.hint{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--sub);border-style:dashed}
+figcaption{margin-top:16px;font:400 12px var(--mono);color:var(--sub);display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;justify-content:space-between}
+.swatches{display:flex;gap:10px;align-items:center}
+.swatches button{width:24px;height:24px;border-radius:50%;border:2px solid transparent;background:var(--c);cursor:pointer;padding:0;outline-offset:3px}
+.swatches button[aria-pressed="true"]{border-color:var(--crust);box-shadow:0 0 0 2px var(--text)}
 
-  /* hero */
-  .hero{padding-block:64px 84px;position:relative;}
-  .hero__grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;}
-  @media (max-width:860px){ .hero__grid{grid-template-columns:1fr;gap:48px;} }
-  .hero h1{font-size:clamp(2.05rem,4.3vw,3.3rem);letter-spacing:-0.01em;}
-  .hero p.lede{margin-top:20px;color:var(--ink-muted);max-width:52ch;font-size:1.06rem;}
-  .hero__cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:32px;align-items:center;}
-  .hero__fine{margin-top:16px;font-family:var(--font-mono);font-size:0.8rem;color:var(--ink-muted);}
+/* features */
+.f-grid{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:72px}
+.sticky{position:sticky;top:32px;align-self:start}
+.sticky h2{margin-bottom:28px}
+.legend{display:grid;gap:10px}
+.legend div{display:flex;align-items:center;gap:10px;font:400 13px var(--mono);color:var(--sub)}
+.glyph{width:14px;height:14px;background:var(--c);flex:none}
+.g-study{--c:var(--mauve)}
+.g-school{--c:var(--blue)}
+.g-day{--c:var(--yellow)}
+.g-study .glyph{border-radius:50%}
+.g-day .glyph{clip-path:polygon(50% 0,100% 100%,0 100%)}
+.group{margin-bottom:56px}
+.group:last-child{margin-bottom:0}
+.group>.tag{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.row{display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;padding:20px 0;border-top:1px solid var(--line)}
+.row h3{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.row p{color:var(--sub);max-width:52ch}
+code,.mono{font-family:var(--mono);font-size:.88em}
 
-  /* hall pass */
-  .pass-wrap{display:flex;justify-content:center;}
-  .pass{
-    width:100%;max-width:340px;background:var(--panel);border:1px solid var(--panel-line);
-    border-radius:16px;padding:22px 22px 0;transform:rotate(-2deg);
-    box-shadow:0 24px 50px -30px rgba(0,0,0,.6);
-  }
-  @media (prefers-reduced-motion:no-preference){
-    .pass{animation:pass-settle .7s cubic-bezier(.2,.8,.2,1) both;}
-  }
-  @keyframes pass-settle{from{transform:rotate(-7deg) translateY(16px);opacity:0;}to{transform:rotate(-2deg) translateY(0);opacity:1;}}
-  .pass__top{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px dashed var(--panel-line);}
-  .pass__hole{width:12px;height:12px;border-radius:50%;background:var(--bg);border:1px solid var(--panel-line);}
-  .pass__title{font-family:var(--font-mono);font-size:0.78rem;letter-spacing:.03em;color:var(--ink-muted);}
-  .pass__fields{margin:16px 0 0;padding:0;}
-  .pass__fields div{padding:9px 0;border-bottom:1px solid var(--panel-line);}
-  .pass__fields div:last-child{border-bottom:none;}
-  .pass__fields dt{font-family:var(--font-mono);font-size:0.7rem;color:var(--blue);text-transform:lowercase;}
-  .pass__fields dd{margin:3px 0 0;font-size:0.9rem;line-height:1.45;}
-  .pass__perforation{margin-top:16px;border-top:2px dashed var(--panel-line);position:relative;}
-  .pass__perforation::before,.pass__perforation::after{content:"";position:absolute;top:-7px;width:14px;height:14px;border-radius:50%;background:var(--bg);}
-  .pass__perforation::before{left:-33px;}
-  .pass__perforation::after{right:-33px;}
-  .pass__stub{display:flex;align-items:center;justify-content:space-between;padding:14px 0;font-family:var(--font-mono);font-size:0.76rem;color:var(--ink-muted);}
-  .pass__barcode{height:20px;margin:0 0 14px;background-image:repeating-linear-gradient(90deg,var(--ink-muted) 0 2px,transparent 2px 5px);opacity:.35;border-radius:2px;}
+/* privacy */
+.p-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:72px}
+.p-grid h2{max-width:9ch}
+.claims{list-style:none;margin:0;padding:0}
+.claims li{padding:20px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:20px minmax(0,1fr);gap:16px;color:var(--sub)}
+.claims li:first-child{border-top:0;padding-top:0}
+.claims b{color:var(--text);font-weight:600}
+.claims .glyph{margin-top:7px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:36px}
+.chips span{font:400 12px var(--mono);border:1px solid var(--line);border-radius:999px;padding:6px 12px;color:var(--sub)}
 
-  /* section headings */
-  section{padding-block:72px;}
-  .section-head{max-width:56ch;margin-bottom:40px;}
-  .section-head h2{font-size:clamp(1.5rem,2.6vw,2rem);}
-  .section-head p{margin-top:12px;color:var(--ink-muted);}
+/* download */
+.dl-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:24px;margin-bottom:40px}
+.dl{display:block;border-top:1px solid var(--line)}
+.dl a{display:grid;grid-template-columns:220px minmax(0,1fr) auto;gap:24px;align-items:center;padding:20px 0;border-bottom:1px solid var(--line);text-decoration:none}
+.dl a:hover{background:var(--base)}
+.dl strong{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.dl .file{font:400 13px var(--mono);color:var(--sub);overflow-wrap:anywhere}
+.pill{font:500 12px var(--mono);border-radius:999px;padding:5px 12px;border:1px solid var(--line);color:var(--sub);white-space:nowrap}
+.pill.rec{background:var(--accent);border-color:var(--accent);color:var(--crust)}
+.steps{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:72px}
+.steps h3{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:16px}
+.steps ul{list-style:none;margin:0;padding:0}
+.steps li{padding:14px 0;border-top:1px solid var(--line);color:var(--sub)}
+.steps li b{color:var(--text);font-weight:600}
 
-  /* timetable */
-  #features{border-top:1px solid var(--panel-line);}
-  .tt-row{display:grid;grid-template-columns:52px 30px 1fr;column-gap:16px;align-items:start;padding:20px 0;border-bottom:1px solid var(--panel-line);}
-  .tt-row:first-child{border-top:1px solid var(--panel-line);}
-  .tt-code{font-family:var(--font-mono);font-size:0.76rem;color:var(--blue);padding-top:4px;}
-  .tt-icon{color:var(--yellow);padding-top:1px;}
-  .tt-title{font-weight:600;margin:0 0 4px;font-size:1.02rem;}
-  .tt-desc{margin:0;color:var(--ink-muted);font-size:0.95rem;max-width:56ch;}
-  @media (max-width:600px){
-    .tt-row{grid-template-columns:28px 1fr;}
-    .tt-code{display:none;}
-  }
+footer{padding:56px 0 72px;color:var(--sub);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px 40px;justify-content:space-between;align-items:center}
+footer .links{display:flex;gap:24px}
+footer small{display:block;margin-top:6px;color:var(--sub);opacity:.8;font-size:12px;max-width:62ch}
 
-  /* download */
-  #download{border-top:1px solid var(--panel-line);}
-  .dl-panel{background:var(--panel);border:1px solid var(--panel-line);border-radius:14px;padding:clamp(22px,4vw,36px);}
-  .dl-header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;}
-  .dl-header h3{font-size:1.2rem;font-family:var(--font-body);font-weight:600;}
-  #dl-meta{font-family:var(--font-mono);font-size:0.8rem;color:var(--ink-muted);}
-  #dl-status{font-size:0.92rem;color:var(--ink-muted);margin:14px 0 26px;min-height:1.4em;}
-  .dl-list{list-style:none;margin:0;padding:0;display:grid;gap:10px;}
-  .dl-row{display:flex;align-items:center;gap:12px;padding:13px 15px;background:var(--bg-deep);border-radius:8px;}
-  .dl-row__label{font-weight:500;font-size:0.94rem;}
-  .dl-row__size{margin-left:auto;font-family:var(--font-mono);font-size:0.78rem;color:var(--ink-muted);}
-  .dl-row__link{color:var(--ink-muted);display:inline-flex;padding:4px;}
-  .dl-row__link:hover{color:var(--yellow);}
-  .dl-note{margin-top:26px;padding-top:22px;border-top:1px dashed var(--panel-line);font-size:0.9rem;color:var(--ink-muted);}
-  .dl-note strong{color:var(--ink);font-weight:600;}
+/* command palette */
+.pal{position:fixed;inset:0;background:rgba(17,17,27,.72);display:grid;place-items:start center;padding:14vh 16px 16px;z-index:10}
+.pal[hidden]{display:none}
+.pal-box{width:100%;max-width:520px;background:var(--base);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.pal input{width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:16px 18px;color:var(--text);font:400 16px var(--mono);outline:none}
+.pal ul{list-style:none;margin:0;padding:6px;max-height:320px;overflow:auto}
+.pal li>*{display:block;width:100%;text-align:left;background:none;border:0;color:var(--text);font:400 15px var(--display);padding:10px 12px;border-radius:8px;cursor:pointer;text-decoration:none}
+.pal li>*.on{background:var(--line)}
+.pal-foot{padding:10px 18px;border-top:1px solid var(--line);font:400 11px var(--mono);color:var(--sub)}
 
-  /* privacy */
-  .privacy{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:flex-start;}
-  .privacy .icon{color:var(--red);}
-  .privacy p{color:var(--ink-muted);max-width:66ch;margin-top:10px;}
-
-  footer{border-top:1px solid var(--panel-line);padding-block:40px;}
-  .footer__row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;font-size:0.86rem;color:var(--ink-muted);}
-  .footer__row a{text-decoration:underline;text-decoration-color:var(--panel-line);text-underline-offset:3px;}
-  .footer__row a:hover{color:var(--ink);}
-  .footer__legal{margin-top:18px;font-size:0.78rem;color:var(--ink-muted);opacity:.75;max-width:70ch;}
+@media (max-width:900px){
+  .hero-grid,.f-grid,.p-grid,.steps{grid-template-columns:minmax(0,1fr);gap:40px}
+  .sticky{position:static}
+  .band{padding:80px 0}
+  .panels{grid-template-columns:minmax(0,1fr)}
+  .win-body{grid-template-columns:minmax(0,1fr)}
+  .side{display:none}
+  .dl a{grid-template-columns:minmax(0,1fr) auto;gap:6px 16px}
+  .dl .file{grid-column:1/2;grid-row:2}
+  .dl .pill{grid-column:2;grid-row:1/3}
+}
+@media (max-width:640px){
+  nav a{display:none}
+  .row{grid-template-columns:minmax(0,1fr);gap:6px}
+  .actions span.hint{margin-left:0}
+  .main{padding:20px}
+}
 </style>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
 
-<!-- icon sprite -->
-<svg style="display:none" aria-hidden="true">
-  <symbol id="icon-bell" viewBox="0 0 24 24">
-    <path d="M12 3.5c-1 0-1.8.8-1.8 1.8v.4C7.7 6.4 6 8.7 6 11.4V15l-1.6 2.2c-.3.4 0 1 .5 1h14.2c.5 0 .8-.6.5-1L18 15v-3.6c0-2.7-1.7-5-4.2-5.7v-.4c0-1-.8-1.8-1.8-1.8Z"/>
-    <path d="M9.8 19.5a2.2 2.2 0 0 0 4.4 0"/>
-  </symbol>
-  <symbol id="icon-grid" viewBox="0 0 24 24">
-    <rect x="4" y="4" width="7" height="7" rx="1.3"/><rect x="13" y="4" width="7" height="7" rx="1.3"/>
-    <rect x="4" y="13" width="7" height="7" rx="1.3"/><rect x="13" y="13" width="7" height="7" rx="1.3"/>
-  </symbol>
-  <symbol id="icon-chat" viewBox="0 0 24 24">
-    <path d="M4 6.7A2.6 2.6 0 0 1 6.6 4.1h10.8A2.6 2.6 0 0 1 20 6.7v6.8a2.6 2.6 0 0 1-2.6 2.6H10l-4.2 3.4v-3.4H6.6A2.6 2.6 0 0 1 4 13.5Z"/>
-    <line x1="7.6" y1="8.6" x2="14.6" y2="8.6"/><line x1="7.6" y1="11.4" x2="12.2" y2="11.4"/>
-  </symbol>
-  <symbol id="icon-book" viewBox="0 0 24 24">
-    <path d="M12 6.6c-1.7-1.2-3.8-1.6-6.2-1.3v11.1c2.4-.3 4.5.1 6.2 1.3 1.7-1.2 3.8-1.6 6.2-1.3V5.3c-2.4-.3-4.5.1-6.2 1.3Z"/>
-    <line x1="12" y1="6.6" x2="12" y2="17.7"/>
-  </symbol>
-  <symbol id="icon-cards" viewBox="0 0 24 24">
-    <rect x="5.3" y="7.3" width="12" height="8" rx="1.3" transform="rotate(-7 11.3 11.3)"/>
-    <rect x="7" y="8.7" width="12" height="8" rx="1.3"/>
-  </symbol>
-  <symbol id="icon-cap" viewBox="0 0 24 24">
-    <path d="M12 5 3 9.4 12 13.8l9-4.4Z"/>
-    <path d="M7 11.3v4c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2v-4"/>
-    <line x1="20" y1="9.4" x2="20" y2="14.6"/>
-  </symbol>
-  <symbol id="icon-apps" viewBox="0 0 24 24">
-    <circle cx="6" cy="8" r="1.5"/><circle cx="12" cy="8" r="1.5"/><circle cx="18" cy="8" r="1.5"/>
-    <circle cx="6" cy="16" r="1.5"/><circle cx="12" cy="16" r="1.5"/><circle cx="18" cy="16" r="1.5"/>
-  </symbol>
-  <symbol id="icon-compass" viewBox="0 0 24 24">
-    <circle cx="12" cy="12" r="7.8"/><line x1="12" y1="12" x2="15.3" y2="8.6"/><circle cx="12" cy="12" r="1"/>
-  </symbol>
-  <symbol id="icon-hourglass" viewBox="0 0 24 24">
-    <path d="M6.5 4h11"/><path d="M6.5 20h11"/>
-    <path d="M7.3 4c0 4.2 3.1 5.2 4.7 8-1.6 2.8-4.7 3.8-4.7 8"/>
-    <path d="M16.7 4c0 4.2-3.1 5.2-4.7 8 1.6 2.8 4.7 3.8 4.7 8"/>
-  </symbol>
-  <symbol id="icon-command" viewBox="0 0 24 24">
-    <rect x="4" y="5" width="16" height="14" rx="2.2"/>
-    <polyline points="9,9.3 12,12 9,14.7"/><line x1="13.5" y1="14.7" x2="16.5" y2="14.7"/>
-  </symbol>
-  <symbol id="icon-download" viewBox="0 0 24 24">
-    <path d="M12 4.2v10"/><polyline points="8,10.4 12,14.4 16,10.4"/><path d="M5 17.7h14"/>
-  </symbol>
-  <symbol id="icon-external" viewBox="0 0 24 24">
-    <path d="M9.2 6H6.6A1.6 1.6 0 0 0 5 7.6v9.8A1.6 1.6 0 0 0 6.6 19h9.8a1.6 1.6 0 0 0 1.6-1.6V14.6"/>
-    <path d="M13.2 5h5.8v5.8"/><line x1="19" y1="5" x2="11" y2="13"/>
-  </symbol>
-  <symbol id="icon-lock" viewBox="0 0 24 24">
-    <rect x="5.5" y="10.6" width="13" height="9" rx="1.6"/>
-    <path d="M8 10.6V8a4 4 0 0 1 8 0v2.6"/><circle cx="12" cy="15.1" r="1.2"/>
-  </symbol>
-  <symbol id="icon-monitor" viewBox="0 0 24 24">
-    <rect x="4" y="5" width="16" height="11" rx="1.2"/><line x1="9" y1="19" x2="15" y2="19"/><line x1="12" y1="16" x2="12" y2="19"/>
-  </symbol>
-  <symbol id="icon-laptop" viewBox="0 0 24 24">
-    <rect x="5" y="6" width="14" height="9" rx="1.2"/><path d="M3 18.4h18l-1.4-2.4H4.4Z"/>
-  </symbol>
-  <symbol id="icon-terminal" viewBox="0 0 24 24">
-    <rect x="4" y="5" width="16" height="14" rx="1.6"/>
-    <polyline points="8,10 11,12.5 8,15"/><line x1="12.5" y1="15" x2="16" y2="15"/>
-  </symbol>
-</svg>
-
-<header class="site">
-  <div class="wrap nav">
-    <a class="brand" href="#main">
-      <svg class="icon icon--lg" aria-hidden="true"><use href="#icon-bell"></use></svg>
+<header>
+  <div class="wrap">
+    <a class="mark" href="#top" aria-label="SchoolMod home">
+      <svg viewBox="0 0 30 30" aria-hidden="true"><circle cx="10" cy="20" r="10" fill="#f9e2af"/><path d="M14 30V10a10 10 0 0 1 16 0v20z" fill="#f38ba8"/></svg>
       SchoolMod
     </a>
-    <ul class="nav__links">
-      <li><a href="#features">Features</a></li>
-      <li><a href="#download">Download</a></li>
-      <li class="nav-hide"><a href="https://github.com/ZDStudios/SchoolMod" target="_blank" rel="noopener">Source</a></li>
-      <li><a class="btn btn--ghost" href="https://github.com/ZDStudios/SchoolMod" target="_blank" rel="noopener">
-        <svg class="icon" aria-hidden="true"><use href="#icon-external"></use></svg>GitHub
-      </a></li>
-    </ul>
+    <nav aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#get">Download</a>
+      <a href="https://github.com/ZDStudios/SchoolMod" target="_blank" rel="noopener">GitHub ↗</a>
+      <button class="kbd" id="open-pal" type="button" aria-label="Open command palette"><span id="kbd-label">Ctrl K</span></button>
+    </nav>
   </div>
 </header>
 
-<main id="main">
-
-  <section class="hero">
-    <div class="wrap hero__grid">
+<main id="top">
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
       <div>
-        <h1>Your whole school day, running on your desktop.</h1>
-        <p class="lede">SchoolMod is a free, open-source app that brings your timetable, homework, notes and AI study tools into one fast, private place — no extra browser tabs, no SchoolMod server, nothing tracked.</p>
-        <div class="hero__cta">
-          <a id="dl-primary" class="btn btn--primary is-loading" href="#" aria-disabled="true">
-            <svg class="icon" aria-hidden="true"><use href="#icon-download"></use></svg>
-            <span>Checking the latest build…</span>
-          </a>
-          <a class="btn btn--ghost" href="https://github.com/ZDStudios/SchoolMod" target="_blank" rel="noopener">
-            <svg class="icon" aria-hidden="true"><use href="#icon-external"></use></svg>
-            <span>View source on GitHub</span>
-          </a>
-        </div>
-        <p class="hero__fine">Free and open source · MIT licensed · Windows, macOS and Linux</p>
+        <span class="tag">SchoolMod 2.0 · open source · Windows, macOS, Linux</span>
+        <h1>One desktop app for your school day.</h1>
       </div>
-
-      <div class="pass-wrap">
-        <div class="pass" role="img" aria-label="A hall pass ticket for SchoolMod version 2.0.0, granting access to the Dashboard, AI Assistant, Notebooks, Flashcards, SEQTA, Microsoft 365, Mathspace, Education Perfect and Bell times.">
-          <div class="pass__top">
-            <span class="pass__hole" aria-hidden="true"></span>
-            <span class="pass__title">HALL PASS</span>
-            <span class="pass__hole" aria-hidden="true"></span>
-          </div>
-          <dl class="pass__fields" aria-hidden="true">
-            <div><dt>Bearer</dt><dd>Every student</dd></div>
-            <div><dt>Destination</dt><dd>Desktop app — Windows, macOS, Linux</dd></div>
-            <div><dt>Grants access to</dt><dd>Dashboard, AI Assistant, Notebooks, Flashcards, SEQTA, Microsoft&nbsp;365, Mathspace, Education&nbsp;Perfect, Bell&nbsp;times</dd></div>
-            <div><dt>Issued by</dt><dd>ZDStudios — open source, MIT</dd></div>
-          </dl>
-          <div class="pass__perforation" aria-hidden="true"></div>
-          <div class="pass__barcode" aria-hidden="true"></div>
-          <div class="pass__stub" aria-hidden="true">
-            <span>v2.0.0</span>
-            <span>Torn here for install</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="features">
-    <div class="wrap">
-      <div class="section-head">
-        <h2>Every tab, one timetable.</h2>
-        <p>Ten tools that used to live in ten browser tabs, now sitting in one app that opens in under a second.</p>
-      </div>
-
-      <div class="tt-list">
-        <div class="tt-row">
-          <span class="tt-code">DASH</span>
-          <svg class="icon tt-icon" aria-hidden="true"><use href="#icon-grid"></use></svg>
-          <div><p class="tt-title">Dashboard</p><p class="tt-desc">Your day at a glance: next class, what's due, cards to review, quick actions.</p></div>
-        </div>
-        <div class="tt-row">
-          <span class="tt-code">ASST</span>
-          <svg class="icon tt-icon" aria-hidden="true"><use href="#icon-chat"></use></svg>
-          <div><p class="tt-title">AI Assistant</p><p class="tt-desc">A streaming study chat powered by your own Claude or ChatGPT account — one click to connect, nothing to configure.</p></div>
-        </div>
-        <div class="tt-row">
-          <span class="tt-code">NBK</span>
-          <svg class="icon tt-icon" aria-hidden="true"><use href="#icon-book"></use></svg>
-          <div><p class="tt-title">Notebooks</p><p class="tt-desc">Drop in PDFs, Word docs or notes and chat with them — answers are grounded in your own sources, with citations.</p></div>
-        </div>
-        <div class="tt-row">
-          <span class="tt-code">CRD</span>
-          <svg class="icon tt-icon" aria-hidden="true"><use href="#icon-cards"></use></svg>
-          <div><p class="tt-title">Flashcards</p><p class="tt-desc">Generate a deck from any topic or your own notes, then review it on a spaced-repetition schedule.</p></div>
-        </div>
-        <div class="tt-row">
-          <span class="tt-code">SEQ</span>
-          <svg class="icon tt-icon" aria-hidden="true"><use href="#icon-cap"></use></svg>
-          <div><p class="tt-title">SEQTA</p><p class="tt-desc">Timetable, assessments, grades, homework and notices, signed in through your school's own Microsoft login.</p></div>
-        </div>
-        <div class="tt-row">
-          <span class="tt-code">365</span>
-          <svg class="icon tt-icon" aria-hidden="true"><use href="#icon-apps"></use></svg>
-          <div><p class="tt-title">Microsoft 365</p><p class="tt-desc">One-click launch for Word, Excel, PowerPoint, Teams and OneNote, plus your recent OneDrive files.</p></div>
-        </div>
-        <div class="tt-row">
-          <span class="tt-code">MATH</span>
-          <svg class="icon tt-icon" aria-hidden="true"><use href="#icon-compass"></use></svg>
-          <div><p class="tt-title">Mathspace &amp; Education Perfect</p><p class="tt-desc">Launch either platform with a worked-solution tutor and an on-demand revision sheet for whatever you're stuck on.</p></div>
-        </div>
-        <div class="tt-row">
-          <span class="tt-code">BELL</span>
-          <svg class="icon tt-icon" aria-hidden="true"><use href="#icon-bell"></use></svg>
-          <div><p class="tt-title">Bell times</p><p class="tt-desc">A live current-period tracker with a countdown to the next bell, carried over from the original SchoolMod.</p></div>
-        </div>
-        <div class="tt-row">
-          <span class="tt-code">FOC</span>
-          <svg class="icon tt-icon" aria-hidden="true"><use href="#icon-hourglass"></use></svg>
-          <div><p class="tt-title">Focus, to-do &amp; scratchpad</p><p class="tt-desc">A Pomodoro timer that tracks daily focus minutes, a task list, and a notepad that saves itself.</p></div>
-        </div>
-        <div class="tt-row">
-          <span class="tt-code">CMD</span>
-          <svg class="icon tt-icon" aria-hidden="true"><use href="#icon-command"></use></svg>
-          <div><p class="tt-title">Command palette</p><p class="tt-desc">Ctrl+K (or ⌘K on a Mac) jumps anywhere in the app or runs an action without touching the mouse.</p></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="download">
-    <div class="wrap">
-      <div class="section-head">
-        <h2>Get the app</h2>
-        <p>This list is pulled live from GitHub's releases API, so it always matches what's actually published for v2.0.0.</p>
-      </div>
-
-      <div class="dl-panel">
-        <div class="dl-header">
-          <h3>SchoolMod 2.0 — Desktop</h3>
-          <span id="dl-meta" aria-live="polite">Loading release details…</span>
-        </div>
-        <p id="dl-status" aria-live="polite"></p>
-        <ul id="dl-list" class="dl-list"></ul>
-        <p class="dl-note"><strong>First launch note —</strong> these builds aren't code-signed yet, so Windows SmartScreen or macOS Gatekeeper will flag them. On Windows choose <em>More info → Run anyway</em>; on a Mac, right-click the app and choose <em>Open</em>.</p>
-      </div>
-      <noscript>
-        <p style="margin-top:20px;color:var(--ink-muted);">JavaScript is off, so the live download list can't load. Get the app directly from
-          <a style="color:var(--blue)" href="https://github.com/ZDStudios/SchoolMod/releases/tag/v2.0.0">the release page on GitHub</a>.
-        </p>
-      </noscript>
-    </div>
-  </section>
-
-  <section class="privacy">
-    <div class="wrap privacy">
-      <svg class="icon icon--lg" aria-hidden="true"><use href="#icon-lock"></use></svg>
       <div>
-        <h2 style="font-size:1.3rem;">Nothing leaves your laptop</h2>
-        <p>SchoolMod runs locally. Your notes, decks, login sessions and AI conversations stay on your device — there's no SchoolMod server in the middle, because one was never built. The Claude and ChatGPT connections talk to your own account directly, and SEQTA or Microsoft sign-ins go straight to your school or Microsoft, not through us.</p>
+        <p class="lead">SchoolMod puts your SEQTA timetable, Microsoft 365 files, flashcards and an AI study chat in one window. Everything stays on your computer.</p>
+        <div class="btns">
+          <a class="btn fill" href="#get">Download</a>
+          <a class="btn" href="https://github.com/ZDStudios/SchoolMod" target="_blank" rel="noopener">Source on GitHub ↗</a>
+        </div>
+        <p class="fine">v2.0.0 · MIT licence · no SchoolMod server</p>
       </div>
     </div>
-  </section>
+  </div>
+  <div class="wrap">
+    <svg class="stage" viewBox="0 0 1200 520" role="img" aria-label="Flat shapes standing on a reflective floor: a clock showing your local time, a notebook, a protractor, a pencil and an arch">
+      <defs>
+        <filter id="grain" x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" result="n"/>
+          <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .7 -.2" result="g"/>
+          <feComposite in="g" in2="SourceGraphic" operator="in" result="gi"/>
+          <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="gi"/></feMerge>
+        </filter>
+        <linearGradient id="fadeg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#fff" stop-opacity=".3"/>
+          <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+        </linearGradient>
+        <mask id="fade" maskUnits="userSpaceOnUse" x="0" y="360" width="1200" height="160">
+          <rect x="0" y="360" width="1200" height="160" fill="url(#fadeg)"/>
+        </mask>
+        <g id="art">
+          <circle cx="60" cy="318" r="42" fill="#89b4fa"/>
+          <!-- clock -->
+          <circle cx="230" cy="240" r="120" fill="#f9e2af"/>
+          <g stroke="#11111b" stroke-width="7" stroke-linecap="round">
+            <path d="M230 142V160M230 320V338M132 240H150M310 240H328"/>
+            <line id="hand-h" x1="230" y1="240" x2="230" y2="192" stroke-width="10"/>
+            <line id="hand-m" x1="230" y1="240" x2="230" y2="164"/>
+          </g>
+          <circle cx="230" cy="240" r="10" fill="#f38ba8"/>
+          <!-- notebook -->
+          <rect x="380" y="110" width="170" height="250" rx="10" fill="#cba6f7"/>
+          <path d="M390 110H414V360H390a10 10 0 0 1-10-10V120a10 10 0 0 1 10-10z" fill="#b4befe"/>
+          <circle cx="397" cy="165" r="7" fill="#11111b"/>
+          <circle cx="397" cy="235" r="7" fill="#11111b"/>
+          <circle cx="397" cy="305" r="7" fill="#11111b"/>
+          <rect x="526" y="110" width="14" height="250" fill="#f38ba8"/>
+          <rect x="440" y="150" width="76" height="58" rx="4" fill="#11111b" opacity=".85"/>
+          <rect x="452" y="166" width="52" height="6" rx="3" fill="#cdd6f4"/>
+          <rect x="452" y="184" width="32" height="6" rx="3" fill="#cdd6f4"/>
+          <!-- protractor -->
+          <path d="M590 360A150 150 0 0 1 890 360z" fill="#a6e3a1"/>
+          <path d="M650 360A90 90 0 0 1 830 360z" fill="#11111b"/>
+          <path d="M835 305L853 295M795 265L805 247M740 250V230M685 265L675 247M645 305L627 295" stroke="#11111b" stroke-width="7" stroke-linecap="round" fill="none"/>
+          <!-- pencil -->
+          <rect x="930" y="150" width="30" height="210" fill="#fab387"/>
+          <rect x="960" y="150" width="30" height="210" fill="#e8956a"/>
+          <path d="M930 150H990L960 88z" fill="#f5e0dc"/>
+          <path d="M948 112H972L960 88z" fill="#11111b"/>
+          <!-- arch -->
+          <path d="M1030 360V230A75 75 0 0 1 1180 230V360z" fill="#f38ba8"/>
+          <path d="M1075 360V245A30 30 0 0 1 1135 245V360z" fill="#11111b"/>
+          <circle cx="1105" cy="92" r="30" fill="#94e2d5"/>
+        </g>
+      </defs>
+      <g filter="url(#grain)"><use href="#art"/></g>
+      <g mask="url(#fade)"><use href="#art" transform="translate(0 720) scale(1 -1)"/></g>
+    </svg>
+  </div>
+</section>
 
+<section class="band" id="app">
+  <div class="wrap">
+    <div class="show-head">
+      <h2>Open it and see your day.</h2>
+      <p>The dashboard shows your next lesson, what is due and how many flashcards are waiting. Quick actions sit underneath.</p>
+    </div>
+    <figure>
+      <div class="win">
+        <div class="titlebar"><span>SchoolMod</span><span>– □ ×</span></div>
+        <div class="win-body">
+          <div class="side" aria-hidden="true">
+            <div class="on">Dashboard</div>
+            <div>Assistant</div>
+            <div>Notebooks</div>
+            <div>Flashcards</div>
+            <div class="gap"></div>
+            <div>SEQTA</div>
+            <div>Microsoft 365</div>
+            <div>Mathspace</div>
+            <div>Education Perfect</div>
+            <div class="gap"></div>
+            <div>Bell times</div>
+            <div>Focus</div>
+          </div>
+          <div class="main">
+            <h3>Good afternoon, Sam</h3>
+            <div class="panels">
+              <div class="panel">
+                <span class="tag">Next lesson</span>
+                <div class="big">Mathematics</div>
+                <p class="meta">Period 3 · starts in 12 min</p>
+                <div class="track" aria-hidden="true"><i></i></div>
+              </div>
+              <div class="panel">
+                <span class="tag">Due soon</span>
+                <ul class="due">
+                  <li>English essay draft <b>THU</b></li>
+                  <li>Science practical <b>FRI</b></li>
+                  <li>Maths test 4 <b>MON</b></li>
+                </ul>
+              </div>
+              <div class="panel">
+                <span class="tag">Cards to review</span>
+                <div class="big">24</div>
+                <p class="meta">spaced repetition queue</p>
+              </div>
+            </div>
+            <div class="actions">
+              <span>New notebook</span>
+              <span>Ask the assistant</span>
+              <span>Start focus timer</span>
+              <span class="hint">Ctrl K</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <span>Example data. Names and times are made up.</span>
+        <span class="swatches" id="swatches" role="group" aria-label="Accent colour"></span>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="band alt" id="features">
+  <div class="wrap f-grid">
+    <div class="sticky">
+      <h2>What is inside.</h2>
+      <div class="legend">
+        <div class="g-study"><span class="glyph"></span>Study</div>
+        <div class="g-school"><span class="glyph"></span>School accounts</div>
+        <div class="g-day"><span class="glyph"></span>Every day</div>
+      </div>
+    </div>
+    <div>
+      <div class="group g-study">
+        <span class="tag"><span class="glyph"></span>Study</span>
+        <div class="row"><h3>AI Assistant</h3><p>A streaming study chat that runs on your own Claude subscription through Claude Code.</p></div>
+        <div class="row"><h3>Notebooks</h3><p>Chat with your own PDFs, Word documents and notes. Answers carry inline citations, and one click makes a summary or study guide.</p></div>
+        <div class="row"><h3>Flashcards</h3><p>Generate cards from a topic or your notes, then review them with SM-2 spaced repetition.</p></div>
+      </div>
+      <div class="group g-school">
+        <span class="tag"><span class="glyph"></span>School accounts</span>
+        <div class="row"><h3>SEQTA</h3><p>Timetable, assessments, homework and notices, with your name and student photo.</p></div>
+        <div class="row"><h3>Microsoft 365</h3><p>One-click launch for OneNote, Word, Excel, PowerPoint, Teams, Outlook, OneDrive and To Do, plus your recent OneDrive files.</p></div>
+        <div class="row"><h3>Mathspace</h3><p>Launch the app, get worked solutions from the AI, and keep a practice streak.</p></div>
+        <div class="row"><h3>Education Perfect</h3><p>Launch the app and get a study coach that builds revision sheets.</p></div>
+        <div class="row"><h3>Bell times</h3><p>A live period countdown, including Trinity's Tuesday and Friday timetables.</p></div>
+      </div>
+      <div class="group g-day">
+        <span class="tag"><span class="glyph"></span>Every day</span>
+        <div class="row"><h3>Dashboard</h3><p>Your name, next lesson, due assessments and cards to review on one screen, with quick actions.</p></div>
+        <div class="row"><h3>Command palette</h3><p>Press <code>Ctrl</code> or <code>⌘</code> + <code>K</code> to jump anywhere or run an action. Try it on this page.</p></div>
+        <div class="row"><h3>Focus tools</h3><p>A Pomodoro timer that counts your daily focus minutes, a task list and a scratchpad that saves as you type.</p></div>
+        <div class="row"><h3>Appearance</h3><p>Light and dark themes, 8 accent colours and a custom frameless window.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="privacy">
+  <div class="wrap p-grid">
+    <h2>Runs on your computer.</h2>
+    <div>
+      <ul class="claims g-day">
+        <li><span class="glyph"></span><p><b>No SchoolMod server.</b> Your notes, cards and settings stay on your machine.</p></li>
+        <li><span class="glyph"></span><p><b>Your own Claude login.</b> The assistant talks to your Claude subscription through the Claude Code CLI.</p></li>
+        <li><span class="glyph"></span><p><b>No cloud search.</b> Document retrieval and spaced repetition are plain TypeScript, with no vector database.</p></li>
+        <li><span class="glyph"></span><p><b>A study tool, nothing sneakier.</b> It does not answer quizzes for you or get around school filters.</p></li>
+      </ul>
+      <div class="chips" aria-label="Built with">
+        <span>Electron</span><span>React 18</span><span>TypeScript</span><span>Tailwind CSS</span><span>Zustand</span><span>MCP SDK</span><span>pdfjs</span><span>mammoth</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="get">
+  <div class="wrap">
+    <div class="dl-head">
+      <h2>Download 2.0.0</h2>
+      <a class="btn" href="https://github.com/ZDStudios/SchoolMod/releases" target="_blank" rel="noopener">All releases ↗</a>
+    </div>
+    <div class="dl">
+      <a href="https://github.com/ZDStudios/SchoolMod/releases" target="_blank" rel="noopener"><strong>Windows installer</strong><span class="file">SchoolMod-2.0.0-Setup.exe</span><span class="pill rec">Recommended</span></a>
+      <a href="https://github.com/ZDStudios/SchoolMod/releases" target="_blank" rel="noopener"><strong>Windows portable</strong><span class="file">SchoolMod-2.0.0-Portable.exe</span><span class="pill">Slow start</span></a>
+      <a href="https://github.com/ZDStudios/SchoolMod/releases" target="_blank" rel="noopener"><strong>macOS, Apple Silicon</strong><span class="file">arm64.dmg</span><span class="pill">M-series</span></a>
+      <a href="https://github.com/ZDStudios/SchoolMod/releases" target="_blank" rel="noopener"><strong>macOS, Intel</strong><span class="file">x64.dmg</span><span class="pill">Intel</span></a>
+      <a href="https://github.com/ZDStudios/SchoolMod/releases" target="_blank" rel="noopener"><strong>Linux</strong><span class="file">SchoolMod-2.0.0.AppImage</span><span class="pill">AppImage</span></a>
+    </div>
+    <div class="steps">
+      <div>
+        <h3>First launch</h3>
+        <ul>
+          <li>Builds are unsigned, so you will see a warning once.</li>
+          <li><b>Windows:</b> choose More info, then Run anyway.</li>
+          <li><b>macOS:</b> right-click the app and choose Open.</li>
+          <li>The portable build unpacks itself on every launch, so use the installer if you can.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Connect what you use</h3>
+        <ul>
+          <li><b>Claude AI:</b> one-click CLI install and login.</li>
+          <li><b>SEQTA:</b> single sign-on, the MCP server, or a direct login.</li>
+          <li><b>Microsoft 365:</b> an Entra ID app with device-code sign-in.</li>
+          <li>All of it is optional and lives in Settings.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
 </main>
 
 <footer>
   <div class="wrap">
-    <div class="footer__row">
-      <span>Built and maintained by ZDStudios. Released under the MIT license.</span>
-      <span>
-        <a href="https://github.com/ZDStudios/SchoolMod">Source &amp; issues</a> ·
-        <a href="https://github.com/ZDStudios/SchoolMod/releases/tag/v2.0.0">Release notes</a>
-      </span>
+    <div>
+      MIT licence · © ZDStudios
+      <small>SEQTA, Microsoft 365, Mathspace and Education Perfect are trademarks of their owners.</small>
     </div>
-    <p class="footer__legal">SEQTA, Microsoft 365, Mathspace and Education Perfect are trademarks of their respective owners. SchoolMod is an independent, unaffiliated project and is not a substitute for doing your own schoolwork.</p>
+    <div class="links">
+      <a href="https://github.com/ZDStudios/SchoolMod" target="_blank" rel="noopener">GitHub ↗</a>
+      <a href="https://github.com/ZDStudios/SchoolMod/releases" target="_blank" rel="noopener">Releases ↗</a>
+      <a href="https://github.com/ZDStudios/SchoolMod/issues" target="_blank" rel="noopener">Issues ↗</a>
+    </div>
   </div>
 </footer>
 
+<div class="pal" id="pal" hidden role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="pal-box">
+    <input id="pal-in" type="text" placeholder="Type a command" autocomplete="off" aria-label="Search commands">
+    <ul id="pal-list"></ul>
+    <p class="pal-foot">↑ ↓ to move · Enter to run · Esc to close</p>
+  </div>
+</div>
+
 <script>
 (function(){
-  var REPO = 'ZDStudios/SchoolMod';
-  var TAG = 'v2.0.0';
-  var API_URL = 'https://api.github.com/repos/' + REPO + '/releases/tags/' + TAG;
-  var RELEASE_PAGE = 'https://github.com/' + REPO + '/releases/tag/' + TAG;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  var mod = isMac ? '⌘ K' : 'Ctrl K';
+  document.getElementById('kbd-label').textContent = mod;
+  var hint = document.querySelector('.actions .hint'); if (hint) hint.textContent = mod;
 
-  var primaryBtn = document.getElementById('dl-primary');
-  var metaEl = document.getElementById('dl-meta');
-  var listEl = document.getElementById('dl-list');
-  var statusEl = document.getElementById('dl-status');
-
-  function formatBytes(bytes){
-    if (bytes === undefined || bytes === null) return '';
-    var units = ['B','KB','MB','GB'];
-    var n = bytes, i = 0;
-    while (n >= 1024 && i < units.length - 1){ n /= 1024; i++; }
-    return (i === 0 ? n : n.toFixed(1)) + ' ' + units[i];
+  /* clock in the hero shows the viewer's own time */
+  var hh = document.getElementById('hand-h'), mm = document.getElementById('hand-m');
+  function tick(){
+    var d = new Date(), m = d.getMinutes() + d.getSeconds()/60, h = (d.getHours() % 12) + m/60;
+    mm.setAttribute('transform','rotate('+(m*6)+' 230 240)');
+    hh.setAttribute('transform','rotate('+(h*30)+' 230 240)');
   }
+  tick(); setInterval(tick, 20000);
 
-  function formatDate(iso){
-    try{
-      var d = new Date(iso);
-      return d.toLocaleDateString(undefined, {year:'numeric', month:'long', day:'numeric'});
-    } catch(e){ return ''; }
+  /* accent colours */
+  var accents = [
+    ['Peach','#fab387'],['Mauve','#cba6f7'],['Pink','#f5c2e7'],['Red','#f38ba8'],
+    ['Yellow','#f9e2af'],['Green','#a6e3a1'],['Teal','#94e2d5'],['Blue','#89b4fa']
+  ];
+  var box = document.getElementById('swatches');
+  var buttons = [];
+  function setAccent(i, save){
+    document.documentElement.style.setProperty('--accent', accents[i][1]);
+    buttons.forEach(function(b, j){ b.setAttribute('aria-pressed', j === i ? 'true' : 'false'); });
+    if (save) { try { localStorage.setItem('schoolmod-accent', String(i)); } catch(e){} }
   }
+  accents.forEach(function(a, i){
+    var b = document.createElement('button');
+    b.type = 'button'; b.id = 'accent-' + a[0].toLowerCase();
+    b.style.setProperty('--c', a[1]);
+    b.setAttribute('aria-label', a[0] + ' accent');
+    b.addEventListener('click', function(){ setAccent(i, true); });
+    box.appendChild(b); buttons.push(b);
+  });
+  var start = 0;
+  try { var s = parseInt(localStorage.getItem('schoolmod-accent'), 10); if (s >= 0 && s < accents.length) start = s; } catch(e){}
+  setAccent(start, false);
 
-  function detectPlatform(){
-    var ua = navigator.userAgent || '';
-    if (/Win/i.test(ua)) return 'windows';
-    if (/Mac/i.test(ua) && !/iPhone|iPad|iPod/i.test(ua)) return 'mac';
-    if (/Linux/i.test(ua) && !/Android/i.test(ua)) return 'linux';
-    return 'unknown';
+  /* command palette */
+  var pal = document.getElementById('pal'), input = document.getElementById('pal-in'), list = document.getElementById('pal-list');
+  var opener = document.getElementById('open-pal'), items = [], active = 0, lastFocus = null;
+  function go(id){ var el = document.getElementById(id); if (el) el.scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block:'start'}); }
+  var cmds = [
+    {t:'Go to Features', run:function(){ go('features'); }},
+    {t:'Go to Privacy', run:function(){ go('privacy'); }},
+    {t:'Go to Download', run:function(){ go('get'); }},
+    {t:'Open the GitHub repo', href:'https://github.com/ZDStudios/SchoolMod'},
+    {t:'Open releases', href:'https://github.com/ZDStudios/SchoolMod/releases'}
+  ];
+  accents.forEach(function(a, i){ cmds.push({t:'Accent: ' + a[0], run:function(){ setAccent(i, true); }}); });
+
+  function render(){
+    var q = input.value.trim().toLowerCase();
+    items = cmds.filter(function(c){ return c.t.toLowerCase().indexOf(q) !== -1; });
+    if (active >= items.length) active = 0;
+    list.innerHTML = '';
+    items.forEach(function(c, i){
+      var li = document.createElement('li'), el;
+      if (c.href) { el = document.createElement('a'); el.href = c.href; el.target = '_blank'; el.rel = 'noopener'; }
+      else { el = document.createElement('button'); el.type = 'button'; }
+      el.textContent = c.t; el.tabIndex = -1;
+      if (i === active) el.className = 'on';
+      el.addEventListener('click', function(){ if (c.run) { c.run(); close(); } else { close(); } });
+      el.addEventListener('mousemove', function(){ if (active !== i) { active = i; mark(); } });
+      li.appendChild(el); list.appendChild(li);
+    });
+    if (!items.length) list.innerHTML = '<li><span style="display:block;padding:10px 12px;color:var(--sub)">Nothing matches that.</span></li>';
   }
-
-  function classify(name){
-    var n = name.toLowerCase();
-    if (/\.(blockmap|ya?ml)$/.test(n)) return null;
-    if (n.endsWith('.exe')) {
-      var portable = n.indexOf('portable') > -1;
-      return {platform:'windows', icon:'monitor', kind: portable ? 'portable' : 'installer', label: 'Windows' + (portable ? ' — portable' : ' — installer')};
-    }
-    if (n.endsWith('.dmg')) {
-      var arch = n.indexOf('arm64') > -1 ? ' — Apple silicon' : (n.indexOf('x64') > -1 ? ' — Intel' : '');
-      return {platform:'mac', icon:'laptop', kind:'installer', label:'macOS' + arch};
-    }
-    if (n.endsWith('.appimage')) return {platform:'linux', icon:'terminal', kind:'portable', label:'Linux — AppImage'};
-    if (n.endsWith('.deb')) return {platform:'linux', icon:'terminal', kind:'installer', label:'Linux — .deb'};
-    if (n.endsWith('.rpm')) return {platform:'linux', icon:'terminal', kind:'installer', label:'Linux — .rpm'};
-    return {platform:'other', icon:'download', kind:'file', label:name};
-  }
-
-  function iconSpan(name){
-    return '<svg class="icon" aria-hidden="true"><use href="#icon-' + name + '"></use></svg>';
-  }
-
-  function render(data){
-    var assets = (data.assets || []).map(function(a){
-      var meta = classify(a.name);
-      if (!meta) return null;
-      meta.name = a.name;
-      meta.url = a.browser_download_url;
-      meta.size = a.size;
-      return meta;
-    }).filter(Boolean);
-
-    var order = {installer:0, portable:1, file:2};
-    assets.sort(function(a,b){ return (order[a.kind]||9) - (order[b.kind]||9); });
-
-    var platform = detectPlatform();
-    var totalSize = assets.reduce(function(sum,a){ return sum + (a.size||0); }, 0);
-
-    if (metaEl){
-      metaEl.textContent = data.tag_name + ' · released ' + formatDate(data.published_at) + ' · ' + formatBytes(totalSize) + ' total';
-    }
-
-    var match = assets.filter(function(a){ return a.platform === platform; })[0];
-
-    if (primaryBtn){
-      primaryBtn.classList.remove('is-loading');
-      primaryBtn.removeAttribute('aria-disabled');
-      if (match){
-        primaryBtn.href = match.url;
-        primaryBtn.setAttribute('download', match.name);
-        primaryBtn.removeAttribute('target');
-        primaryBtn.innerHTML = iconSpan('download') + '<span>Download for ' + match.label.split(' —')[0] + ' (' + formatBytes(match.size) + ')</span>';
-      } else {
-        primaryBtn.href = RELEASE_PAGE;
-        primaryBtn.removeAttribute('download');
-        primaryBtn.target = '_blank';
-        primaryBtn.rel = 'noopener';
-        primaryBtn.innerHTML = iconSpan('external') + '<span>See all builds on GitHub</span>';
-      }
-    }
-
-    if (listEl){
-      listEl.innerHTML = '';
-      assets.forEach(function(a){
-        var li = document.createElement('li');
-        li.className = 'dl-row';
-        li.innerHTML =
-          iconSpan(a.icon) +
-          '<span class="dl-row__label">' + a.label + '</span>' +
-          '<span class="dl-row__size">' + formatBytes(a.size) + '</span>' +
-          '<a class="dl-row__link" href="' + a.url + '" download="' + a.name + '">' +
-            iconSpan('download') +
-            '<span class="visually-hidden">Download ' + a.name + '</span>' +
-          '</a>';
-        listEl.appendChild(li);
-      });
-    }
-
-    if (statusEl){
-      if (platform === 'unknown'){
-        statusEl.textContent = "We couldn't tell what you're running — pick a build from the list below.";
-      } else if (match){
-        statusEl.textContent = 'We picked the build that matches your system. Other platforms are listed below.';
-      } else {
-        statusEl.textContent = 'No ' + platform + ' build in this release yet — pick one below, or check the release page.';
-      }
-    }
-  }
-
-  function renderFallback(){
-    if (primaryBtn){
-      primaryBtn.classList.remove('is-loading');
-      primaryBtn.removeAttribute('aria-disabled');
-      primaryBtn.href = RELEASE_PAGE;
-      primaryBtn.target = '_blank';
-      primaryBtn.rel = 'noopener';
-      primaryBtn.innerHTML = iconSpan('external') + '<span>Open the release on GitHub</span>';
-    }
-    if (statusEl){
-      statusEl.textContent = "GitHub's API didn't respond just now — the button above opens the release page directly.";
-    }
-    if (metaEl){ metaEl.textContent = TAG; }
-    if (listEl){
-      listEl.innerHTML = '<li class="dl-row"><a class="dl-row__label" style="color:var(--blue)" href="' + RELEASE_PAGE + '">View assets on GitHub</a></li>';
-    }
-  }
-
-  fetch(API_URL, {headers:{Accept:'application/vnd.github+json'}})
-    .then(function(res){ if (!res.ok) throw new Error('bad status'); return res.json(); })
-    .then(render)
-    .catch(renderFallback);
+  function mark(){ Array.prototype.forEach.call(list.querySelectorAll('li > *'), function(el, i){ el.className = i === active ? 'on' : ''; }); }
+  function open(){ lastFocus = document.activeElement; pal.hidden = false; input.value = ''; active = 0; render(); input.focus(); }
+  function close(){ pal.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+  opener.addEventListener('click', open);
+  pal.addEventListener('mousedown', function(e){ if (e.target === pal) close(); });
+  input.addEventListener('input', function(){ active = 0; render(); });
+  document.addEventListener('keydown', function(e){
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); pal.hidden ? open() : close(); return; }
+    if (pal.hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); close(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); if (items.length) { active = (active + 1) % items.length; mark(); } }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (items.length) { active = (active - 1 + items.length) % items.length; mark(); } }
+    else if (e.key === 'Enter') { e.preventDefault(); var el = list.querySelectorAll('li > *')[active]; if (el && items.length) el.click(); }
+    else if (e.key === 'Tab') { e.preventDefault(); input.focus(); }
+  });
 })();
 </script>
 </body>
