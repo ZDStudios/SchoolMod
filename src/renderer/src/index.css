@@ -2,28 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Theme matches the SchoolMod website (zdstudios.github.io/SchoolMod):
+ * Catppuccin Mocha for dark, Catppuccin Latte for light, peach accent,
+ * Bricolage Grotesque + JetBrains Mono.
+ */
 :root {
-  --bg: #f6f7fb;
-  --bg-elev: #ffffff;
-  --bg-sidebar: #ffffff;
-  --border: #e7e9f0;
-  --text: #171a21;
-  --text-dim: #5a6478;
-  --accent: #3366ff;
-  --accent-soft: rgba(51, 102, 255, 0.1);
-  --ring: rgba(51, 102, 255, 0.35);
+  /* Latte */
+  --bg: #e6e9ef;
+  --bg-elev: #eff1f5;
+  --bg-sidebar: #dce0e8;
+  --border: #ccd0da;
+  --text: #4c4f69;
+  --text-dim: #6c6f85;
+  --accent: #fab387;
+  /* Accent used as text on light surfaces must be darker to stay readable. */
+  --accent-text: color-mix(in srgb, var(--accent) 55%, #000);
+  --accent-soft: color-mix(in srgb, var(--accent) 22%, transparent);
+  --ring: color-mix(in srgb, var(--accent) 45%, transparent);
+  /* Text on an accent fill: dark, like the website's Download button. */
+  --on-accent: #11111b;
+  --green: #40a02b;
+  --yellow: #df8e1d;
+  --red: #d20f39;
+  --blue: #1e66f5;
+  --mauve: #8839ef;
+  --font-display: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  color-scheme: light;
 }
 
 .dark {
-  --bg: #0b0d13;
-  --bg-elev: #14171f;
-  --bg-sidebar: #101219;
-  --border: #232733;
-  --text: #eef1f7;
-  --text-dim: #9aa4bc;
-  --accent: #5b86ff;
-  --accent-soft: rgba(91, 134, 255, 0.14);
-  --ring: rgba(91, 134, 255, 0.4);
+  /* Mocha */
+  --bg: #11111b;
+  --bg-elev: #181825;
+  --bg-sidebar: #11111b;
+  --border: #313244;
+  --text: #cdd6f4;
+  --text-dim: #a6adc8;
+  --accent-text: var(--accent);
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --ring: color-mix(in srgb, var(--accent) 40%, transparent);
+  --green: #a6e3a1;
+  --yellow: #f9e2af;
+  --red: #f38ba8;
+  --blue: #89b4fa;
+  --mauve: #cba6f7;
+  color-scheme: dark;
 }
 
 * {
@@ -38,7 +63,8 @@ body,
 }
 
 body {
-  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -71,7 +97,7 @@ body {
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all
       duration-150 outline-none disabled:opacity-50 disabled:pointer-events-none;
     border: 1px solid var(--border);
     background: var(--bg-elev);
@@ -81,12 +107,14 @@ body {
     border-color: var(--accent);
   }
   .btn-primary {
-    @apply text-white shadow-glow;
+    @apply shadow-glow;
     background: var(--accent);
+    color: var(--on-accent);
     border-color: transparent;
   }
   .btn-primary:hover {
-    filter: brightness(1.07);
+    filter: brightness(1.06);
+    transform: translateY(-1px);
     border-color: transparent;
   }
   .btn-ghost {
@@ -115,7 +143,15 @@ body {
   .chip {
     @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
     background: var(--accent-soft);
-    color: var(--accent);
+    color: var(--accent-text);
+  }
+
+  /* The website's small mono uppercase labels ("SCHOOLMOD 2.0 · OPEN SOURCE"). */
+  .tag {
+    font: 500 11px/1.3 var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-text);
   }
 
   .sidebar-link {
@@ -128,7 +164,7 @@ body {
   }
   .sidebar-link.active {
     background: var(--accent-soft);
-    color: var(--accent);
+    color: var(--accent-text);
   }
 
   .titlebar-btn {
@@ -172,7 +208,7 @@ body {
   background: var(--accent-soft);
   padding: 0.1rem 0.35rem;
   border-radius: 6px;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.85em;
 }
 .prose-sm pre {
@@ -191,7 +227,7 @@ body {
   font-weight: 700;
 }
 .prose-sm a {
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: underline;
 }
 
@@ -212,3 +248,8 @@ body {
 .seqta-lesson h1,
 .seqta-lesson h2,
 .seqta-lesson h3 { font-weight: 700; margin: 0.8em 0 0.4em; }
+
+/* Dark text for anything sitting on an accent fill (peach is too light for white text). */
+.text-on-accent {
+  color: var(--on-accent);
+}

@@ -90,14 +90,14 @@ export function PageHeader({
       <div className="flex items-center gap-3">
         {icon && (
           <div
-            className="grid h-11 w-11 place-items-center rounded-2xl text-white"
-            style={{ background: 'var(--accent)' }}
+            className="grid h-11 w-11 place-items-center rounded-2xl"
+            style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
           >
             {icon}
           </div>
         )}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+          <h1 className="text-3xl font-extrabold tracking-[-0.03em]">{title}</h1>
           {subtitle && (
             <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
               {subtitle}

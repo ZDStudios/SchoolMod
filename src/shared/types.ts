@@ -123,7 +123,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
-  accent: '#3366ff',
+  accent: '#fab387',
   claude: {
     mode: 'cli',
     cliPath: 'claude',

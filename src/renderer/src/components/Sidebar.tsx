@@ -82,7 +82,7 @@ export default function Sidebar() {
           {photo ? (
             <img src={photo} alt={name} className="h-9 w-9 shrink-0 rounded-full object-cover" style={{ boxShadow: '0 0 0 2px var(--accent)' }} />
           ) : (
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-bold text-white" style={{ background: 'var(--accent)' }}>
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-bold text-on-accent" style={{ background: 'var(--accent)' }}>
               {name.slice(0, 1).toUpperCase()}
             </div>
           )}

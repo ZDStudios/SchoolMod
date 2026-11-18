@@ -98,11 +98,11 @@ const BASE_TOOLS: Tool[] = [
   {
     name: 'app_set_accent',
     description: 'Change the accent colour. Accepts a hex colour or a common colour name.',
-    args: '{"colour": "#3366ff" | "blue" | "purple" | "pink" | "red" | "orange" | "green" | "teal" | "amber"}',
+    args: '{"colour": "#fab387" | "peach" | "blue" | "purple" | "pink" | "red" | "orange" | "green" | "teal" | "amber"}',
     run: (a) => {
       const named: Record<string, string> = {
-        blue: '#3366ff', purple: '#7c3aed', pink: '#db2777', red: '#e11d48',
-        orange: '#ea580c', green: '#16a34a', teal: '#0891b2', amber: '#f59e0b'
+        peach: '#fab387', blue: '#89b4fa', purple: '#cba6f7', pink: '#f5c2e7', red: '#f38ba8',
+        orange: '#fab387', green: '#a6e3a1', teal: '#94e2d5', amber: '#f9e2af', yellow: '#f9e2af'
       }
       const raw = String(a?.colour || '').toLowerCase().trim()
       const accent = /^#[0-9a-f]{6}$/.test(raw) ? raw : named[raw]

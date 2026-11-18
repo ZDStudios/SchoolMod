@@ -510,7 +510,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     title: 'SchoolMod',
-    backgroundColor: '#0d0f16',
+    backgroundColor: '#11111b',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     titleBarOverlay: false,
     frame: process.platform === 'darwin',

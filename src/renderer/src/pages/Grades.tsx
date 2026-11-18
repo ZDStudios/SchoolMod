@@ -8,10 +8,10 @@ import type { SeqtaGrade, SeqtaSubjectAverage } from '../../../shared/types'
 
 const gradeColor = (p: number | null) => {
   if (p == null) return 'var(--text-dim)'
-  if (p >= 80) return '#16a34a'
-  if (p >= 65) return '#3366ff'
-  if (p >= 50) return '#f59e0b'
-  return '#ef4444'
+  if (p >= 80) return 'var(--green)'
+  if (p >= 65) return 'var(--blue)'
+  if (p >= 50) return 'var(--yellow)'
+  return 'var(--red)'
 }
 
 /**
@@ -174,7 +174,7 @@ export default function Grades() {
                       <p className="truncate text-sm font-medium">{g.title}</p>
                       <p className="text-xs" style={{ color: 'var(--text-dim)' }}>{g.subject} · {fmtDate(g.due)}</p>
                     </div>
-                    <span className="shrink-0 rounded-lg px-2.5 py-1 text-sm font-bold text-white" style={{ background: gradeColor(g.percentage) }}>
+                    <span className="shrink-0 rounded-lg px-2.5 py-1 text-sm font-bold" style={{ background: gradeColor(g.percentage), color: 'var(--on-accent)' }}>
                       {g.percentage}%
                     </span>
                   </div>

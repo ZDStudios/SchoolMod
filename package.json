@@ -1,6 +1,6 @@
 {
   "name": "schoolmod",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "SchoolMod — the all-in-one student productivity hub. SEQTA, Microsoft 365, AI notebooks, flashcards and Claude, in one beautiful desktop app.",
   "author": {
     "name": "ZDStudios",
@@ -27,6 +27,8 @@
     "puppeteer-core": "^23.11.1"
   },
   "devDependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@types/node": "^22.7.5",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",

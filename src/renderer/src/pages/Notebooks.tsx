@@ -287,10 +287,10 @@ function NotebookDetail({ notebook, onBack, onChange }: { notebook: Notebook; on
             {messages.map((m, i) => (
               <div key={i}>
                 <div className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-bold text-white" style={{ background: m.role === 'user' ? 'var(--text-dim)' : 'var(--accent)' }}>
+                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-bold text-on-accent" style={{ background: m.role === 'user' ? 'var(--text-dim)' : 'var(--accent)' }}>
                     {m.role === 'user' ? 'You' : <BookOpen size={13} />}
                   </div>
-                  <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${m.role === 'user' ? 'text-white' : ''}`} style={{ background: m.role === 'user' ? 'var(--accent)' : 'var(--bg)', border: m.role === 'user' ? 'none' : '1px solid var(--border)' }}>
+                  <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${m.role === 'user' ? 'text-on-accent' : ''}`} style={{ background: m.role === 'user' ? 'var(--accent)' : 'var(--bg)', border: m.role === 'user' ? 'none' : '1px solid var(--border)' }}>
                     {m.role === 'user' ? <span className="whitespace-pre-wrap">{m.content}</span> : <Markdown text={m.content} />}
                   </div>
                 </div>

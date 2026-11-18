@@ -60,12 +60,21 @@ export function initStores() {
 }
 
 // --- settings ---
+/**
+ * Accent swatches from before the website-matching redesign. They're reset to
+ * the site's peach so existing installs pick up the new look instead of
+ * keeping a colour saved in their settings file; a new swatch can still be
+ * picked in Settings.
+ */
+const OLD_ACCENTS = new Set(['#3366ff', '#7c3aed', '#db2777', '#e11d48', '#ea580c', '#16a34a', '#0891b2', '#f59e0b'])
+
 /** Deep-merge stored settings over defaults so new nested fields always exist. */
 export const getSettings = (): Settings => {
   const s = settingsStore.get()
   return {
     ...DEFAULT_SETTINGS,
     ...s,
+    accent: !s.accent || OLD_ACCENTS.has(s.accent.toLowerCase()) ? DEFAULT_SETTINGS.accent : s.accent,
     claude: { ...DEFAULT_SETTINGS.claude, ...s.claude },
     codex: { ...DEFAULT_SETTINGS.codex, ...(s as any).codex },
     seqta: {

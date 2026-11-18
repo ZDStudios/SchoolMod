@@ -5,9 +5,9 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'Segoe UI', 'system-ui', 'sans-serif'],
-        display: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace']
+        sans: ['"Bricolage Grotesque Variable"', '"Bricolage Grotesque"', 'Segoe UI', 'system-ui', 'sans-serif'],
+        display: ['"Bricolage Grotesque Variable"', '"Bricolage Grotesque"', 'Segoe UI', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono Variable"', '"JetBrains Mono"', 'ui-monospace', 'Consolas', 'monospace']
       },
       colors: {
         brand: {
@@ -38,7 +38,7 @@ module.exports = {
         }
       },
       boxShadow: {
-        glow: '0 0 0 1px rgba(51,102,255,0.18), 0 8px 30px -6px rgba(51,102,255,0.35)',
+        glow: '0 8px 28px -8px color-mix(in srgb, var(--accent) 55%, transparent)',
         card: '0 1px 2px rgba(16,24,40,0.04), 0 8px 24px -12px rgba(16,24,40,0.18)'
       },
       keyframes: {

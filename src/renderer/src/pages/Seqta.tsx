@@ -101,7 +101,7 @@ export default function Seqta() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${tab === t.id ? 'text-white' : ''}`}
+            className={`flex flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${tab === t.id ? 'text-on-accent' : ''}`}
             style={{ background: tab === t.id ? 'var(--accent)' : 'transparent' }}
           >
             <t.icon size={15} /> {t.label}
@@ -117,7 +117,7 @@ export default function Seqta() {
       {tab === 'timetable' && (
         <div className="mb-3 flex gap-1 rounded-lg p-1 w-fit" style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
           {[{ k: false, l: 'Today' }, { k: true, l: 'Week' }].map((o) => (
-            <button key={o.l} onClick={() => setWeek(o.k)} className={`rounded-md px-3 py-1 text-xs font-medium ${week === o.k ? 'text-white' : ''}`} style={{ background: week === o.k ? 'var(--accent)' : 'transparent' }}>{o.l}</button>
+            <button key={o.l} onClick={() => setWeek(o.k)} className={`rounded-md px-3 py-1 text-xs font-medium ${week === o.k ? 'text-on-accent' : ''}`} style={{ background: week === o.k ? 'var(--accent)' : 'transparent' }}>{o.l}</button>
           ))}
         </div>
       )}

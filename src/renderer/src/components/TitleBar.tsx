@@ -17,7 +17,7 @@ export default function TitleBar() {
     >
       <div className="flex items-center gap-2.5" style={{ paddingLeft: isMac ? 64 : 0 }}>
         <div
-          className="grid h-5 w-5 place-items-center rounded-md text-[11px] font-black text-white"
+          className="grid h-5 w-5 place-items-center rounded-md text-[11px] font-black text-on-accent"
           style={{ background: 'var(--accent)' }}
         >
           S

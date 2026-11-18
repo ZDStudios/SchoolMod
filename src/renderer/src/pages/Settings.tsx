@@ -24,7 +24,8 @@ import { useUpdate } from '../store/update'
 import { PageHeader, ErrorBanner } from '../components/ui'
 import { call } from '../lib/utils'
 
-const ACCENTS = ['#3366ff', '#7c3aed', '#db2777', '#e11d48', '#ea580c', '#16a34a', '#0891b2', '#f59e0b']
+// Catppuccin Mocha, like the website: peach, mauve, pink, red, yellow, green, teal, blue.
+const ACCENTS = ['#fab387', '#cba6f7', '#f5c2e7', '#f38ba8', '#f9e2af', '#a6e3a1', '#94e2d5', '#89b4fa']
 const THEMES = [
   { id: 'system', label: 'System' },
   { id: 'light', label: 'Light' },
@@ -60,7 +61,7 @@ export default function Settings() {
               className="grid h-8 w-8 place-items-center rounded-full transition hover:scale-110"
               style={{ background: c, boxShadow: settings.accent === c ? `0 0 0 3px var(--bg-elev), 0 0 0 5px ${c}` : 'none' }}
             >
-              {settings.accent === c && <Check size={15} className="text-white" />}
+              {settings.accent === c && <Check size={15} style={{ color: '#11111b' }} />}
             </button>
           ))}
         </div>

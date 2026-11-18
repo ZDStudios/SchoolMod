@@ -118,7 +118,7 @@ export function TodoList() {
           <div key={t.id} className="group flex items-center gap-2 rounded-lg px-2 py-1.5" style={{ background: 'var(--bg)' }}>
             <button onClick={() => setTodos((ts) => ts.map((x) => x.id === t.id ? { ...x, done: !x.done } : x))}
               className="grid h-4 w-4 shrink-0 place-items-center rounded border" style={{ borderColor: 'var(--accent)', background: t.done ? 'var(--accent)' : 'transparent' }}>
-              {t.done && <Check size={11} className="text-white" />}
+              {t.done && <Check size={11} className="text-on-accent" />}
             </button>
             <span className={`flex-1 text-sm ${t.done ? 'line-through opacity-50' : ''}`}>{t.text}</span>
             <button onClick={() => setTodos((ts) => ts.filter((x) => x.id !== t.id))} className="opacity-0 transition group-hover:opacity-100">
@@ -265,8 +265,8 @@ export function QuoteCard() {
   const [q, who] = QUOTES[idx]
   return (
     <div className="card p-5" style={{ background: 'var(--accent)', borderColor: 'transparent' }}>
-      <p className="text-sm font-medium leading-relaxed text-white">“{q}”</p>
-      <p className="mt-2 text-xs text-white/80">— {who}</p>
+      <p className="text-sm font-medium leading-relaxed text-on-accent">“{q}”</p>
+      <p className="mt-2 text-xs text-on-accent opacity-80">— {who}</p>
     </div>
   )
 }

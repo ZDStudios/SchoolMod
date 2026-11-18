@@ -158,10 +158,10 @@ function GenerateModal({ deck, onClose, onDone }: { deck: Deck; onClose: () => v
 }
 
 const GRADES: { label: string; grade: ReviewGrade; color: string }[] = [
-  { label: 'Again', grade: 1, color: '#ef4444' },
-  { label: 'Hard', grade: 3, color: '#f59e0b' },
-  { label: 'Good', grade: 4, color: '#3366ff' },
-  { label: 'Easy', grade: 5, color: '#16a34a' }
+  { label: 'Again', grade: 1, color: 'var(--red)' },
+  { label: 'Hard', grade: 3, color: 'var(--yellow)' },
+  { label: 'Good', grade: 4, color: 'var(--blue)' },
+  { label: 'Easy', grade: 5, color: 'var(--green)' }
 ]
 
 function StudySession({ deck, onExit }: { deck: Deck; onExit: () => Promise<void> }) {
@@ -240,8 +240,8 @@ function StudySession({ deck, onExit }: { deck: Deck; onExit: () => Promise<void
                   <button
                     key={g.grade}
                     onClick={() => grade(g.grade)}
-                    className="btn font-semibold text-white"
-                    style={{ background: g.color, borderColor: 'transparent' }}
+                    className="btn font-semibold"
+                    style={{ background: g.color, color: 'var(--on-accent)', borderColor: 'transparent' }}
                   >
                     {g.label}
                   </button>
