@@ -5,7 +5,7 @@ import { getSettings, setSettings } from '../store'
 import { sanitizeHtml, htmlToText } from './html'
 import { resolveCommand } from './mcpClient'
 import { puppeteerLogin } from './seqtaPuppeteer'
-import { electronSsoLogin } from './seqtaElectron'
+import { seqtaSignIn, FinalLoginError } from './seqtaElectron'
 import { shell } from 'electron'
 import { writeFileSync } from 'fs'
 import { tmpdir } from 'os'
@@ -36,8 +36,20 @@ interface Identity {
 }
 let identity: Identity | null = null
 
+/** "students.school.edu.au/#?page=/home" → "https://students.school.edu.au" */
+export function normalizeBaseUrl(raw: string): string {
+  let url = raw.trim()
+  if (!url) return ''
+  if (!/^https?:\/\//i.test(url)) url = `https://${url}`
+  try {
+    return new URL(url).origin
+  } catch {
+    return url.replace(/\/+$/, '')
+  }
+}
+
 function base(): string {
-  const url = getSettings().seqta.baseUrl.trim().replace(/\/$/, '')
+  const url = normalizeBaseUrl(getSettings().seqta.baseUrl)
   if (!url) throw new Error('No SEQTA URL set. Add it in Settings → SEQTA.')
   return url
 }
@@ -165,16 +177,24 @@ async function doEnsure(force: boolean): Promise<Identity> {
     }
   }
 
-  // Fresh SSO login. Try in order of zero-dependency-ness:
-  //   1) Electron's built-in browser  2) bundled Python helper  3) Puppeteer.
-  if (!s.email || !s.password) {
-    throw new Error('Add your SEQTA email and password in Settings → SEQTA.')
+  // Never pop a sign-in window for a student who hasn't connected SEQTA yet:
+  // the dashboard calls in here on every launch.
+  if (!force && !s.connected) {
+    throw new Error('SEQTA is not connected. Open Settings → SEQTA and click Connect.')
   }
+
+  // Fresh login, whichever way the school signs in: a plain SEQTA
+  // username/password goes straight through the API; SSO runs in Electron's
+  // own browser window (silent with saved credentials, otherwise or on MFA a
+  // visible window the student signs in to). The Microsoft-only Python helper
+  // and Puppeteer remain as fallbacks for when the window can't load at all,
+  // and only when credentials are saved.
   let info: any
   const errors: string[] = []
   try {
-    info = await electronSsoLogin(base(), s.email, s.password)
+    info = await seqtaSignIn(base(), s.email, s.password, { interactive: true })
   } catch (e1: any) {
+    if (e1 instanceof FinalLoginError || !s.email || !s.password) throw e1
     errors.push(`Built-in browser: ${e1.message}`)
     try {
       info = await runHelperWithAutoDeps([base(), s.email, s.password])
@@ -205,6 +225,7 @@ async function doEnsure(force: boolean): Promise<Identity> {
       ...prev,
       mode: 'sso',
       connected: true,
+      baseUrl: identity.base,
       sessionCookie: identity.cookie,
       displayName: identity.name,
       personUUID: identity.uuid
@@ -581,8 +602,8 @@ export const WEBVIEW_PARTITION = 'persist:seqta-web'
 /**
  * Prepare the embedded SEQTA browser so it opens already signed in.
  *
- * The SSO partition ('seqta-sso') is deliberately in-memory and is wiped when
- * the app quits, so the webview can't just reuse it. Instead we take the
+ * The SSO window has its own partition (SSO_PARTITION) whose SEQTA cookies are
+ * reset on every sign-in, so the webview doesn't share it. Instead we take the
  * JSESSIONID that ensure() has already validated and plant it in a persistent
  * partition. That skips a second interactive Microsoft login entirely.
  */

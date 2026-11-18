@@ -17,7 +17,8 @@ import type {
   RagAnswer,
   Deck,
   ReviewGrade,
-  IpcResult
+  IpcResult,
+  UpdateInfo
 } from '../shared/types'
 
 function invoke<T>(channel: string, ...args: any[]): Promise<IpcResult<T>> {
@@ -159,6 +160,16 @@ const api = {
       invoke<{ saved: boolean; path?: string; notebooks?: number; decks?: number }>(CH.backupExport),
     import: () =>
       invoke<{ imported: boolean; notebooks?: number; decks?: number }>(CH.backupImport)
+  },
+  update: {
+    check: () => invoke<UpdateInfo>(CH.updateCheck),
+    /** Downloads and installs the latest release; the app quits and restarts into it. */
+    install: () => invoke<{ action: 'restarting' | 'opened'; path?: string }>(CH.updateInstall),
+    onProgress: (cb: (fraction: number) => void) => {
+      const l = (_e: any, f: number) => cb(f)
+      ipcRenderer.on(CH.updateProgress, l)
+      return () => ipcRenderer.removeListener(CH.updateProgress, l)
+    }
   },
   exportIcs: () => invoke<{ saved: boolean; path?: string; events?: number }>(CH.icsExport),
   openExternal: (url: string) => invoke(CH.openExternal, url),

@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom'
 import TitleBar from './components/TitleBar'
 import Sidebar from './components/Sidebar'
 import CommandPalette from './components/CommandPalette'
+import UpdatePrompt from './components/UpdatePrompt'
 import { useApp } from './store/app'
 import { useChat } from './store/chat'
 import { Spinner } from './components/ui'
@@ -73,6 +74,7 @@ export default function App() {
         </main>
       </div>
       <CommandPalette />
+      <UpdatePrompt />
     </div>
   )
 }

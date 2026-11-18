@@ -75,7 +75,8 @@ export const getSettings = (): Settings => {
     },
     microsoft: { ...DEFAULT_SETTINGS.microsoft, ...s.microsoft },
     notifications: { ...DEFAULT_SETTINGS.notifications, ...(s as any).notifications },
-    desktop: { ...DEFAULT_SETTINGS.desktop, ...(s as any).desktop }
+    desktop: { ...DEFAULT_SETTINGS.desktop, ...(s as any).desktop },
+    updates: { ...DEFAULT_SETTINGS.updates, ...(s as any).updates }
   }
 }
 export const setSettings = (patch: Partial<Settings>): Settings => {

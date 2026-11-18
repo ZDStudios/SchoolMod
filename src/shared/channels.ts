@@ -88,6 +88,12 @@ export const CH = {
   /** main -> renderer: clipboard text captured by the global quick-explain hotkey. */
   quickExplain: 'desktop:quickExplain',
 
+  // updates
+  updateCheck: 'update:check',
+  updateInstall: 'update:install',
+  /** main -> renderer: download progress 0..1 while installing an update. */
+  updateProgress: 'update:progress',
+
   // misc
   openExternal: 'app:openExternal',
   saveFile: 'app:saveFile'

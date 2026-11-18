@@ -16,9 +16,11 @@ import {
   Bell,
   Monitor,
   Archive,
-  Upload
+  Upload,
+  RefreshCw
 } from 'lucide-react'
 import { useApp } from '../store/app'
+import { useUpdate } from '../store/update'
 import { PageHeader, ErrorBanner } from '../components/ui'
 import { call } from '../lib/utils'
 
@@ -31,6 +33,7 @@ const THEMES = [
 
 export default function Settings() {
   const { settings, save } = useApp()
+  const version = useUpdate((s) => s.info?.current)
   if (!settings) return null
 
   return (
@@ -71,9 +74,10 @@ export default function Settings() {
       <RemindersSection />
       <DesktopSection />
       <BackupSection />
+      <UpdatesSection />
 
       <p className="mt-8 text-center text-xs" style={{ color: 'var(--text-dim)' }}>
-        SchoolMod 2.0 · Your data stays on this device. Built for students, by ZDStudios.
+        SchoolMod {version || '2.0'} · Your data stays on this device. Built for students, by ZDStudios.
       </p>
     </div>
   )
@@ -150,6 +154,9 @@ function AiFeaturesSection() {
 function ClaudeSection() {
   const { settings, save } = useApp()
   const claude = settings!.claude
+  const codex = settings!.codex
+  const isCodex = claude.mode === 'codex'
+  const providerName = isCodex ? 'ChatGPT' : 'Claude'
   const [test, setTest] = useState<{ loading: boolean; ok?: boolean; msg?: string }>({ loading: false })
   const [busy, setBusy] = useState<string>('') // '', 'checking', 'installing', 'loggingin'
   const [logs, setLogs] = useState<string[]>([])
@@ -181,7 +188,7 @@ function ClaudeSection() {
       let st = await call(window.api.claude.status())
       if (!st.installed) {
         setBusy('installing')
-        addLog('Installing Claude Code (npm i -g @anthropic-ai/claude-code)…')
+        addLog(isCodex ? 'Installing Codex (npm i -g @openai/codex)…' : 'Installing Claude Code (npm i -g @anthropic-ai/claude-code)…')
         await call(window.api.claude.install())
         st = await call(window.api.claude.status())
       }
@@ -195,7 +202,9 @@ function ClaudeSection() {
       setTest({
         loading: false,
         ok: st.authenticated,
-        msg: st.authenticated ? `Connected via Claude Code ${st.version}` : 'Not authorised yet — try the link again.'
+        msg: st.authenticated
+          ? `Connected via ${isCodex ? 'Codex' : 'Claude Code'} ${st.version}`
+          : 'Not authorised yet — try the link again.'
       })
     } catch (e: any) {
       setBusy('')
@@ -206,17 +215,25 @@ function ClaudeSection() {
     }
   }
 
+  const switchMode = (mode: typeof claude.mode) => {
+    if (busy) return
+    setTest({ loading: false })
+    setLogs([])
+    setUrl('')
+    save({ claude: { ...claude, mode } })
+  }
+
   const isCli = claude.mode !== 'wrapper'
   return (
     <Section icon={<Sparkles size={18} />} title="AI provider" desc="Powers the assistant, notebooks, flashcards and study coaches.">
       <div className="mb-4 flex gap-2">
-        <button className={`btn flex-1 px-2 text-xs ${claude.mode === 'cli' ? 'btn-primary' : ''}`} onClick={() => save({ claude: { ...claude, mode: 'cli' } })}>
+        <button className={`btn flex-1 px-2 text-xs ${claude.mode === 'cli' ? 'btn-primary' : ''}`} onClick={() => switchMode('cli')}>
           Claude · one-click
         </button>
-        <button className={`btn flex-1 px-2 text-xs ${claude.mode === 'codex' ? 'btn-primary' : ''}`} onClick={() => save({ claude: { ...claude, mode: 'codex' } })}>
+        <button className={`btn flex-1 px-2 text-xs ${claude.mode === 'codex' ? 'btn-primary' : ''}`} onClick={() => switchMode('codex')}>
           ChatGPT · Codex
         </button>
-        <button className={`btn flex-1 px-2 text-xs ${claude.mode === 'wrapper' ? 'btn-primary' : ''}`} onClick={() => save({ claude: { ...claude, mode: 'wrapper' } })}>
+        <button className={`btn flex-1 px-2 text-xs ${claude.mode === 'wrapper' ? 'btn-primary' : ''}`} onClick={() => switchMode('wrapper')}>
           OpenAI wrapper
         </button>
       </div>
@@ -231,13 +248,22 @@ function ClaudeSection() {
           <div className="flex items-center gap-3">
             <button className="btn btn-primary" onClick={connect} disabled={!!busy}>
               {busy ? <Loader2 size={15} className="animate-spin" /> : <Rocket size={15} />}
-              {busy === 'installing' ? 'Installing…' : busy === 'loggingin' ? 'Waiting for login…' : busy ? 'Checking…' : 'Connect Claude'}
+              {busy === 'installing' ? 'Installing…' : busy === 'loggingin' ? 'Waiting for login…' : busy ? 'Checking…' : `Connect ${providerName}`}
             </button>
             <button className="btn" onClick={runTest} disabled={test.loading || !!busy}>
               {test.loading ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Test
             </button>
-            <Field label="Model" >
-              <input className="input !py-1.5" value={claude.model} onChange={(e) => save({ claude: { ...claude, model: e.target.value } })} placeholder="claude-sonnet-5" />
+            <Field label="Model">
+              {isCodex ? (
+                <input
+                  className="input !py-1.5"
+                  value={codex.model}
+                  onChange={(e) => save({ codex: { ...codex, model: e.target.value } })}
+                  placeholder="Default (e.g. gpt-5)"
+                />
+              ) : (
+                <input className="input !py-1.5" value={claude.model} onChange={(e) => save({ claude: { ...claude, model: e.target.value } })} placeholder="claude-sonnet-5" />
+              )}
             </Field>
           </div>
           {url && (
@@ -372,6 +398,61 @@ function RemindersSection() {
         {tested ? <Check size={15} /> : <Bell size={15} />}
         {tested ? 'Sent — check your notifications' : 'Send a test notification'}
       </button>
+    </Section>
+  )
+}
+
+function UpdatesSection() {
+  const { settings, save } = useApp()
+  const updates = settings!.updates
+  const { info, checking, error, lastChecked, check, openPrompt } = useUpdate()
+
+  const status = checking
+    ? 'Checking GitHub for updates…'
+    : !info
+      ? ''
+      : info.available
+        ? `SchoolMod ${info.latest} is available (you have ${info.current}).`
+        : `You're up to date — SchoolMod ${info.current} is the latest version.`
+
+  return (
+    <Section icon={<RefreshCw size={18} />} title="Updates" desc="Get new versions of SchoolMod from GitHub.">
+      <Toggle
+        label="Check for updates automatically"
+        desc="When SchoolMod opens (and every few hours), it checks GitHub for a newer version and asks before installing it."
+        on={updates.autoCheck}
+        onChange={(v) => save({ updates: { ...updates, autoCheck: v } })}
+      />
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button className="btn" onClick={() => check(false)} disabled={checking}>
+          {checking ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+          Check for updates
+        </button>
+        {info?.available && !checking && (
+          <button className="btn btn-primary" onClick={openPrompt}>
+            <Download size={15} /> Update to {info.latest}
+          </button>
+        )}
+        {status && (
+          <span className={`text-xs ${info?.available && !checking ? 'text-green-500' : ''}`} style={info?.available && !checking ? undefined : { color: 'var(--text-dim)' }}>
+            {status}
+          </span>
+        )}
+      </div>
+      {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
+      {lastChecked > 0 && !checking && (
+        <p className="mt-2 text-xs" style={{ color: 'var(--text-dim)' }}>
+          Last checked {new Date(lastChecked).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+          {updates.skippedVersion && (
+            <>
+              {' '}· skipped {updates.skippedVersion}{' '}
+              <button className="underline" onClick={() => save({ updates: { ...updates, skippedVersion: '' } })}>
+                undo
+              </button>
+            </>
+          )}
+        </p>
+      )}
     </Section>
   )
 }
@@ -522,9 +603,6 @@ function ComputerAccessSection() {
 function SeqtaSection() {
   const { settings, save } = useApp()
   const seqta = settings!.seqta
-  const [url, setUrl] = useState(seqta.baseUrl)
-  const [user, setUser] = useState('')
-  const [pass, setPass] = useState('')
   const [state, setState] = useState<{ loading: boolean; err?: string; info?: string }>({ loading: false })
 
   const setMcp = (patch: Partial<typeof seqta.mcp>) =>
@@ -552,17 +630,6 @@ function SeqtaSection() {
       setState({ loading: false, err: e.message })
     }
   }
-  const connectDirect = async () => {
-    setState({ loading: true })
-    try {
-      await call(window.api.seqta.login(url, user, pass))
-      await useApp.getState().load()
-      setState({ loading: false })
-      setPass('')
-    } catch (e: any) {
-      setState({ loading: false, err: e.message })
-    }
-  }
   const disconnect = async () => {
     await window.api.seqta.logout()
     await useApp.getState().load()
@@ -577,7 +644,7 @@ function SeqtaSection() {
             <span className="grid h-6 w-6 place-items-center rounded-full bg-green-500/15 text-green-500">
               <Check size={14} />
             </span>
-            Connected via <strong>{seqta.mode === 'mcp' ? 'MCP server' : seqta.mode === 'sso' ? 'Microsoft SSO' : 'direct login'}</strong>
+            Connected via <strong>{seqta.mode === 'mcp' ? 'MCP server' : 'SEQTA sign-in'}</strong>
             {seqta.displayName && <> · {seqta.displayName}</>}
           </div>
           <button className="btn btn-ghost text-red-500" onClick={disconnect}>
@@ -587,46 +654,44 @@ function SeqtaSection() {
       ) : (
         <>
           <div className="mb-4 flex gap-2">
-            <button className={`btn flex-1 px-2 text-xs ${seqta.mode === 'sso' ? 'btn-primary' : ''}`} onClick={() => save({ seqta: { ...seqta, mode: 'sso' } })}>
-              SSO · recommended
+            <button className={`btn flex-1 px-2 text-xs ${seqta.mode !== 'mcp' ? 'btn-primary' : ''}`} onClick={() => save({ seqta: { ...seqta, mode: 'sso' } })}>
+              Sign in · recommended
             </button>
             <button className={`btn flex-1 px-2 text-xs ${seqta.mode === 'mcp' ? 'btn-primary' : ''}`} onClick={() => save({ seqta: { ...seqta, mode: 'mcp' } })}>
               MCP server
             </button>
-            <button className={`btn flex-1 px-2 text-xs ${seqta.mode === 'direct' ? 'btn-primary' : ''}`} onClick={() => save({ seqta: { ...seqta, mode: 'direct' } })}>
-              Direct login
-            </button>
           </div>
           <ErrorBanner message={state.err || ''} />
 
-          {seqta.mode === 'sso' ? (
+          {seqta.mode !== 'mcp' ? (
             <>
               <div className="mb-3 rounded-xl border px-3.5 py-2.5 text-xs" style={{ borderColor: 'var(--border)', color: 'var(--text-dim)' }}>
-                Signs in through your school's Microsoft account and loads your name, photo, timetable, assessments,
-                homework and notices. Needs Python with <code>requests</code> + <code>beautifulsoup4</code> (a headless
-                browser is used as a fallback).
+                Works with Microsoft SSO schools (MFA included) and regular SEQTA username/password logins, and loads
+                your name, photo, timetable, assessments, homework and notices. A sign-in window opens if your school
+                needs you to confirm anything; after that SchoolMod renews the session silently.
               </div>
               <Field label="SEQTA portal URL">
                 <input className="input" value={seqta.baseUrl} onChange={(e) => save({ seqta: { ...seqta, baseUrl: e.target.value } })} placeholder="https://students.yourschool.wa.edu.au" />
               </Field>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="School email">
-                  <input className="input" value={seqta.email} onChange={(e) => save({ seqta: { ...seqta, email: e.target.value } })} autoComplete="off" placeholder="you@students.school.edu" />
+                <Field label="School email or SEQTA username (optional)">
+                  <input className="input" value={seqta.email} onChange={(e) => save({ seqta: { ...seqta, email: e.target.value } })} autoComplete="off" placeholder="you@school.edu or username" />
                 </Field>
-                <Field label="Password">
+                <Field label="Password (optional)">
                   <input className="input" type="password" value={seqta.password} onChange={(e) => save({ seqta: { ...seqta, password: e.target.value } })} autoComplete="off" />
                 </Field>
               </div>
-              <button className="btn btn-primary" onClick={connectSso} disabled={state.loading || !seqta.baseUrl || !seqta.email || !seqta.password}>
+              <button className="btn btn-primary" onClick={connectSso} disabled={state.loading || !seqta.baseUrl.trim()}>
                 {state.loading ? <Loader2 size={15} className="animate-spin" /> : <CalendarDays size={15} />}
-                Connect SEQTA
+                {state.loading ? 'Waiting for sign-in…' : 'Connect SEQTA'}
               </button>
               {state.info && <p className="mt-2 text-xs text-green-500">{state.info}</p>}
               <p className="mt-2 text-xs" style={{ color: 'var(--text-dim)' }}>
-                Credentials are stored locally on this device only and used solely to sign in to your school.
+                Leave these blank to sign in yourself in the window. If you fill them in, they're stored locally on this
+                device only and used solely to sign in to your school without the window.
               </p>
             </>
-          ) : seqta.mode === 'mcp' ? (
+          ) : (
             <>
               <div className="mb-3 rounded-xl border px-3.5 py-2.5 text-xs" style={{ borderColor: 'var(--border)', color: 'var(--text-dim)' }}>
                 Uses your{' '}
@@ -653,27 +718,6 @@ function SeqtaSection() {
                 Connect & test
               </button>
               {state.info && <p className="mt-2 text-xs text-green-500">{state.info}</p>}
-            </>
-          ) : (
-            <>
-              <Field label="SEQTA portal URL">
-                <input className="input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://yourschool.seqta.com.au" />
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Username">
-                  <input className="input" value={user} onChange={(e) => setUser(e.target.value)} autoComplete="off" />
-                </Field>
-                <Field label="Password">
-                  <input className="input" type="password" value={pass} onChange={(e) => setPass(e.target.value)} autoComplete="off" />
-                </Field>
-              </div>
-              <button className="btn btn-primary" onClick={connectDirect} disabled={state.loading || !url || !user}>
-                {state.loading ? <Loader2 size={15} className="animate-spin" /> : <CalendarDays size={15} />}
-                Connect SEQTA
-              </button>
-              <p className="mt-2 text-xs" style={{ color: 'var(--text-dim)' }}>
-                Credentials go straight to your school's SEQTA server and are never stored — only the session cookie is kept. (SSO schools should use the MCP option.)
-              </p>
             </>
           )}
         </>

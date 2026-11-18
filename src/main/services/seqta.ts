@@ -257,6 +257,10 @@ export async function photo(): Promise<string> {
 export async function logout() {
   await mcpDisconnect().catch(() => {})
   direct.clear()
+  // Also forget the sign-in browser (Microsoft "stay signed in" included), so
+  // Disconnect really signs out and the next Connect can use another account.
+  const { clearSsoBrowser } = await import('./seqtaElectron')
+  await clearSsoBrowser()
   setSettings({ seqta: { ...seqta(), connected: false, sessionCookie: '', displayName: '', personUUID: '' } })
 }
 

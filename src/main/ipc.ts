@@ -38,6 +38,7 @@ const getNotifications = lazy(() => import('./services/notifications'))
 const getDesktop = lazy(() => import('./services/desktop'))
 const getBackup = lazy(() => import('./services/backup'))
 const getIcs = lazy(() => import('./services/ics'))
+const getUpdater = lazy(() => import('./services/updater'))
 
 /**
  * Guard for every channel that would reach a model.
@@ -232,6 +233,14 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
     require('fs').writeFileSync(res.filePath, ics, 'utf-8')
     return { saved: true, path: res.filePath, events: (lessons as any[]).length + (assessments as any[]).length }
   })
+
+  // ---- updates ----
+  handle(CH.updateCheck, async () => (await getUpdater()).check())
+  handle(CH.updateInstall, async (e) =>
+    (await getUpdater()).install((fraction) => {
+      if (!e.sender.isDestroyed()) e.sender.send(CH.updateProgress, fraction)
+    })
+  )
 
   // ---- misc ----
   handle(CH.openExternal, (_e, url) => shell.openExternal(url))

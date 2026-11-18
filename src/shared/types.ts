@@ -5,6 +5,8 @@ export type ThemeMode = 'light' | 'dark' | 'system'
 export interface CodexSettings {
   /** Path/command for the OpenAI Codex CLI (ChatGPT account). */
   cliPath: string
+  /** ChatGPT model for `codex exec --model`, e.g. "gpt-5". Empty = Codex's own default. */
+  model: string
 }
 
 export interface ClaudeSettings {
@@ -80,6 +82,28 @@ export interface DesktopSettings {
   quickExplainShortcut: string
 }
 
+export interface UpdateSettings {
+  /** Check GitHub for a newer SchoolMod on launch (and every few hours) and offer to install it. */
+  autoCheck: boolean
+  /** A version the student chose to skip; the automatic prompt stays quiet for it. */
+  skippedVersion: string
+}
+
+/** Result of an update check against the GitHub releases. */
+export interface UpdateInfo {
+  current: string
+  latest: string
+  available: boolean
+  title: string
+  notes: string
+  pageUrl: string
+  publishedAt: string
+  /** How "Update" installs: swap the portable exe, run the installer, or open the release page. */
+  kind: 'portable' | 'installer' | 'manual'
+  /** Bytes to download (0 when kind is 'manual'). */
+  downloadSize: number
+}
+
 export interface Settings {
   theme: ThemeMode
   accent: string
@@ -94,6 +118,7 @@ export interface Settings {
   notifications: NotificationSettings
   desktop: DesktopSettings
   onboardingDone: boolean
+  updates: UpdateSettings
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -106,7 +131,7 @@ export const DEFAULT_SETTINGS: Settings = {
     apiKey: 'schoolmod',
     model: 'claude-sonnet-5'
   },
-  codex: { cliPath: 'codex' },
+  codex: { cliPath: 'codex', model: '' },
   seqta: {
     mode: 'sso',
     connected: false,
@@ -124,6 +149,7 @@ export const DEFAULT_SETTINGS: Settings = {
   aiEnabled: true,
   notifications: { enabled: true, bells: true, assessments: true, bellLeadMinutes: 5 },
   desktop: { tray: true, autoLaunch: false, quickExplainShortcut: 'CommandOrControl+Shift+E' },
+  updates: { autoCheck: true, skippedVersion: '' },
   onboardingDone: false
 }
 

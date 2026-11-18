@@ -112,7 +112,9 @@ export async function chatStream(
   if (cmd === 'codex') throw new Error('Codex CLI not found. Click Connect in Settings.')
 
   const text = await new Promise<string>((resolve, reject) => {
-    const child = spawnSafe(cmd, ['exec', '--skip-git-repo-check', '-'], { cwd: workdir() })
+    const model = (getSettings().codex.model || '').trim()
+    const args = ['exec', '--skip-git-repo-check', ...(model ? ['--model', model] : []), '-']
+    const child = spawnSafe(cmd, args, { cwd: workdir() })
     let out = ''
     let err = ''
     child.stdout!.on('data', (d) => (out += d))
