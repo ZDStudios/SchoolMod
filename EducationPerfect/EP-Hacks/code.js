@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         bob
 // @namespace    http://tampermonkey.net/
-// @version      35.0
+// @version      35.2
 // @description  Adds Beta Features gate, multi-target drag fix, proper touch simulation, token-level editing, dropdown support, and Got It bypass.
 // @match        *://*.educationperfect.com/*
 // @grant        none
@@ -116,7 +116,32 @@
         const temp = document.createElement('div');
         temp.innerHTML = str;
         str = temp.textContent || temp.innerText || '';
-        return str.replace(/\[block[^\n]*\n?/g, '').replace(/<[^>]*>?/gm, '').replace(/[\*\[\]]/g, '').replace(/\s+/g, ' ').trim();
+        return str.replace(/\[block[^\n]*\n?/g, '').replace(/<[^>]*>?/gm, '').replace(/\/\//g, '').replace(/__/g, '').replace(/[\*\[\]]/g, '').replace(/\s+/g, ' ').trim();
+    }
+
+    // Returns true if the raw value is an image (EP stores <img ...> or image url= tags)
+    function isImageAnswer(raw) {
+        if (!raw) return false;
+        const s = String(raw);
+        return /<img\b/i.test(s) || /\bimage\s+url=/i.test(s);
+    }
+
+    // Render an answer for display in the status box — shows image if present, else clean text
+    function renderAnswerForDisplay(raw) {
+        if (!raw) return '';
+        const s = String(raw);
+        // EP image format: <img url="..." ...> or image url="..." width="..." title="..."
+        // Extract URL and title from either format
+        const urlMatch = s.match(/(?:src|url)\s*=\s*["']([^"']+)["']/i);
+        const titleMatch = s.match(/title\s*=\s*["']([^"']+)["']/i);
+        if (urlMatch) {
+            const imgUrl = urlMatch[1];
+            const caption = titleMatch ? titleMatch[1] : '';
+            return `<img src="${imgUrl}" style="max-width:100%; max-height:120px; border-radius:4px; display:block; margin:2px 0;" title="${caption}">` +
+                   (caption ? `<div style="font-size:10px; opacity:0.7; margin-top:2px;">${caption}</div>` : '');
+        }
+        // Not an image — return cleaned text
+        return cleanAnswerText(raw);
     }
 
     function cleanTargetForInput(raw) {
@@ -226,11 +251,18 @@
                 </div>
             </div>
 
-            <div id="ep-status-box" style="
-                background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15);
-                padding: 8px; border-radius: 6px; min-height: 52px; max-height: 140px;
-                overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 11px;
-            ">Initializing UI Controls...</div>
+            <div style="position: relative;">
+                <div id="ep-status-box" style="
+                    background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15);
+                    padding: 8px; border-radius: 6px; min-height: 52px; max-height: 220px;
+                    overflow-y: auto; word-break: break-word; font-size: 11px;
+                ">Initializing UI Controls...</div>
+                <button id="ep-copy-btn" title="Copy answers" style="
+                    position: absolute; top: 4px; right: 4px; background: rgba(255,255,255,0.12);
+                    border: 1px solid rgba(255,255,255,0.2); color: inherit; border-radius: 4px;
+                    padding: 1px 6px; font-size: 10px; cursor: pointer; line-height: 16px;
+                ">📋</button>
+            </div>
         </div>
     `;
 
@@ -265,6 +297,17 @@
     });
 
     const statusBox = overlay.querySelector('#ep-status-box');
+    const copyBtn = overlay.querySelector('#ep-copy-btn');
+    copyBtn.addEventListener('click', () => {
+        const text = statusBox.innerText || statusBox.textContent || '';
+        navigator.clipboard.writeText(text).then(() => {
+            copyBtn.textContent = '✅';
+            setTimeout(() => { copyBtn.textContent = '📋'; }, 1200);
+        }).catch(() => {
+            copyBtn.textContent = '❌';
+            setTimeout(() => { copyBtn.textContent = '📋'; }, 1200);
+        });
+    });
     const themeSelect = overlay.querySelector('#ep-theme-select');
     const autoModeToggle = overlay.querySelector('#toggle-automode');
     const autoHideToggle = overlay.querySelector('#toggle-autohide');
@@ -494,6 +537,45 @@
             if (c.SampleAnswer && !isPromptText(cleanAnswerText(c.SampleAnswer))) answers.push(cleanAnswerText(c.SampleAnswer));
         });
         return [...new Set(answers.filter(Boolean))].filter(a => !isPromptText(a));
+    }
+
+    // Like getAnswers but returns raw strings (pre-clean) for rich display (images etc.)
+    function getAnswersRaw(q) {
+        const raws = [];
+        if (!q?.questionDef?.Components) return raws;
+        q.questionDef.Components.forEach(c => {
+            if (c.Gaps) c.Gaps.forEach(g => {
+                if (g.CorrectOptions?.[0]) raws.push(String(g.CorrectOptions[0]));
+            });
+            if (c.OrderedSequence) c.OrderedSequence.forEach(item => {
+                const t = item.Text || item.Label || item.Value;
+                if (t) raws.push(String(t));
+            });
+            if (c.Targets) c.Targets.forEach(t => {
+                if (t.CorrectValue) raws.push(String(t.CorrectValue));
+            });
+            if (c.ComponentTypeCode === 'MULTICHOICE_COMPONENT' && c.Options) {
+                c.Options.forEach(o => {
+                    if (o.Correct === 'true' || o.Correct === true || o.IsCorrect === true) {
+                        const t = o.TextTemplate || o.Text || o.Label || o.Description;
+                        if (t) raws.push(String(t));
+                    }
+                });
+            }
+            if (c.ComponentTypeCode === 'DROPDOWN_COMPONENT' && c.Options) {
+                c.Options.forEach(o => {
+                    if (String(o.Correct) === 'true') {
+                        const t = o.Description || o.TextTemplate || o.Text || o.Label;
+                        if (t) raws.push(String(t));
+                    }
+                });
+            }
+            if (c.ComponentTypeCode === 'TEXT_BOX_COMPONENT' && c.Options?.[0]) raws.push(String(c.Options[0]));
+            if (c.CorrectAnswer) raws.push(String(c.CorrectAnswer));
+            if (c.ModelAnswerHTML && !isPromptText(cleanAnswerText(c.ModelAnswerHTML))) raws.push(String(c.ModelAnswerHTML));
+            if (c.SampleAnswer && !isPromptText(cleanAnswerText(c.SampleAnswer))) raws.push(String(c.SampleAnswer));
+        });
+        return raws.filter(Boolean);
     }
 
     // --- SOLVERS ---
@@ -901,6 +983,7 @@
 
             const q = gs.game.model.currentQuestion;
             const cleanAns = getAnswers(q);
+            const rawAns = getAnswersRaw(q);
 
             let statusHTML = (autoModeActive
                 ? '<span style="color: #ff71ce; font-weight: 700;">🤖 AUTO ACTIVE</span>\n'
@@ -909,7 +992,9 @@
             if (cleanAns.length > 0) {
                 statusHTML += '<div style="margin-top: 4px;">';
                 cleanAns.forEach((ans, i) => {
-                    statusHTML += `<div style="background: rgba(250, 204, 21, 0.25); color: #fef08a; border: 1px solid #eab308; padding: 4px 6px; border-radius: 4px; margin-top: 4px; font-weight: 700; font-size: 11px;">💡 Answer ${i + 1}: ${ans}</div>`;
+                    const raw = rawAns[i] || ans;
+                    const displayContent = renderAnswerForDisplay(raw);
+                    statusHTML += `<div style="background: rgba(250, 204, 21, 0.25); color: #fef08a; border: 1px solid #eab308; padding: 4px 6px; border-radius: 4px; margin-top: 4px; font-weight: 700; font-size: 11px;">💡 Answer ${i + 1}: ${displayContent}</div>`;
                 });
                 statusHTML += '</div>';
             } else {
