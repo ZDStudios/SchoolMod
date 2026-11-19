@@ -1,1297 +1,574 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SchoolMod — Supercharge Your School Tools</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SchoolMod</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgMTEwNSIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsbGVkYnk9InQiPgogIDx0aXRsZSBpZD0idCI+U2Nob29sTW9kIGxvZ288L3RpdGxlPgogIDwhLS0gQ2F0cHB1Y2NpbiBNb2NoYTogc3VyZmFjZTAgIzMxMzI0NCwgc3VyZmFjZTEgIzQ1NDc1YSwgZ3JlZW4gI2E2ZTNhMSwgdGVhbCAjOTRlMmQ1LCBza3kgIzg5ZGNlYiwgc2FwcGhpcmUgIzc0YzdlYywgYmx1ZSAjODliNGZhLCBsYXZlbmRlciAjYjRiZWZlLCB0ZXh0ICNjZGQ2ZjQgLS0+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InRlYWwtYmx1ZSIgeDE9IjQwIiB5MT0iODAwIiB4Mj0iNTMwIiB5Mj0iODgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzk0ZTJkNSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM4OWI0ZmEiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InN3b29zaCIgeDE9Ijg2OCIgeTE9IjU2MCIgeDI9IjMwMCIgeTI9Ijk4MCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM4OWI0ZmEiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNzRjN2VjIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJkZWVwIiB4MT0iODY4IiB5MT0iNzAwIiB4Mj0iNDYwIiB5Mj0iMTA3MCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM1ODViNzAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNDU0NzVhIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGNsaXBQYXRoIGlkPSJzaGllbGQiPjxwYXRoIGQ9Ik00MCAzNDVMNDU1IDIzN0w4NjggMzQ1Vjg1Mkw0NTUgMTA3NUw0MCA4NDVaIi8+PC9jbGlwUGF0aD4KICA8L2RlZnM+CgogIDxnIGNsaXAtcGF0aD0idXJsKCNzaGllbGQpIj4KICAgIDxyZWN0IHg9IjAiIHk9IjIwMCIgd2lkdGg9IjkwMCIgaGVpZ2h0PSI5MDAiIGZpbGw9IiMzMTMyNDQiLz4KICAgIDwhLS0gbGlnaHRlciB1cHBlciB3ZWRnZSBvZiB0aGUgY2VudHJlIC0tPgogICAgPHBhdGggZD0iTTQ1NSAyMzdMODY4IDM0NVY0MjBMMzAwIDczNUw5NSA1NzJaIiBmaWxsPSIjNDU0NzVhIi8+CiAgICA8IS0tIGdyZWVuIGNvcm5lciAtLT4KICAgIDxwYXRoIGQ9Ik00MCAzNDVMNDU1IDIzN0w5NSA1NzJMNDAgNTMwWiIgZmlsbD0iI2E2ZTNhMSIvPgogICAgPCEtLSBkYXJrZXIgdGVhbCBmYWNldCAtLT4KICAgIDxwYXRoIGQ9Ik00MCA1MzBMOTUgNTcyTDM0MCA3OTVMNDAgNzM4WiIgZmlsbD0iIzk0ZTJkNSIgZmlsbC1vcGFjaXR5PSIuNTUiLz4KICAgIDwhLS0gZGVlcCBjb3JuZXIgKHJ1bnMgdW5kZXIgdGhlIHN3b29zaCBzbyBubyBzZWFtIHNob3dzKSAtLT4KICAgIDxwYXRoIGQ9Ik0yOTAgOTc1TDg2OCA2NzBWODUyTDQ1NSAxMDc1TDQwIDg0NVoiIGZpbGw9InVybCgjZGVlcCkiLz4KICAgIDwhLS0gYnJpZ2h0IHRlYWwgdG8gYmx1ZSBmYWNldCAocnVucyB1bmRlciB0aGUgc3dvb3NoKSAtLT4KICAgIDxwYXRoIGQ9Ik00MCA3MzhMMzQwIDc5NUw1MzAgODMwTDYwMCA4NjBMNDIwIDk2MEwyOTAgOTkwTDQwIDg0NVoiIGZpbGw9InVybCgjdGVhbC1ibHVlKSIvPgogICAgPCEtLSBzd29vc2ggLS0+CiAgICA8cGF0aCBkPSJNODY4IDUzMEM3NzAgNjQwIDY1MCA3NTAgNTMwIDgzMEM0NTAgODg1IDM3MCA5NDAgMjkwIDk4NEM0ODAgOTc1IDc2MCA4MzAgODY4IDY5MFoiIGZpbGw9InVybCgjc3dvb3NoKSIvPgogIDwvZz4KCiAgPCEtLSBjYXAgLS0+CiAgPHBhdGggZD0iTTM1IDE3NUw0NTUgMjhMODY4IDE3Mkw3MzUgMjIyVjI2NUw0NTUgMjA1TDIwNyAyNjVWMjMyTDEyNSAyMDVaIiBmaWxsPSIjYjRiZWZlIi8+CiAgPHBhdGggZD0iTTY0MiAxNTBMNzY1IDIwNUw2OTAgMTk1WiIgZmlsbD0iI2NkZDZmNCIgZmlsbC1vcGFjaXR5PSIuNDUiLz4KICA8cmVjdCB4PSIxMjAiIHk9IjIwNSIgd2lkdGg9IjE0IiBoZWlnaHQ9IjU2IiBmaWxsPSIjYjRiZWZlIi8+CiAgPHBhdGggZD0iTTEyMCAyNThIMTM0TDE1MCAyNzJWMzg4SDkzVjI3MloiIGZpbGw9IiNiNGJlZmUiLz4KCiAgPCEtLSBzbSAtLT4KICA8cGF0aCBkPSJNMjcyLjc1Mzc2ODg0NDIyMTEgNjc1LjE2NTgyOTE0NTcyODZRMjQ4LjQ4MjQxMjA2MDMwMTUgNjc1LjE2NTgyOTE0NTcyODYgMjI1LjQ0MjIxMTA1NTI3NjM3IDY2OS41Mzc2ODg0NDIyMTFRMjAyLjQwMjAxMDA1MDI1MTI1IDY2My45MDk1NDc3Mzg2OTM1IDE4OC4zMzE2NTgyOTE0NTcyNyA2NTUuNDY3MzM2NjgzNDE3MUwyMDguMzgxOTA5NTQ3NzM4NyA2MDkuNzM4NjkzNDY3MzM2N1EyMjEuNzQ4NzQzNzE4NTkyOTggNjE3LjgyOTE0NTcyODY0MzIgMjM5LjY4ODQ0MjIxMTA1NTMgNjIyLjU3Nzg4OTQ0NzIzNjJRMjU3LjYyODE0MDcwMzUxNzYgNjI3LjMyNjYzMzE2NTgyOTEgMjc0Ljg2NDMyMTYwODA0MDIgNjI3LjMyNjYzMzE2NTgyOTFRMjkxLjc0ODc0MzcxODU5MyA2MjcuMzI2NjMzMTY1ODI5MSAyOTguMjU2MjgxNDA3MDM1MiA2MjMuODA5MDQ1MjI2MTMwNlEzMDQuNzYzODE5MDk1NDc3NCA2MjAuMjkxNDU3Mjg2NDMyMiAzMDQuNzYzODE5MDk1NDc3NCA2MTQuMzExNTU3Nzg4OTQ0N1EzMDQuNzYzODE5MDk1NDc3NCA2MDguNjgzNDE3MDg1NDI3MSAyOTguNjA4MDQwMjAxMDA1MDUgNjA2LjA0NTIyNjEzMDY1MzJRMjkyLjQ1MjI2MTMwNjUzMjcgNjAzLjQwNzAzNTE3NTg3OTQgMjgyLjQyNzEzNTY3ODM5MiA2MDIuMFEyNzIuNDAyMDEwMDUwMjUxMjUgNjAwLjU5Mjk2NDgyNDEyMDYgMjYwLjQ0MjIxMTA1NTI3NjQgNTk4LjgzNDE3MDg1NDI3MTRRMjQ4LjQ4MjQxMjA2MDMwMTUgNTk3LjA3NTM3Njg4NDQyMjEgMjM2LjM0NjczMzY2ODM0MTcgNTk0LjA4NTQyNzEzNTY3ODRRMjI0LjIxMTA1NTI3NjM4MTkgNTkxLjA5NTQ3NzM4NjkzNDcgMjE0LjE4NTkyOTY0ODI0MTIgNTg0LjkzOTY5ODQ5MjQ2MjRRMjA0LjE2MDgwNDAyMDEwMDUgNTc4Ljc4MzkxOTU5Nzk5IDE5OC4xODA5MDQ1MjI2MTMwNSA1NjguMjMxMTU1Nzc4ODk0NVExOTIuMjAxMDA1MDI1MTI1NjIgNTU3LjY3ODM5MTk1OTc5OSAxOTIuMjAxMDA1MDI1MTI1NjIgNTQxLjQ5NzQ4NzQzNzE4NTlRMTkyLjIwMTAwNTAyNTEyNTYyIDUyMy4yMDYwMzAxNTA3NTM4IDIwMi45Mjk2NDgyNDEyMDYwMiA1MDguOTU5Nzk4OTk0OTc0OVEyMTMuNjU4MjkxNDU3Mjg2NDIgNDk0LjcxMzU2NzgzOTE5NiAyMzQuNDEyMDYwMzAxNTA3NTUgNDg2LjQ0NzIzNjE4MDkwNDVRMjU1LjE2NTgyOTE0NTcyODY1IDQ3OC4xODA5MDQ1MjI2MTMwNSAyODUuMDY1MzI2NjMzMTY1ODUgNDc4LjE4MDkwNDUyMjYxMzA1UTMwNS4xMTU1Nzc4ODk0NDcyNSA0NzguMTgwOTA0NTIyNjEzMDUgMzI1LjY5MzQ2NzMzNjY4MzQgNDgyLjIyNjEzMDY1MzI2NjNRMzQ2LjI3MTM1Njc4MzkxOTYgNDg2LjI3MTM1Njc4MzkxOTYgMzYwLjM0MTcwODU0MjcxMzYgNDk0LjM2MTgwOTA0NTIyNjFMMzQwLjI5MTQ1NzI4NjQzMjIgNTM5LjczODY5MzQ2NzMzNjdRMzI2LjIyMTEwNTUyNzYzODIgNTMxLjY0ODI0MTIwNjAzMDIgMzEyLjE1MDc1Mzc2ODg0NDIgNTI4LjY1ODI5MTQ1NzI4NjRRMjk4LjA4MDQwMjAxMDA1MDI1IDUyNS42NjgzNDE3MDg1NDI3IDI4NS40MTcwODU0MjcxMzU3IDUyNS42NjgzNDE3MDg1NDI3UTI2OC41MzI2NjMzMTY1ODI5IDUyNS42NjgzNDE3MDg1NDI3IDI2MS42NzMzNjY4MzQxNzA4NSA1MjkuNTM3Njg4NDQyMjExUTI1NC44MTQwNzAzNTE3NTg4IDUzMy40MDcwMzUxNzU4Nzk0IDI1NC44MTQwNzAzNTE3NTg4IDUzOS4wMzUxNzU4NzkzOTdRMjU0LjgxNDA3MDM1MTc1ODggNTQ0LjY2MzMxNjU4MjkxNDYgMjYwLjc5Mzk2OTg0OTI0NjI1IDU0Ny42NTMyNjYzMzE2NTgzUTI2Ni43NzM4NjkzNDY3MzM3IDU1MC42NDMyMTYwODA0MDIgMjc2Ljc5ODk5NDk3NDg3NDQgNTUyLjIyNjEzMDY1MzI2NjNRMjg2LjgyNDEyMDYwMzAxNTEgNTUzLjgwOTA0NTIyNjEzMDYgMjk4Ljc4MzkxOTU5Nzk4OTk1IDU1NS4zOTE5NTk3OTg5OTVRMzEwLjc0MzcxODU5Mjk2NDggNTU2Ljk3NDg3NDM3MTg1OTMgMzIyLjg3OTM5Njk4NDkyNDYgNTYwLjE0MDcwMzUxNzU4OFEzMzUuMDE1MDc1Mzc2ODg0NCA1NjMuMzA2NTMyNjYzMzE2NiAzNDUuMDQwMjAxMDA1MDI1MSA1NjkuNDYyMzExNTU3Nzg5UTM1NS4wNjUzMjY2MzMxNjU4NSA1NzUuNjE4MDkwNDUyMjYxMyAzNjEuMDQ1MjI2MTMwNjUzMyA1ODUuOTk0OTc0ODc0MzcxOFEzNjcuMDI1MTI1NjI4MTQwNyA1OTYuMzcxODU5Mjk2NDgyNCAzNjcuMDI1MTI1NjI4MTQwNyA2MTIuNTUyNzYzODE5MDk1NVEzNjcuMDI1MTI1NjI4MTQwNyA2MzAuMTQwNzAzNTE3NTg3OSAzNTYuMjk2NDgyNDEyMDYwMyA2NDQuMjExMDU1Mjc2MzgxOVEzNDUuNTY3ODM5MTk1OTc5OSA2NTguMjgxNDA3MDM1MTc1OSAzMjQuNjM4MTkwOTU0NzczOSA2NjYuNzIzNjE4MDkwNDUyMlEzMDMuNzA4NTQyNzEzNTY3ODUgNjc1LjE2NTgyOTE0NTcyODYgMjcyLjc1Mzc2ODg0NDIyMTEgNjc1LjE2NTgyOTE0NTcyODZaIE0zOTUuODY5MzQ2NzMzNjY4MzUgNjcyLjBWNDgxLjM0NjczMzY2ODM0MTdINDU5LjUzNzY4ODQ0MjIxMTFWNTAxLjM5Njk4NDkyNDYyMzFRNDY2LjU3Mjg2NDMyMTYwODA1IDQ5My42NTgyOTE0NTcyODY0IDQ3NS43MTg1OTI5NjQ4MjQxNSA0ODguMzgxOTA5NTQ3NzM4N1E0OTQuMDEwMDUwMjUxMjU2MyA0NzguMTgwOTA0NTIyNjEzMDUgNTE2LjUyMjYxMzA2NTMyNjYgNDc4LjE4MDkwNDUyMjYxMzA1UTU0Mi4yMDEwMDUwMjUxMjU2IDQ3OC4xODA5MDQ1MjI2MTMwNSA1NjEuODk5NDk3NDg3NDM3MiA0OTEuMTk1OTc5ODk5NDk3NVE1NzEuMzk2OTg0OTI0NjIzMiA0OTcuODc5Mzk2OTg0OTI0NiA1NzguMDgwNDAyMDEwMDUwMyA1MDguMDgwNDAyMDEwMDUwMjVRNTg2LjE3MDg1NDI3MTM1NjggNDk4LjIzMTE1NTc3ODg5NDQ1IDU5Ny4wNzUzNzY4ODQ0MjIxIDQ5MS4xOTU5Nzk4OTk0OTc1UTYxNy40NzczODY5MzQ2NzM0IDQ3OC4xODA5MDQ1MjI2MTMwNSA2NDQuMjExMDU1Mjc2MzgyIDQ3OC4xODA5MDQ1MjI2MTMwNVE2NjYuMzcxODU5Mjk2NDgyNCA0NzguMTgwOTA0NTIyNjEzMDUgNjgzLjc4MzkxOTU5Nzk5IDQ4Ny4xNTA3NTM3Njg4NDQyUTcwMS4xOTU5Nzk4OTk0OTc1IDQ5Ni4xMjA2MDMwMTUwNzU0IDcxMS4yMjExMDU1Mjc2MzgyIDUxNC43NjM4MTkwOTU0Nzc0UTcyMS4yNDYyMzExNTU3NzkgNTMzLjQwNzAzNTE3NTg3OTQgNzIxLjI0NjIzMTE1NTc3OSA1NjIuOTU0NzczODY5MzQ2N1Y2NzIuMEg2NTQuNDEyMDYwMzAxNTA3NlY1NzMuODU5Mjk2NDgyNDEyUTY1NC40MTIwNjAzMDE1MDc2IDU1My40NTcyODY0MzIxNjA4IDY0Ni42NzMzNjY4MzQxNzA5IDU0NC4xMzU2NzgzOTE5NTk4UTYzOC45MzQ2NzMzNjY4MzQyIDUzNC44MTQwNzAzNTE3NTg4IDYyNS41Njc4MzkxOTU5Nzk5IDUzNC44MTQwNzAzNTE3NTg4UTYxNi4wNzAzNTE3NTg3OTQgNTM0LjgxNDA3MDM1MTc1ODggNjA4LjMzMTY1ODI5MTQ1NzMgNTM5LjM4NjkzNDY3MzM2NjhRNjAwLjU5Mjk2NDgyNDEyMDYgNTQzLjk1OTc5ODk5NDk3NDkgNTk2LjM3MTg1OTI5NjQ4MjQgNTUzLjI4MTQwNzAzNTE3NTlRNTkyLjE1MDc1Mzc2ODg0NDIgNTYyLjYwMzAxNTA3NTM3NjkgNTkyLjE1MDc1Mzc2ODg0NDIgNTc3LjM3Njg4NDQyMjExMDZWNjcyLjBINTI1LjMxNjU4MjkxNDU3MjlWNTczLjg1OTI5NjQ4MjQxMlE1MjUuMzE2NTgyOTE0NTcyOSA1NTMuNDU3Mjg2NDMyMTYwOCA1MTcuNzUzNzY4ODQ0MjIxMiA1NDQuMTM1Njc4MzkxOTU5OFE1MTAuMTkwOTU0NzczODY5NCA1MzQuODE0MDcwMzUxNzU4OCA0OTYuNDcyMzYxODA5MDQ1MjUgNTM0LjgxNDA3MDM1MTc1ODhRNDg2LjYyMzExNTU3Nzg4OTQ1IDUzNC44MTQwNzAzNTE3NTg4IDQ3OS4wNjAzMDE1MDc1Mzc3IDUzOS4zODY5MzQ2NzMzNjY4UTQ3MS40OTc0ODc0MzcxODU5NSA1NDMuOTU5Nzk4OTk0OTc0OSA0NjcuMTAwNTAyNTEyNTYyOCA1NTMuMjgxNDA3MDM1MTc1OVE0NjIuNzAzNTE3NTg3OTM5NyA1NjIuNjAzMDE1MDc1Mzc2OSA0NjIuNzAzNTE3NTg3OTM5NyA1NzcuMzc2ODg0NDIyMTEwNlY2NzIuMFoiIGZpbGw9IiNjZGQ2ZjQiLz4KPC9zdmc+Cg==">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #080c18;
-    --bg2: #0d1225;
-    --bg3: #111829;
-    --blue: #3b82f6;
-    --cyan: #06b6d4;
-    --mint: #10d9a0;
-    --purple: #8b5cf6;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --border: rgba(255,255,255,0.07);
-    --glow-blue: rgba(59,130,246,0.15);
-    --glow-mint: rgba(16,217,160,0.15);
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html { scroll-behavior: smooth; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    overflow-x: hidden;
-    min-height: 100vh;
-  }
-
-  /* ─── CANVAS BACKGROUND ─── */
-  #bg-canvas {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-  }
-
-  /* ─── MESH GRADIENT ─── */
-  .mesh {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    background:
-      radial-gradient(ellipse 80% 60% at 10% 20%, rgba(59,130,246,0.08) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 50% at 90% 80%, rgba(16,217,160,0.07) 0%, transparent 60%),
-      radial-gradient(ellipse 40% 40% at 50% 50%, rgba(139,92,246,0.05) 0%, transparent 60%);
-  }
-
-  /* ─── LAYOUT ─── */
-  main { position: relative; z-index: 1; }
-
-  .container {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 2rem;
-  }
-
-  /* ─── NAV ─── */
-  nav {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 100;
-    padding: 1rem 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(8,12,24,0.7);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .nav-logo {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    text-decoration: none;
-  }
-  .nav-logo img {
-    width: 32px; height: 32px;
-    border-radius: 8px;
-  }
-  .nav-logo span {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1.1rem;
-    color: var(--text);
-    letter-spacing: -0.02em;
-  }
-
-  .nav-links {
-    display: flex;
-    gap: 2rem;
-    list-style: none;
-  }
-  .nav-links a {
-    color: var(--muted);
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 500;
-    letter-spacing: 0.03em;
-    transition: color 0.2s;
-  }
-  .nav-links a:hover { color: var(--text); }
-
-  .nav-cta {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.5rem 1.1rem;
-    border-radius: 8px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 500;
-    text-decoration: none;
-    transition: all 0.2s;
-    cursor: pointer;
-    border: none;
-  }
-
-  .btn-ghost {
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid var(--border);
-  }
-  .btn-ghost:hover {
-    color: var(--text);
-    border-color: rgba(255,255,255,0.2);
-    background: rgba(255,255,255,0.04);
-  }
-
-  .btn-primary {
-    background: linear-gradient(135deg, var(--blue), var(--mint));
-    color: #fff;
-    font-weight: 600;
-    box-shadow: 0 0 20px rgba(59,130,246,0.25);
-  }
-  .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 0 30px rgba(59,130,246,0.4);
-  }
-
-  /* ─── HERO ─── */
-  .hero {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 8rem 2rem 6rem;
-  }
-
-  .hero-inner {
-    max-width: 780px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2rem;
-  }
-
-  .hero-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.85rem;
-    background: rgba(59,130,246,0.1);
-    border: 1px solid rgba(59,130,246,0.25);
-    border-radius: 100px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
-    color: var(--cyan);
-    letter-spacing: 0.05em;
-    animation: fadeUp 0.6s ease both;
-  }
-  .badge-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--mint);
-    box-shadow: 0 0 6px var(--mint);
-    animation: pulse 2s ease infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.8); }
-  }
-
-  .hero-logo {
-    width: 100px; height: 100px;
-    border-radius: 22px;
-    box-shadow: 0 0 60px rgba(59,130,246,0.3), 0 0 120px rgba(16,217,160,0.15);
-    animation: fadeUp 0.6s 0.1s ease both;
-  }
-
-  h1 {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: clamp(3rem, 7vw, 5.5rem);
-    line-height: 1.0;
-    letter-spacing: -0.04em;
-    animation: fadeUp 0.6s 0.2s ease both;
-  }
-
-  .gradient-text {
-    background: linear-gradient(135deg, var(--blue) 0%, var(--cyan) 40%, var(--mint) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .hero-sub {
-    font-size: 1.2rem;
-    color: var(--muted);
-    line-height: 1.6;
-    max-width: 520px;
-    animation: fadeUp 0.6s 0.3s ease both;
-  }
-
-  .hero-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    justify-content: center;
-    animation: fadeUp 0.6s 0.4s ease both;
-  }
-  .hero-actions .btn { padding: 0.75rem 1.6rem; font-size: 0.95rem; }
-
-  .hero-meta {
-    display: flex;
-    gap: 2rem;
-    align-items: center;
-    color: var(--muted);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
-    animation: fadeUp 0.6s 0.5s ease both;
-  }
-  .hero-meta span { display: flex; align-items: center; gap: 0.4rem; }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  /* ─── SECTION BASE ─── */
-  section { padding: 6rem 0; }
-
-  .section-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--cyan);
-    margin-bottom: 1rem;
-  }
-  .section-label::before {
-    content: '';
-    display: block;
-    width: 20px; height: 1px;
-    background: var(--cyan);
-  }
-
-  h2 {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: clamp(2rem, 4vw, 2.8rem);
-    letter-spacing: -0.03em;
-    line-height: 1.1;
-    margin-bottom: 1rem;
-  }
-
-  .section-desc {
-    color: var(--muted);
-    font-size: 1.05rem;
-    line-height: 1.7;
-    max-width: 540px;
-    margin-bottom: 3rem;
-  }
-
-  /* ─── FEATURES ─── */
-  .features-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1rem;
-  }
-
-  .feature-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 1.8rem;
-    transition: all 0.3s;
-    position: relative;
-    overflow: hidden;
-  }
-  .feature-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, var(--glow-blue), transparent);
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  .feature-card:hover {
-    border-color: rgba(59,130,246,0.3);
-    transform: translateY(-3px);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-  }
-  .feature-card:hover::before { opacity: 1; }
-
-  .feature-icon {
-    font-size: 2rem;
-    margin-bottom: 1rem;
-    display: block;
-  }
-
-  .feature-title {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 1.05rem;
-    margin-bottom: 0.5rem;
-    letter-spacing: -0.01em;
-  }
-
-  .feature-desc {
-    color: var(--muted);
-    font-size: 0.9rem;
-    line-height: 1.6;
-  }
-
-  .coming-soon {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    margin-top: 0.75rem;
-    padding: 0.2rem 0.6rem;
-    background: rgba(139,92,246,0.1);
-    border: 1px solid rgba(139,92,246,0.2);
-    border-radius: 100px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--purple);
-    letter-spacing: 0.05em;
-  }
-
-  /* ─── INTEGRATIONS ─── */
-  .integrations { background: var(--bg2); }
-
-  .integrations-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-
-  .integration-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    transition: all 0.25s;
-    position: relative;
-    overflow: hidden;
-  }
-  .integration-card:hover {
-    border-color: rgba(255,255,255,0.15);
-    transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.2);
-  }
-
-  .integration-icon { font-size: 2rem; }
-
-  .integration-name {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 1rem;
-    letter-spacing: -0.01em;
-  }
-
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.7rem;
-    border-radius: 100px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    width: fit-content;
-  }
-  .status-badge .dot { width: 5px; height: 5px; border-radius: 50%; }
-
-  .status-live { background: rgba(16,217,160,0.1); color: var(--mint); border: 1px solid rgba(16,217,160,0.2); }
-  .status-live .dot { background: var(--mint); box-shadow: 0 0 4px var(--mint); }
-
-  .status-beta { background: rgba(59,130,246,0.1); color: var(--blue); border: 1px solid rgba(59,130,246,0.2); }
-  .status-beta .dot { background: var(--blue); box-shadow: 0 0 4px var(--blue); }
-
-  .status-progress { background: rgba(251,191,36,0.1); color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
-  .status-progress .dot { background: #fbbf24; animation: pulse 1.5s ease infinite; }
-
-  /* ─── ROADMAP ─── */
-  .roadmap-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    max-width: 600px;
-  }
-
-  .roadmap-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem 1.2rem;
-    border-left: 2px solid var(--border);
-    margin-left: 0.6rem;
-    position: relative;
-    transition: all 0.2s;
-  }
-  .roadmap-item::before {
-    content: '';
-    position: absolute;
-    left: -5px;
-    top: 50%; transform: translateY(-50%);
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--border);
-    border: 2px solid var(--bg);
-  }
-  .roadmap-item.done {
-    border-left-color: var(--mint);
-    opacity: 0.7;
-  }
-  .roadmap-item.done::before { background: var(--mint); box-shadow: 0 0 8px var(--mint); }
-  .roadmap-item.active { border-left-color: var(--blue); }
-  .roadmap-item.active::before { background: var(--blue); box-shadow: 0 0 8px var(--blue); animation: pulse 2s ease infinite; }
-
-  .roadmap-check {
-    font-size: 0.85rem;
-    flex-shrink: 0;
-  }
-
-  .roadmap-text {
-    font-size: 0.95rem;
-    color: var(--muted);
-    font-weight: 400;
-  }
-  .roadmap-item.active .roadmap-text { color: var(--text); }
-
-  /* ─── INSTALL ─── */
-  .install { background: var(--bg2); }
-
-  .code-block {
-    background: #0a0e1a;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-    max-width: 600px;
-  }
-
-  .code-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.8rem 1.2rem;
-    background: rgba(255,255,255,0.03);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .code-dots { display: flex; gap: 0.4rem; }
-  .code-dots span {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: var(--border);
-  }
-  .code-dots span:nth-child(1) { background: #ff5f57; }
-  .code-dots span:nth-child(2) { background: #febc2e; }
-  .code-dots span:nth-child(3) { background: #28c840; }
-
-  .code-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--muted);
-  }
-
-  .copy-btn {
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--muted);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    padding: 0.25rem 0.6rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .copy-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
-
-  .code-body {
-    padding: 1.4rem 1.6rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.82rem;
-    line-height: 2;
-    color: var(--text);
-    overflow-x: auto;
-  }
-
-  .code-comment { color: #4b5563; }
-  .code-cmd { color: var(--cyan); }
-  .code-arg { color: var(--mint); }
-  .code-path { color: var(--purple); }
-
-  /* ─── README SECTION ─── */
-  .readme-section { background: var(--bg); }
-
-  .readme-container {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-  }
-
-  .readme-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 1rem 1.5rem;
-    background: rgba(255,255,255,0.02);
-    border-bottom: 1px solid var(--border);
-  }
-  .readme-header svg { color: var(--muted); }
-  .readme-header span {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    color: var(--muted);
-  }
-
-  #readme-content {
-    padding: 2rem 2.5rem;
-    font-size: 0.9rem;
-    line-height: 1.8;
-    color: var(--text);
-  }
-
-  #readme-content h1, #readme-content h2, #readme-content h3 {
-    font-family: 'Syne', sans-serif;
-    letter-spacing: -0.02em;
-    margin: 1.5rem 0 0.75rem;
-    color: var(--text);
-  }
-  #readme-content h1 { font-size: 1.8rem; }
-  #readme-content h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
-  #readme-content h3 { font-size: 1.05rem; color: var(--cyan); }
-
-  #readme-content p { margin-bottom: 1rem; color: var(--muted); }
-  #readme-content a { color: var(--blue); text-decoration: none; }
-  #readme-content a:hover { text-decoration: underline; }
-
-  #readme-content code {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 0.15rem 0.4rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8em;
-    color: var(--mint);
-  }
-
-  #readme-content pre {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 1.2rem;
-    overflow-x: auto;
-    margin: 1rem 0;
-  }
-  #readme-content pre code {
-    background: none;
-    border: none;
-    padding: 0;
-    color: var(--text);
-    font-size: 0.82rem;
-    line-height: 1.8;
-  }
-
-  #readme-content table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1rem 0;
-    font-size: 0.88rem;
-  }
-  #readme-content th {
-    background: rgba(255,255,255,0.04);
-    padding: 0.7rem 1rem;
-    text-align: left;
-    font-family: 'Syne', sans-serif;
-    font-size: 0.8rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--muted);
-    border: 1px solid var(--border);
-  }
-  #readme-content td {
-    padding: 0.7rem 1rem;
-    border: 1px solid var(--border);
-    color: var(--muted);
-  }
-
-  #readme-content ul, #readme-content ol {
-    padding-left: 1.5rem;
-    margin-bottom: 1rem;
-  }
-  #readme-content li { margin-bottom: 0.3rem; color: var(--muted); }
-
-  #readme-content blockquote {
-    border-left: 3px solid var(--blue);
-    padding-left: 1rem;
-    margin: 1rem 0;
-    color: var(--muted);
-    font-style: italic;
-  }
-
-  .readme-loading {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    color: var(--muted);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    padding: 2rem;
-  }
-
-  .spinner {
-    width: 16px; height: 16px;
-    border: 2px solid var(--border);
-    border-top-color: var(--cyan);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ─── CONTRIBUTE ─── */
-  .contribute-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    max-width: 700px;
-  }
-
-  .step-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 1.5rem;
-    position: relative;
-    transition: all 0.25s;
-  }
-  .step-card:hover {
-    border-color: rgba(59,130,246,0.3);
-    transform: translateY(-2px);
-  }
-
-  .step-num {
-    font-family: 'Syne', sans-serif;
-    font-size: 2.5rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, var(--blue), var(--mint));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    line-height: 1;
-    margin-bottom: 0.75rem;
-  }
-
-  .step-title {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.95rem;
-    margin-bottom: 0.4rem;
-  }
-
-  .step-desc {
-    font-size: 0.85rem;
-    color: var(--muted);
-    line-height: 1.5;
-  }
-
-  /* ─── FOOTER ─── */
-  footer {
-    position: relative;
-    z-index: 1;
-    background: var(--bg2);
-    border-top: 1px solid var(--border);
-    padding: 2.5rem 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: gap-1rem;
-    gap: 1rem;
-  }
-
-  .footer-brand {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    text-decoration: none;
-  }
-  .footer-brand img { width: 28px; height: 28px; border-radius: 6px; }
-  .footer-brand span {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1rem;
-    color: var(--text);
-  }
-
-  .footer-links {
-    display: flex;
-    gap: 1.5rem;
-    list-style: none;
-  }
-  .footer-links a {
-    color: var(--muted);
-    text-decoration: none;
-    font-size: 0.82rem;
-    transition: color 0.2s;
-  }
-  .footer-links a:hover { color: var(--text); }
-
-  .footer-copy {
-    color: var(--muted);
-    font-size: 0.78rem;
-    font-family: 'JetBrains Mono', monospace;
-  }
-
-  /* ─── SCROLL REVEAL ─── */
-  .reveal {
-    opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.7s ease, transform 0.7s ease;
-  }
-  .reveal.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  /* ─── HERO SCROLL INDICATOR ─── */
-  .scroll-indicator {
-    position: absolute;
-    bottom: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.4rem;
-    color: var(--muted);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.1em;
-    opacity: 0.5;
-    animation: fadeUp 0.6s 1s ease both;
-  }
-  .scroll-arrow {
-    width: 20px; height: 20px;
-    border-right: 1.5px solid currentColor;
-    border-bottom: 1.5px solid currentColor;
-    transform: rotate(45deg);
-    animation: bounce 1.5s ease infinite;
-  }
-  @keyframes bounce {
-    0%, 100% { transform: rotate(45deg) translateY(0); }
-    50% { transform: rotate(45deg) translateY(4px); }
-  }
-
-  /* ─── STAT ROW ─── */
-  .hero-stats {
-    display: flex;
-    gap: 2.5rem;
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 2rem 0 0;
-    border-top: 1px solid var(--border);
-    width: 100%;
-    animation: fadeUp 0.6s 0.6s ease both;
-  }
-
-  .stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.2rem;
-  }
-
-  .stat-value {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1.4rem;
-    letter-spacing: -0.02em;
-    background: linear-gradient(135deg, var(--cyan), var(--mint));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .stat-label {
-    font-size: 0.75rem;
-    color: var(--muted);
-    letter-spacing: 0.03em;
-  }
-
-  @media (max-width: 640px) {
-    .nav-links { display: none; }
-    .hero { padding-top: 6rem; }
-    footer { flex-direction: column; text-align: center; }
-    .footer-links { flex-wrap: wrap; justify-content: center; }
-  }
+/* Layout idea: flat school-object shapes on a dark floor (hero), then ruled lists and a real-looking app window. Catppuccin Mocha, one swappable accent. */
+:root{
+  --crust:#11111b;
+  --mantle:#181825;
+  --base:#1e1e2e;
+  --line:#313244;
+  --text:#cdd6f4;
+  --sub:#a6adc8;
+  --accent:#fab387;
+  --mauve:#cba6f7;
+  --green:#a6e3a1;
+  --yellow:#f9e2af;
+  --red:#f38ba8;
+  --blue:#89b4fa;
+  --display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--crust);scroll-padding-top:24px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+body{margin:0;background:var(--crust);color:var(--text);font:400 17px/1.55 var(--display);-webkit-font-smoothing:antialiased}
+::selection{background:var(--accent);color:var(--crust)}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+.tag{font:500 12px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--sub)}
+h1,h2,h3,p{margin:0}
+h2{font-size:clamp(32px,4.4vw,56px);font-weight:800;line-height:1.02;letter-spacing:-.028em;text-wrap:balance}
+.band{padding:112px 0}
+.band.alt{background:var(--mantle)}
+
+/* header */
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:24px;padding-top:28px;padding-bottom:8px}
+.mark{display:flex;align-items:center;gap:10px;font-weight:800;font-size:21px;letter-spacing:-.02em;text-decoration:none}
+.mark .logo{height:40px;width:auto;aspect-ratio:900/1105;display:block}
+nav{display:flex;align-items:center;gap:30px;font-size:15px}
+nav a{text-decoration:none;color:var(--sub)}
+nav a:hover{color:var(--text)}
+.kbd{font:500 12px var(--mono);color:var(--sub);background:none;border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+.kbd:hover{color:var(--text);border-color:var(--sub)}
+
+/* hero */
+.hero{padding-top:56px}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:48px;align-items:end}
+.hero .tag{color:var(--accent);margin-bottom:22px;display:block}
+h1{font-size:clamp(46px,7.2vw,96px);font-weight:800;line-height:.95;letter-spacing:-.04em;max-width:11ch}
+.lead{color:var(--sub);font-size:18px;max-width:34ch;margin-bottom:26px}
+.btns{display:flex;flex-wrap:wrap;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:8px;font:600 15px var(--display);text-decoration:none;border-radius:999px;padding:13px 22px;border:1.5px solid var(--text);color:var(--text)}
+.btn:hover{background:var(--text);color:var(--crust)}
+.btn.fill{background:var(--accent);border-color:var(--accent);color:var(--crust)}
+.btn.fill:hover{filter:brightness(1.08);background:var(--accent)}
+.fine{margin-top:16px;font:400 12px var(--mono);color:var(--sub)}
+.stage{display:block;width:100%;height:auto;margin-top:40px}
+
+/* app window */
+.show-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:24px;margin-bottom:40px}
+.show-head p{color:var(--sub);max-width:38ch}
+figure{margin:0}
+.win{background:var(--base);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 40px 90px rgba(0,0,0,.55)}
+.titlebar{display:flex;justify-content:space-between;align-items:center;background:var(--mantle);border-bottom:1px solid var(--line);padding:0 14px;height:38px;font:400 12px var(--mono);color:var(--sub)}
+.titlebar span:last-child{letter-spacing:.3em}
+.win-body{display:grid;grid-template-columns:200px minmax(0,1fr)}
+.side{background:var(--mantle);border-right:1px solid var(--line);padding:16px 0;display:flex;flex-direction:column;font-size:14px}
+.side div{padding:8px 20px;color:var(--sub);border-left:3px solid transparent}
+.side div.on{color:var(--text);border-left-color:var(--accent);background:var(--base)}
+.side .gap{height:12px;padding:0;border:0}
+.main{padding:28px;display:grid;gap:22px}
+.main h3{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.panels{display:grid;grid-template-columns:1.3fr 1.3fr 1fr;gap:16px}
+.panel{border:1px solid var(--line);border-radius:10px;padding:18px;background:var(--mantle);min-width:0}
+.panel .tag{display:block;margin-bottom:12px}
+.big{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.meta{color:var(--sub);font-size:14px;margin-top:4px}
+.track{height:6px;border-radius:3px;background:var(--line);margin-top:18px;overflow:hidden}
+.track i{display:block;height:100%;width:62%;background:var(--accent);border-radius:3px}
+.due{list-style:none;margin:0;padding:0;display:grid;gap:10px;font-size:14px}
+.due li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.due li:last-child{border:0;padding:0}
+.due b{font:500 12px var(--mono);color:var(--accent);white-space:nowrap}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.actions span{font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--text)}
+.actions span.hint{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--sub);border-style:dashed}
+figcaption{margin-top:16px;font:400 12px var(--mono);color:var(--sub);display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;justify-content:space-between}
+.swatches{display:flex;gap:10px;align-items:center}
+.swatches button{width:24px;height:24px;border-radius:50%;border:2px solid transparent;background:var(--c);cursor:pointer;padding:0;outline-offset:3px}
+.swatches button[aria-pressed="true"]{border-color:var(--crust);box-shadow:0 0 0 2px var(--text)}
+
+/* features */
+.f-grid{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:72px}
+.sticky{position:sticky;top:32px;align-self:start}
+.sticky h2{margin-bottom:28px}
+.legend{display:grid;gap:10px}
+.legend div{display:flex;align-items:center;gap:10px;font:400 13px var(--mono);color:var(--sub)}
+.glyph{width:14px;height:14px;background:var(--c);flex:none}
+.g-study{--c:var(--mauve)}
+.g-school{--c:var(--blue)}
+.g-day{--c:var(--yellow)}
+.g-study .glyph{border-radius:50%}
+.g-day .glyph{clip-path:polygon(50% 0,100% 100%,0 100%)}
+.group{margin-bottom:56px}
+.group:last-child{margin-bottom:0}
+.group>.tag{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.row{display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;padding:20px 0;border-top:1px solid var(--line)}
+.row h3{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.row p{color:var(--sub);max-width:52ch}
+code,.mono{font-family:var(--mono);font-size:.88em}
+
+/* privacy */
+.p-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:72px}
+.p-grid h2{max-width:9ch}
+.claims{list-style:none;margin:0;padding:0}
+.claims li{padding:20px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:20px minmax(0,1fr);gap:16px;color:var(--sub)}
+.claims li:first-child{border-top:0;padding-top:0}
+.claims b{color:var(--text);font-weight:600}
+.claims .glyph{margin-top:7px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:36px}
+.chips span{font:400 12px var(--mono);border:1px solid var(--line);border-radius:999px;padding:6px 12px;color:var(--sub)}
+
+/* download */
+.dl-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:24px;margin-bottom:40px}
+.dl{display:block;border-top:1px solid var(--line)}
+.dl a{display:grid;grid-template-columns:220px minmax(0,1fr) auto;gap:24px;align-items:center;padding:20px 0;border-bottom:1px solid var(--line);text-decoration:none}
+.dl a:hover{background:var(--base)}
+.dl strong{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.dl .file{font:400 13px var(--mono);color:var(--sub);overflow-wrap:anywhere}
+.pill{font:500 12px var(--mono);border-radius:999px;padding:5px 12px;border:1px solid var(--line);color:var(--sub);white-space:nowrap}
+.pill.rec{background:var(--accent);border-color:var(--accent);color:var(--crust)}
+.steps{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:72px}
+.steps h3{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:16px}
+.steps ul{list-style:none;margin:0;padding:0}
+.steps li{padding:14px 0;border-top:1px solid var(--line);color:var(--sub)}
+.steps li b{color:var(--text);font-weight:600}
+
+footer{padding:56px 0 72px;color:var(--sub);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px 40px;justify-content:space-between;align-items:center}
+footer .foot-id{display:flex;align-items:center;gap:16px}
+footer .foot-id .logo{height:44px;width:auto;aspect-ratio:900/1105;flex:none}
+footer .links{display:flex;gap:24px}
+footer small{display:block;margin-top:6px;color:var(--sub);opacity:.8;font-size:12px;max-width:62ch}
+
+/* command palette */
+.pal{position:fixed;inset:0;background:rgba(17,17,27,.72);display:grid;place-items:start center;padding:14vh 16px 16px;z-index:10}
+.pal[hidden]{display:none}
+.pal-box{width:100%;max-width:520px;background:var(--base);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.pal input{width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:16px 18px;color:var(--text);font:400 16px var(--mono);outline:none}
+.pal ul{list-style:none;margin:0;padding:6px;max-height:320px;overflow:auto}
+.pal li>*{display:block;width:100%;text-align:left;background:none;border:0;color:var(--text);font:400 15px var(--display);padding:10px 12px;border-radius:8px;cursor:pointer;text-decoration:none}
+.pal li>*.on{background:var(--line)}
+.pal-foot{padding:10px 18px;border-top:1px solid var(--line);font:400 11px var(--mono);color:var(--sub)}
+
+@media (max-width:900px){
+  .hero-grid,.f-grid,.p-grid,.steps{grid-template-columns:minmax(0,1fr);gap:40px}
+  .sticky{position:static}
+  .band{padding:80px 0}
+  .panels{grid-template-columns:minmax(0,1fr)}
+  .win-body{grid-template-columns:minmax(0,1fr)}
+  .side{display:none}
+  .dl a{grid-template-columns:minmax(0,1fr) auto;gap:6px 16px}
+  .dl .file{grid-column:1/2;grid-row:2}
+  .dl .pill{grid-column:2;grid-row:1/3}
+}
+@media (max-width:640px){
+  nav a{display:none}
+  .row{grid-template-columns:minmax(0,1fr);gap:6px}
+  .actions span.hint{margin-left:0}
+  .main{padding:20px}
+}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="sm-logo" viewBox="0 0 900 1105">
+  <defs>
+    <linearGradient id="teal-blue" x1="40" y1="800" x2="530" y2="880" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#94e2d5"/>
+      <stop offset="1" stop-color="#89b4fa"/>
+    </linearGradient>
+    <linearGradient id="swoosh" x1="868" y1="560" x2="300" y2="980" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#89b4fa"/>
+      <stop offset="1" stop-color="#74c7ec"/>
+    </linearGradient>
+    <linearGradient id="deep" x1="868" y1="700" x2="460" y2="1070" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#585b70"/>
+      <stop offset="1" stop-color="#45475a"/>
+    </linearGradient>
+    <clipPath id="shield"><path d="M40 345L455 237L868 345V852L455 1075L40 845Z"/></clipPath>
+  </defs>
 
-<canvas id="bg-canvas"></canvas>
-<div class="mesh"></div>
+  <g clip-path="url(#shield)">
+    <rect x="0" y="200" width="900" height="900" fill="#313244"/>
+    <path d="M455 237L868 345V420L300 735L95 572Z" fill="#45475a"/>
+    <path d="M40 345L455 237L95 572L40 530Z" fill="#a6e3a1"/>
+    <path d="M40 530L95 572L340 795L40 738Z" fill="#94e2d5" fill-opacity=".55"/>
+    <path d="M290 975L868 670V852L455 1075L40 845Z" fill="url(#deep)"/>
+    <path d="M40 738L340 795L530 830L600 860L420 960L290 990L40 845Z" fill="url(#teal-blue)"/>
+    <path d="M868 530C770 640 650 750 530 830C450 885 370 940 290 984C480 975 760 830 868 690Z" fill="url(#swoosh)"/>
+  </g>
 
-<!-- NAV -->
-<nav>
-  <a href="#" class="nav-logo">
-    <img src="https://zdstudios.github.io/SchoolMod/Icons/SchoolMod.png" alt="SchoolMod">
-    <span>SchoolMod</span>
-  </a>
-  <ul class="nav-links">
-    <li><a href="#features">Features</a></li>
-    <li><a href="#integrations">Integrations</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#install">Install</a></li>
-    <li><a href="#readme">README</a></li>
-  </ul>
-  <div class="nav-cta">
-    <a href="https://github.com/ZDStudios/SchoolMod" target="_blank" class="btn btn-ghost">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.929.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
-      GitHub
+  <path d="M35 175L455 28L868 172L735 222V265L455 205L207 265V232L125 205Z" fill="#b4befe"/>
+  <path d="M642 150L765 205L690 195Z" fill="#cdd6f4" fill-opacity=".45"/>
+  <rect x="120" y="205" width="14" height="56" fill="#b4befe"/>
+  <path d="M120 258H134L150 272V388H93V272Z" fill="#b4befe"/>
+
+  <path d="M272.7537688442211 675.1658291457286Q248.4824120603015 675.1658291457286 225.44221105527637 669.537688442211Q202.40201005025125 663.9095477386935 188.33165829145727 655.4673366834171L208.3819095477387 609.7386934673367Q221.74874371859298 617.8291457286432 239.6884422110553 622.5778894472362Q257.6281407035176 627.3266331658291 274.8643216080402 627.3266331658291Q291.748743718593 627.3266331658291 298.2562814070352 623.8090452261306Q304.7638190954774 620.2914572864322 304.7638190954774 614.3115577889447Q304.7638190954774 608.6834170854271 298.60804020100505 606.0452261306532Q292.4522613065327 603.4070351758794 282.427135678392 602.0Q272.40201005025125 600.5929648241206 260.4422110552764 598.8341708542714Q248.4824120603015 597.0753768844221 236.3467336683417 594.0854271356784Q224.2110552763819 591.0954773869347 214.1859296482412 584.9396984924624Q204.1608040201005 578.78391959799 198.18090452261305 568.2311557788945Q192.20100502512562 557.678391959799 192.20100502512562 541.4974874371859Q192.20100502512562 523.2060301507538 202.92964824120602 508.9597989949749Q213.65829145728642 494.713567839196 234.41206030150755 486.4472361809045Q255.16582914572865 478.18090452261305 285.06532663316585 478.18090452261305Q305.11557788944725 478.18090452261305 325.6934673366834 482.2261306532663Q346.2713567839196 486.2713567839196 360.3417085427136 494.3618090452261L340.2914572864322 539.7386934673367Q326.2211055276382 531.6482412060302 312.1507537688442 528.6582914572864Q298.08040201005025 525.6683417085427 285.4170854271357 525.6683417085427Q268.5326633165829 525.6683417085427 261.67336683417085 529.537688442211Q254.8140703517588 533.4070351758794 254.8140703517588 539.035175879397Q254.8140703517588 544.6633165829146 260.79396984924625 547.6532663316583Q266.7738693467337 550.643216080402 276.7989949748744 552.2261306532663Q286.8241206030151 553.8090452261306 298.78391959798995 555.391959798995Q310.7437185929648 556.9748743718593 322.8793969849246 560.140703517588Q335.0150753768844 563.3065326633166 345.0402010050251 569.462311557789Q355.06532663316585 575.6180904522613 361.0452261306533 585.9949748743718Q367.0251256281407 596.3718592964824 367.0251256281407 612.5527638190955Q367.0251256281407 630.1407035175879 356.2964824120603 644.2110552763819Q345.5678391959799 658.2814070351759 324.6381909547739 666.7236180904522Q303.70854271356785 675.1658291457286 272.7537688442211 675.1658291457286Z M395.86934673366835 672.0V481.3467336683417H459.5376884422111V501.3969849246231Q466.57286432160805 493.6582914572864 475.71859296482415 488.3819095477387Q494.0100502512563 478.18090452261305 516.5226130653266 478.18090452261305Q542.2010050251256 478.18090452261305 561.8994974874372 491.1959798994975Q571.3969849246232 497.8793969849246 578.0804020100503 508.08040201005025Q586.1708542713568 498.23115577889445 597.0753768844221 491.1959798994975Q617.4773869346734 478.18090452261305 644.211055276382 478.18090452261305Q666.3718592964824 478.18090452261305 683.78391959799 487.1507537688442Q701.1959798994975 496.1206030150754 711.2211055276382 514.7638190954774Q721.246231155779 533.4070351758794 721.246231155779 562.9547738693467V672.0H654.4120603015076V573.859296482412Q654.4120603015076 553.4572864321608 646.6733668341709 544.1356783919598Q638.9346733668342 534.8140703517588 625.5678391959799 534.8140703517588Q616.070351758794 534.8140703517588 608.3316582914573 539.3869346733668Q600.5929648241206 543.9597989949749 596.3718592964824 553.2814070351759Q592.1507537688442 562.6030150753769 592.1507537688442 577.3768844221106V672.0H525.3165829145729V573.859296482412Q525.3165829145729 553.4572864321608 517.7537688442212 544.1356783919598Q510.1909547738694 534.8140703517588 496.47236180904525 534.8140703517588Q486.62311557788945 534.8140703517588 479.0603015075377 539.3869346733668Q471.49748743718595 543.9597989949749 467.1005025125628 553.2814070351759Q462.7035175879397 562.6030150753769 462.7035175879397 577.3768844221106V672.0Z" fill="#cdd6f4"/>
+</symbol></svg>
+
+<header>
+  <div class="wrap">
+    <a class="mark" href="#top" aria-label="SchoolMod home">
+      <svg class="logo" viewBox="0 0 900 1105" aria-hidden="true"><use href="#sm-logo"/></svg>
+      SchoolMod
     </a>
-    <a href="https://github.com/ZDStudios/SchoolMod" target="_blank" class="btn btn-primary">⭐ Star Repo</a>
+    <nav aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#get">Download</a>
+      <a href="https://github.com/ZDStudios/SchoolMod" target="_blank" rel="noopener">GitHub ↗</a>
+      <button class="kbd" id="open-pal" type="button" aria-label="Open command palette"><span id="kbd-label">Ctrl K</span></button>
+    </nav>
   </div>
-</nav>
+</header>
 
-<main>
-
-  <!-- HERO -->
-  <section class="hero" style="position:relative;">
-    <div class="hero-inner">
-      <div class="hero-badge">
-        <span class="badge-dot"></span>
-        v0.1.0-alpha · Work In Progress
+<main id="top">
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="tag">SchoolMod 2.0 · open source · Windows, macOS, Linux</span>
+        <h1>One desktop app for your school day.</h1>
       </div>
-
-      <img src="https://zdstudios.github.io/SchoolMod/Icons/SchoolMod.png" alt="SchoolMod Logo" class="hero-logo">
-
-      <h1>School Tools,<br><span class="gradient-text">Supercharged.</span></h1>
-
-      <p class="hero-sub">
-        SchoolMod is an open-source browser extension that injects powerful enhancements directly into the platforms your school already uses — community built, always growing.
-      </p>
-
-      <div class="hero-actions">
-        <a href="#install" class="btn btn-primary">🚀 Get Started</a>
-        <a href="https://github.com/ZDStudios/SchoolMod" target="_blank" class="btn btn-ghost">View Source</a>
-        <a href="#integrations" class="btn btn-ghost">See Integrations</a>
-      </div>
-
-      <div class="hero-meta">
-        <span>📄 MIT License</span>
-        <span>🌍 Open Source</span>
-        <span>🤝 PRs Welcome</span>
-      </div>
-
-      <div class="hero-stats">
-        <div class="stat-item">
-          <span class="stat-value">2</span>
-          <span class="stat-label">Live Integrations</span>
+      <div>
+        <p class="lead">SchoolMod puts your SEQTA timetable, Microsoft 365 files, flashcards and an AI study chat in one window. Everything stays on your computer.</p>
+        <div class="btns">
+          <a class="btn fill" href="https://github.com/ZDStudios/SchoolMod/releases/tag/v2.2.0" target="_blank" rel="noopener">Download</a>
+          <a class="btn" href="https://github.com/ZDStudios/SchoolMod" target="_blank" rel="noopener">Source on GitHub ↗</a>
         </div>
-        <div class="stat-item">
-          <span class="stat-value">3</span>
-          <span class="stat-label">In Progress</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-value">MIT</span>
-          <span class="stat-label">Licensed</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-value">∞</span>
-          <span class="stat-label">Community</span>
-        </div>
+        <p class="fine">v2.0.0 · MIT licence · no SchoolMod server</p>
       </div>
     </div>
-    <div class="scroll-indicator">
-      SCROLL
-      <div class="scroll-arrow"></div>
+  </div>
+  <div class="wrap">
+    <svg class="stage" viewBox="0 0 1200 520" role="img" aria-label="Flat shapes standing on a reflective floor: a clock showing your local time, a notebook, a protractor, a pencil and an arch">
+      <defs>
+        <filter id="grain" x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" result="n"/>
+          <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .7 -.2" result="g"/>
+          <feComposite in="g" in2="SourceGraphic" operator="in" result="gi"/>
+          <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="gi"/></feMerge>
+        </filter>
+        <linearGradient id="fadeg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#fff" stop-opacity=".3"/>
+          <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+        </linearGradient>
+        <mask id="fade" maskUnits="userSpaceOnUse" x="0" y="360" width="1200" height="160">
+          <rect x="0" y="360" width="1200" height="160" fill="url(#fadeg)"/>
+        </mask>
+        <g id="art">
+          <circle cx="60" cy="318" r="42" fill="#89b4fa"/>
+          <!-- clock -->
+          <circle cx="230" cy="240" r="120" fill="#f9e2af"/>
+          <g stroke="#11111b" stroke-width="7" stroke-linecap="round">
+            <path d="M230 142V160M230 320V338M132 240H150M310 240H328"/>
+            <line id="hand-h" x1="230" y1="240" x2="230" y2="192" stroke-width="10"/>
+            <line id="hand-m" x1="230" y1="240" x2="230" y2="164"/>
+          </g>
+          <circle cx="230" cy="240" r="10" fill="#f38ba8"/>
+          <!-- notebook -->
+          <rect x="380" y="110" width="170" height="250" rx="10" fill="#cba6f7"/>
+          <path d="M390 110H414V360H390a10 10 0 0 1-10-10V120a10 10 0 0 1 10-10z" fill="#b4befe"/>
+          <circle cx="397" cy="165" r="7" fill="#11111b"/>
+          <circle cx="397" cy="235" r="7" fill="#11111b"/>
+          <circle cx="397" cy="305" r="7" fill="#11111b"/>
+          <rect x="526" y="110" width="14" height="250" fill="#f38ba8"/>
+          <rect x="440" y="150" width="76" height="58" rx="4" fill="#11111b" opacity=".85"/>
+          <rect x="452" y="166" width="52" height="6" rx="3" fill="#cdd6f4"/>
+          <rect x="452" y="184" width="32" height="6" rx="3" fill="#cdd6f4"/>
+          <!-- protractor -->
+          <path d="M590 360A150 150 0 0 1 890 360z" fill="#a6e3a1"/>
+          <path d="M650 360A90 90 0 0 1 830 360z" fill="#11111b"/>
+          <path d="M835 305L853 295M795 265L805 247M740 250V230M685 265L675 247M645 305L627 295" stroke="#11111b" stroke-width="7" stroke-linecap="round" fill="none"/>
+          <!-- pencil -->
+          <rect x="930" y="150" width="30" height="210" fill="#fab387"/>
+          <rect x="960" y="150" width="30" height="210" fill="#e8956a"/>
+          <path d="M930 150H990L960 88z" fill="#f5e0dc"/>
+          <path d="M948 112H972L960 88z" fill="#11111b"/>
+          <!-- arch -->
+          <path d="M1030 360V230A75 75 0 0 1 1180 230V360z" fill="#f38ba8"/>
+          <path d="M1075 360V245A30 30 0 0 1 1135 245V360z" fill="#11111b"/>
+          <circle cx="1105" cy="92" r="30" fill="#94e2d5"/>
+        </g>
+      </defs>
+      <g filter="url(#grain)"><use href="#art"/></g>
+      <g mask="url(#fade)"><use href="#art" transform="translate(0 720) scale(1 -1)"/></g>
+    </svg>
+  </div>
+</section>
+
+<section class="band" id="app">
+  <div class="wrap">
+    <div class="show-head">
+      <h2>Open it and see your day.</h2>
+      <p>The dashboard shows your next lesson, what is due and how many flashcards are waiting. Quick actions sit underneath.</p>
     </div>
-  </section>
-
-  <!-- FEATURES -->
-  <section id="features">
-    <div class="container">
-      <div class="reveal">
-        <span class="section-label">What you get</span>
-        <h2>Every Feature<br>You Actually Want</h2>
-        <p class="section-desc">SchoolMod patches the gap between what school platforms offer and what students and teachers really need.</p>
-      </div>
-
-      <div class="features-grid reveal">
-        <div class="feature-card">
-          <span class="feature-icon">🎨</span>
-          <div class="feature-title">UI Improvements</div>
-          <p class="feature-desc">Cleaner interfaces and better readability across all supported platforms. No more eye strain.</p>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">⚡</span>
-          <div class="feature-title">Performance Tweaks</div>
-          <p class="feature-desc">Reduce lag and improve load times on every supported site. Less waiting, more learning.</p>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">🔗</span>
-          <div class="feature-title">Cross-Platform Sync</div>
-          <p class="feature-desc">A unified experience across all your school tools. One mod to rule them all.</p>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">🛠️</span>
-          <div class="feature-title">Modular Design</div>
-          <p class="feature-desc">Enable only the integrations you need. No bloat, just what works for you.</p>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">🌙</span>
-          <div class="feature-title">Dark Mode</div>
-          <p class="feature-desc">Easy on the eyes during those late-night study sessions. Your eyes will thank you.</p>
-          <span class="coming-soon">🕐 Coming Soon</span>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">📊</span>
-          <div class="feature-title">Enhanced Analytics</div>
-          <p class="feature-desc">See richer data from quizzes, assignments, and more. Know where you actually stand.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- INTEGRATIONS -->
-  <section id="integrations" class="integrations">
-    <div class="container">
-      <div class="reveal">
-        <span class="section-label">Platform Support</span>
-        <h2>Integrations</h2>
-        <p class="section-desc">SchoolMod targets the most popular school platforms. Live today, and more on the way.</p>
-      </div>
-
-      <div class="integrations-grid reveal">
-        <div class="integration-card">
-          <span class="integration-icon">📘</span>
-          <div class="integration-name">Education Perfect</div>
-          <span class="status-badge status-live"><span class="dot"></span>LIVE · V5</span>
-        </div>
-        <div class="integration-card">
-          <span class="integration-icon">➗</span>
-          <div class="integration-name">Mathspace</div>
-          <span class="status-badge status-beta"><span class="dot"></span>BETA · V3</span>
-        </div>
-        <div class="integration-card">
-          <span class="integration-icon">🟦</span>
-          <div class="integration-name">Blooket</div>
-          <span class="status-badge status-progress"><span class="dot"></span>IN PROGRESS</span>
-        </div>
-        <div class="integration-card">
-          <span class="integration-icon">🎮</span>
-          <div class="integration-name">Kahoot</div>
-          <span class="status-badge status-progress"><span class="dot"></span>IN PROGRESS</span>
-        </div>
-        <div class="integration-card">
-          <span class="integration-icon">📚</span>
-          <div class="integration-name">Seqta</div>
-          <span class="status-badge status-progress"><span class="dot"></span>IN PROGRESS</span>
-        </div>
-        <div class="integration-card" style="border-style: dashed; opacity: 0.5; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 140px;">
-          <span style="font-size:1.5rem;">+</span>
-          <div class="integration-name" style="font-size:0.85rem; margin-top:0.4rem; color: var(--muted);">Request a Platform</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ROADMAP -->
-  <section id="roadmap">
-    <div class="container">
-      <div class="reveal">
-        <span class="section-label">What's Next</span>
-        <h2>Roadmap</h2>
-        <p class="section-desc">Here's what's being built. The project is moving fast — contributions can accelerate any of these.</p>
-      </div>
-
-      <div class="roadmap-list reveal">
-        <div class="roadmap-item active">
-          <span class="roadmap-check">🔧</span>
-          <span class="roadmap-text">Core injection framework</span>
-        </div>
-        <div class="roadmap-item active">
-          <span class="roadmap-check">📘</span>
-          <span class="roadmap-text">Education Perfect enhancements</span>
-        </div>
-        <div class="roadmap-item active">
-          <span class="roadmap-check">➗</span>
-          <span class="roadmap-text">Mathspace enhancements</span>
-        </div>
-        <div class="roadmap-item">
-          <span class="roadmap-check">⬜</span>
-          <span class="roadmap-text">Blooket enhancements</span>
-        </div>
-        <div class="roadmap-item">
-          <span class="roadmap-check">⬜</span>
-          <span class="roadmap-text">Kahoot enhancements</span>
-        </div>
-        <div class="roadmap-item">
-          <span class="roadmap-check">⬜</span>
-          <span class="roadmap-text">Seqta enhancements</span>
-        </div>
-        <div class="roadmap-item">
-          <span class="roadmap-check">⬜</span>
-          <span class="roadmap-text">Settings UI / dashboard</span>
-        </div>
-        <div class="roadmap-item">
-          <span class="roadmap-check">⬜</span>
-          <span class="roadmap-text">Browser extension packaging</span>
-        </div>
-        <div class="roadmap-item">
-          <span class="roadmap-check">⬜</span>
-          <span class="roadmap-text">Dark mode for all platforms</span>
-        </div>
-        <div class="roadmap-item">
-          <span class="roadmap-check">⬜</span>
-          <span class="roadmap-text">Documentation site</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- INSTALL -->
-  <section id="install" class="install">
-    <div class="container">
-      <div class="reveal">
-        <span class="section-label">Getting Started</span>
-        <h2>Install from Source</h2>
-        <p class="section-desc">Full packaged extension coming soon. For now, run from source with a modern browser.</p>
-      </div>
-
-      <div class="code-block reveal">
-        <div class="code-header">
-          <div class="code-dots">
-            <span></span><span></span><span></span>
+    <figure>
+      <div class="win">
+        <div class="titlebar"><span>SchoolMod</span><span>– □ ×</span></div>
+        <div class="win-body">
+          <div class="side" aria-hidden="true">
+            <div class="on">Dashboard</div>
+            <div>Assistant</div>
+            <div>Notebooks</div>
+            <div>Flashcards</div>
+            <div class="gap"></div>
+            <div>SEQTA</div>
+            <div>Microsoft 365</div>
+            <div>Mathspace</div>
+            <div>Education Perfect</div>
+            <div class="gap"></div>
+            <div>Bell times</div>
+            <div>Focus</div>
           </div>
-          <span class="code-title">bash — install from source</span>
-          <button class="copy-btn" onclick="copyCode()">copy</button>
-        </div>
-        <div class="code-body">
-          <div><span class="code-comment"># 1. Clone the repository</span></div>
-          <div><span class="code-cmd">git</span> <span class="code-arg">clone</span> <span class="code-path">https://github.com/ZDStudios/SchoolMod.git</span></div>
-          <br>
-          <div><span class="code-comment"># 2. Navigate into the project</span></div>
-          <div><span class="code-cmd">cd</span> <span class="code-path">SchoolMod</span></div>
-          <br>
-          <div><span class="code-comment"># 3. Follow /docs — full instructions coming soon</span></div>
-        </div>
-      </div>
-
-      <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;" class="reveal">
-        <span style="color: var(--muted); font-size: 0.85rem;">Requires:</span>
-        <span style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 6px; padding: 0.25rem 0.7rem; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--blue);">Chrome</span>
-        <span style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 6px; padding: 0.25rem 0.7rem; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--blue);">Firefox</span>
-        <span style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 6px; padding: 0.25rem 0.7rem; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--blue);">Edge</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- CONTRIBUTING -->
-  <section id="contribute">
-    <div class="container">
-      <div class="reveal">
-        <span class="section-label">Open Source</span>
-        <h2>Help Build It</h2>
-        <p class="section-desc">Contributions of any kind are welcome — bug reports, features, code, or docs. This is a community project.</p>
-      </div>
-
-      <div class="contribute-grid reveal">
-        <div class="step-card">
-          <div class="step-num">01</div>
-          <div class="step-title">Fork the Repo</div>
-          <p class="step-desc">Hit that fork button on GitHub and clone it locally.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-num">02</div>
-          <div class="step-title">Create a Branch</div>
-          <p class="step-desc"><code style="font-family: JetBrains Mono, monospace; font-size:0.8em; color: var(--mint);">git checkout -b feature/MyFeature</code></p>
-        </div>
-        <div class="step-card">
-          <div class="step-num">03</div>
-          <div class="step-title">Commit & Push</div>
-          <p class="step-desc">Make your changes, commit, and push to your branch.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-num">04</div>
-          <div class="step-title">Open a PR</div>
-          <p class="step-desc">Open a Pull Request and join the community.</p>
-        </div>
-      </div>
-
-      <div style="margin-top:2rem;" class="reveal">
-        <a href="https://github.com/ZDStudios/SchoolMod" target="_blank" class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 0.95rem;">
-          🤝 Contribute on GitHub
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- README -->
-  <section id="readme" class="readme-section">
-    <div class="container">
-      <div class="reveal">
-        <span class="section-label">From the Source</span>
-        <h2>README.md</h2>
-        <p class="section-desc">Live from the main branch on GitHub, always up to date.</p>
-      </div>
-
-      <div class="readme-container reveal">
-        <div class="readme-header">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-          </svg>
-          <span>ZDStudios/SchoolMod / README.md</span>
-          <span style="margin-left:auto; font-size:0.7rem; color: var(--mint);" id="readme-status">fetching...</span>
-        </div>
-        <div id="readme-content">
-          <div class="readme-loading">
-            <div class="spinner"></div>
-            Loading README from GitHub...
+          <div class="main">
+            <h3>Good afternoon, Sam</h3>
+            <div class="panels">
+              <div class="panel">
+                <span class="tag">Next lesson</span>
+                <div class="big">Mathematics</div>
+                <p class="meta">Period 3 · starts in 12 min</p>
+                <div class="track" aria-hidden="true"><i></i></div>
+              </div>
+              <div class="panel">
+                <span class="tag">Due soon</span>
+                <ul class="due">
+                  <li>English essay draft <b>THU</b></li>
+                  <li>Science practical <b>FRI</b></li>
+                  <li>Maths test 4 <b>MON</b></li>
+                </ul>
+              </div>
+              <div class="panel">
+                <span class="tag">Cards to review</span>
+                <div class="big">24</div>
+                <p class="meta">spaced repetition queue</p>
+              </div>
+            </div>
+            <div class="actions">
+              <span>New notebook</span>
+              <span>Ask the assistant</span>
+              <span>Start focus timer</span>
+              <span class="hint">Ctrl K</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </section>
+      <figcaption>
+        <span>Example data. Names and times are made up.</span>
+        <span class="swatches" id="swatches" role="group" aria-label="Accent colour"></span>
+      </figcaption>
+    </figure>
+  </div>
+</section>
 
+<section class="band alt" id="features">
+  <div class="wrap f-grid">
+    <div class="sticky">
+      <h2>What is inside.</h2>
+      <div class="legend">
+        <div class="g-study"><span class="glyph"></span>Study</div>
+        <div class="g-school"><span class="glyph"></span>School accounts</div>
+        <div class="g-day"><span class="glyph"></span>Every day</div>
+      </div>
+    </div>
+    <div>
+      <div class="group g-study">
+        <span class="tag"><span class="glyph"></span>Study</span>
+        <div class="row"><h3>AI Assistant</h3><p>A streaming study chat that runs on your own Claude subscription through Claude Code.</p></div>
+        <div class="row"><h3>Notebooks</h3><p>Chat with your own PDFs, Word documents and notes. Answers carry inline citations, and one click makes a summary or study guide.</p></div>
+        <div class="row"><h3>Flashcards</h3><p>Generate cards from a topic or your notes, then review them with SM-2 spaced repetition.</p></div>
+      </div>
+      <div class="group g-school">
+        <span class="tag"><span class="glyph"></span>School accounts</span>
+        <div class="row"><h3>SEQTA</h3><p>Timetable, assessments, homework and notices, with your name and student photo.</p></div>
+        <div class="row"><h3>Microsoft 365</h3><p>One-click launch for OneNote, Word, Excel, PowerPoint, Teams, Outlook, OneDrive and To Do, plus your recent OneDrive files.</p></div>
+        <div class="row"><h3>Mathspace</h3><p>Launch the app, get worked solutions from the AI, and keep a practice streak.</p></div>
+        <div class="row"><h3>Education Perfect</h3><p>Launch the app and get a study coach that builds revision sheets.</p></div>
+        <div class="row"><h3>Bell times</h3><p>A live period countdown, including Trinity's Tuesday and Friday timetables.</p></div>
+      </div>
+      <div class="group g-day">
+        <span class="tag"><span class="glyph"></span>Every day</span>
+        <div class="row"><h3>Dashboard</h3><p>Your name, next lesson, due assessments and cards to review on one screen, with quick actions.</p></div>
+        <div class="row"><h3>Command palette</h3><p>Press <code>Ctrl</code> or <code>⌘</code> + <code>K</code> to jump anywhere or run an action. Try it on this page.</p></div>
+        <div class="row"><h3>Focus tools</h3><p>A Pomodoro timer that counts your daily focus minutes, a task list and a scratchpad that saves as you type.</p></div>
+        <div class="row"><h3>Appearance</h3><p>Light and dark themes, 8 accent colours and a custom frameless window.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="privacy">
+  <div class="wrap p-grid">
+    <h2>Runs on your computer.</h2>
+    <div>
+      <ul class="claims g-day">
+        <li><span class="glyph"></span><p><b>No SchoolMod server.</b> Your notes, cards and settings stay on your machine.</p></li>
+        <li><span class="glyph"></span><p><b>Your own Claude login.</b> The assistant talks to your Claude subscription through the Claude Code CLI.</p></li>
+        <li><span class="glyph"></span><p><b>No cloud search.</b> Document retrieval and spaced repetition are plain TypeScript, with no vector database.</p></li>
+        <li><span class="glyph"></span><p><b>A study tool, nothing sneakier.</b> It does not answer quizzes for you or get around school filters.</p></li>
+      </ul>
+      <div class="chips" aria-label="Built with">
+        <span>Electron</span><span>React 18</span><span>TypeScript</span><span>Tailwind CSS</span><span>Zustand</span><span>MCP SDK</span><span>pdfjs</span><span>mammoth</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="get">
+  <div class="wrap">
+    <div class="dl-head">
+      <h2>Download 2.0.0</h2>
+      <a class="btn" href="https://github.com/ZDStudios/SchoolMod/releases" target="_blank" rel="noopener">All releases ↗</a>
+    </div>
+    <div class="dl">
+      <a href="https://github.com/ZDStudios/SchoolMod/releases/tag/v2.2.0" target="_blank" rel="noopener"><strong>Windows installer</strong><span class="file">SchoolMod-2.0.0-Setup.exe</span><span class="pill rec">Recommended</span></a>
+      <a href="https://github.com/ZDStudios/SchoolMod/releases/tag/v2.2.0" target="_blank" rel="noopener"><strong>Windows portable</strong><span class="file">SchoolMod-2.0.0-Portable.exe</span><span class="pill">Slow start</span></a>
+      <a href="https://github.com/ZDStudios/SchoolMod/releases/tag/v2.2.0" target="_blank" rel="noopener"><strong>macOS, Apple Silicon</strong><span class="file">arm64.dmg</span><span class="pill">M-series</span></a>
+      <a href="https://github.com/ZDStudios/SchoolMod/releases/tag/v2.2.0" target="_blank" rel="noopener"><strong>macOS, Intel</strong><span class="file">x64.dmg</span><span class="pill">Intel</span></a>
+      <a href="https://github.com/ZDStudios/SchoolMod/releases/tag/v2.2.0" target="_blank" rel="noopener"><strong>Linux</strong><span class="file">SchoolMod-2.0.0.AppImage</span><span class="pill">AppImage</span></a>
+    </div>
+    <div class="steps">
+      <div>
+        <h3>First launch</h3>
+        <ul>
+          <li>Builds are unsigned, so you will see a warning once.</li>
+          <li><b>Windows:</b> choose More info, then Run anyway.</li>
+          <li><b>macOS:</b> right-click the app and choose Open.</li>
+          <li>The portable build unpacks itself on every launch, so use the installer if you can.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Connect what you use</h3>
+        <ul>
+          <li><b>Claude AI:</b> one-click CLI install and login.</li>
+          <li><b>SEQTA:</b> single sign-on, the MCP server, or a direct login.</li>
+          <li><b>Microsoft 365:</b> an Entra ID app with device-code sign-in.</li>
+          <li>All of it is optional and lives in Settings.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
 </main>
 
-<!-- FOOTER -->
 <footer>
-  <a href="#" class="footer-brand">
-    <img src="https://zdstudios.github.io/SchoolMod/Icons/SchoolMod.png" alt="SchoolMod">
-    <span>SchoolMod</span>
-  </a>
-  <ul class="footer-links">
-    <li><a href="https://github.com/ZDStudios/SchoolMod" target="_blank">GitHub</a></li>
-    <li><a href="https://github.com/ZDStudios/SchoolMod/issues/new" target="_blank">Report Bug</a></li>
-    <li><a href="https://github.com/ZDStudios/SchoolMod/issues/new" target="_blank">Feature Request</a></li>
-    <li><a href="https://github.com/ZDStudios/SchoolMod/blob/main/LICENSE" target="_blank">MIT License</a></li>
-  </ul>
-  <span class="footer-copy">Not affiliated with EP, Mathspace, Blooket, Kahoot, or Seqta.</span>
+  <div class="wrap">
+    <div class="foot-id"><svg class="logo" viewBox="0 0 900 1105" aria-hidden="true"><use href="#sm-logo"/></svg><div>MIT licence · © ZDStudios
+      <small>SEQTA, Microsoft 365, Mathspace and Education Perfect are trademarks of their owners.</small></div>
+    </div>
+    <div class="links">
+      <a href="https://github.com/ZDStudios/SchoolMod" target="_blank" rel="noopener">GitHub ↗</a>
+      <a href="https://github.com/ZDStudios/SchoolMod/releases" target="_blank" rel="noopener">Releases ↗</a>
+      <a href="https://github.com/ZDStudios/SchoolMod/issues" target="_blank" rel="noopener">Issues ↗</a>
+    </div>
+  </div>
 </footer>
 
+<div class="pal" id="pal" hidden role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="pal-box">
+    <input id="pal-in" type="text" placeholder="Type a command" autocomplete="off" aria-label="Search commands">
+    <ul id="pal-list"></ul>
+    <p class="pal-foot">↑ ↓ to move · Enter to run · Esc to close</p>
+  </div>
+</div>
+
 <script>
-  /* ─── STAR FIELD CANVAS ─── */
-  const canvas = document.getElementById('bg-canvas');
-  const ctx = canvas.getContext('2d');
-  let stars = [];
-  let W, H;
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  var mod = isMac ? '⌘ K' : 'Ctrl K';
+  document.getElementById('kbd-label').textContent = mod;
+  var hint = document.querySelector('.actions .hint'); if (hint) hint.textContent = mod;
 
-  function resize() {
-    W = canvas.width = window.innerWidth;
-    H = canvas.height = window.innerHeight;
+  /* clock in the hero shows the viewer's own time */
+  var hh = document.getElementById('hand-h'), mm = document.getElementById('hand-m');
+  function tick(){
+    var d = new Date(), m = d.getMinutes() + d.getSeconds()/60, h = (d.getHours() % 12) + m/60;
+    mm.setAttribute('transform','rotate('+(m*6)+' 230 240)');
+    hh.setAttribute('transform','rotate('+(h*30)+' 230 240)');
   }
+  tick(); setInterval(tick, 20000);
 
-  function initStars() {
-    stars = Array.from({ length: 120 }, () => ({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      r: Math.random() * 1.2 + 0.3,
-      a: Math.random(),
-      s: Math.random() * 0.003 + 0.001,
-      d: Math.random() > 0.5 ? 1 : -1
-    }));
+  /* accent colours */
+  var accents = [
+    ['Peach','#fab387'],['Mauve','#cba6f7'],['Pink','#f5c2e7'],['Red','#f38ba8'],
+    ['Yellow','#f9e2af'],['Green','#a6e3a1'],['Teal','#94e2d5'],['Blue','#89b4fa']
+  ];
+  var box = document.getElementById('swatches');
+  var buttons = [];
+  function setAccent(i, save){
+    document.documentElement.style.setProperty('--accent', accents[i][1]);
+    buttons.forEach(function(b, j){ b.setAttribute('aria-pressed', j === i ? 'true' : 'false'); });
+    if (save) { try { localStorage.setItem('schoolmod-accent', String(i)); } catch(e){} }
   }
-
-  function drawStars() {
-    ctx.clearRect(0, 0, W, H);
-    stars.forEach(s => {
-      s.a += s.s * s.d;
-      if (s.a > 1 || s.a < 0) s.d *= -1;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(148,163,184,${s.a * 0.4})`;
-      ctx.fill();
-    });
-    requestAnimationFrame(drawStars);
-  }
-
-  resize();
-  initStars();
-  drawStars();
-  window.addEventListener('resize', () => { resize(); initStars(); });
-
-  /* ─── SCROLL REVEAL ─── */
-  const revealEls = document.querySelectorAll('.reveal');
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((e, i) => {
-      if (e.isIntersecting) {
-        setTimeout(() => e.target.classList.add('visible'), 100);
-        observer.unobserve(e.target);
-      }
-    });
-  }, { threshold: 0.1 });
-  revealEls.forEach(el => observer.observe(el));
-
-  /* ─── COPY CODE ─── */
-  function copyCode() {
-    const code = `git clone https://github.com/ZDStudios/SchoolMod.git\ncd SchoolMod`;
-    navigator.clipboard.writeText(code).then(() => {
-      const btn = document.querySelector('.copy-btn');
-      btn.textContent = 'copied!';
-      btn.style.color = 'var(--mint)';
-      btn.style.borderColor = 'var(--mint)';
-      setTimeout(() => {
-        btn.textContent = 'copy';
-        btn.style.color = '';
-        btn.style.borderColor = '';
-      }, 2000);
-    });
-  }
-
-  /* ─── FETCH & RENDER README ─── */
-  async function loadReadme() {
-    const el = document.getElementById('readme-content');
-    const status = document.getElementById('readme-status');
-    try {
-      const r = await fetch('https://raw.githubusercontent.com/ZDStudios/SchoolMod/refs/heads/main/README.md');
-      if (!r.ok) throw new Error('Network response was not ok');
-      const md = await r.text();
-      // Remove HTML align divs from readme (badge images etc)
-      const cleaned = md
-        .replace(/<div align="center">/gi, '')
-        .replace(/<\/div>/gi, '')
-        .replace(/<br\/>/gi, '\n')
-        .replace(/<br>/gi, '\n');
-      el.innerHTML = marked.parse(cleaned);
-      status.textContent = 'loaded ✓';
-      status.style.color = 'var(--mint)';
-    } catch (err) {
-      el.innerHTML = `<p style="color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size:0.8rem;">
-        ⚠️ Could not load README. <a href="https://github.com/ZDStudios/SchoolMod#readme" target="_blank" style="color:var(--blue)">View on GitHub →</a>
-      </p>`;
-      status.textContent = 'failed';
-      status.style.color = '#f87171';
-    }
-  }
-
-  loadReadme();
-
-  /* ─── NAV ACTIVE STATE ─── */
-  const sections = document.querySelectorAll('section[id]');
-  const navLinks = document.querySelectorAll('.nav-links a');
-
-  window.addEventListener('scroll', () => {
-    let current = '';
-    sections.forEach(s => {
-      if (window.scrollY >= s.offsetTop - 120) current = s.id;
-    });
-    navLinks.forEach(a => {
-      a.style.color = a.getAttribute('href') === '#' + current ? 'var(--text)' : '';
-    });
+  accents.forEach(function(a, i){
+    var b = document.createElement('button');
+    b.type = 'button'; b.id = 'accent-' + a[0].toLowerCase();
+    b.style.setProperty('--c', a[1]);
+    b.setAttribute('aria-label', a[0] + ' accent');
+    b.addEventListener('click', function(){ setAccent(i, true); });
+    box.appendChild(b); buttons.push(b);
   });
+  var start = 0;
+  try { var s = parseInt(localStorage.getItem('schoolmod-accent'), 10); if (s >= 0 && s < accents.length) start = s; } catch(e){}
+  setAccent(start, false);
+
+  /* command palette */
+  var pal = document.getElementById('pal'), input = document.getElementById('pal-in'), list = document.getElementById('pal-list');
+  var opener = document.getElementById('open-pal'), items = [], active = 0, lastFocus = null;
+  function go(id){ var el = document.getElementById(id); if (el) el.scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block:'start'}); }
+  var cmds = [
+    {t:'Go to Features', run:function(){ go('features'); }},
+    {t:'Go to Privacy', run:function(){ go('privacy'); }},
+    {t:'Go to Download', run:function(){ go('get'); }},
+    {t:'Open the GitHub repo', href:'https://github.com/ZDStudios/SchoolMod'},
+    {t:'Open releases', href:'https://github.com/ZDStudios/SchoolMod/releases'}
+  ];
+  accents.forEach(function(a, i){ cmds.push({t:'Accent: ' + a[0], run:function(){ setAccent(i, true); }}); });
+
+  function render(){
+    var q = input.value.trim().toLowerCase();
+    items = cmds.filter(function(c){ return c.t.toLowerCase().indexOf(q) !== -1; });
+    if (active >= items.length) active = 0;
+    list.innerHTML = '';
+    items.forEach(function(c, i){
+      var li = document.createElement('li'), el;
+      if (c.href) { el = document.createElement('a'); el.href = c.href; el.target = '_blank'; el.rel = 'noopener'; }
+      else { el = document.createElement('button'); el.type = 'button'; }
+      el.textContent = c.t; el.tabIndex = -1;
+      if (i === active) el.className = 'on';
+      el.addEventListener('click', function(){ if (c.run) { c.run(); close(); } else { close(); } });
+      el.addEventListener('mousemove', function(){ if (active !== i) { active = i; mark(); } });
+      li.appendChild(el); list.appendChild(li);
+    });
+    if (!items.length) list.innerHTML = '<li><span style="display:block;padding:10px 12px;color:var(--sub)">Nothing matches that.</span></li>';
+  }
+  function mark(){ Array.prototype.forEach.call(list.querySelectorAll('li > *'), function(el, i){ el.className = i === active ? 'on' : ''; }); }
+  function open(){ lastFocus = document.activeElement; pal.hidden = false; input.value = ''; active = 0; render(); input.focus(); }
+  function close(){ pal.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+  opener.addEventListener('click', open);
+  pal.addEventListener('mousedown', function(e){ if (e.target === pal) close(); });
+  input.addEventListener('input', function(){ active = 0; render(); });
+  document.addEventListener('keydown', function(e){
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); pal.hidden ? open() : close(); return; }
+    if (pal.hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); close(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); if (items.length) { active = (active + 1) % items.length; mark(); } }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (items.length) { active = (active - 1 + items.length) % items.length; mark(); } }
+    else if (e.key === 'Enter') { e.preventDefault(); var el = list.querySelectorAll('li > *')[active]; if (el && items.length) el.click(); }
+    else if (e.key === 'Tab') { e.preventDefault(); input.focus(); }
+  });
+})();
 </script>
 </body>
 </html>

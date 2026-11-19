@@ -1,135 +1,117 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/version-0.1.0--alpha-blue?style=for-the-badge" alt="Version">
-<img src="https://img.shields.io/badge/status-Work%20In%20Progress-orange?style=for-the-badge" alt="Status">
-<img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License">
-<img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge" alt="PRs Welcome">
+# 📘 SchoolMod 2.0
 
-<br/><br/>
+**The all-in-one student productivity hub.**
+SEQTA · Microsoft 365 · AI Notebooks · Flashcards · your Claude subscription — in one beautiful desktop app.
 
-# 🎓 SchoolMod
-
-### *Supercharge the tools your school already uses.*
-
-SchoolMod is an open-source browser extension / script that enhances the most popular school platforms with new features, quality-of-life improvements, and powerful integrations — all in one place.
-
-<br/>
-
-[✨ Features](#-features) • [🔌 Integrations](#-integrations) • [🚀 Getting Started](#-getting-started) • [🤝 Contributing](#-contributing) • [📄 License](#-license)
-
----
+Windows · macOS · Linux · built with Electron + React + TypeScript
 
 </div>
 
-## 📖 About
-
-School platforms are powerful — but they're missing features that students and teachers actually want. **SchoolMod** patches that gap.
-
-Instead of juggling workarounds or waiting for official updates, SchoolMod injects enhancements directly into the platforms you use every day. It's community-built, open-source, and always growing.
-
-> ⚠️ **This project is a Work In Progress.** Expect bugs, breaking changes, and rapid iteration. Contributions are very welcome!
-
 ---
+
+SchoolMod started life as a browser extension that patched school websites. **2.0 is a complete ground-up rebuild** — a native desktop app that brings the tools students actually use into one clean, fast, private workspace.
+
+Everything runs **locally on your device**. Your notes, decks and credentials never touch a SchoolMod server (there isn't one).
 
 ## ✨ Features
 
-- 🎨 **UI Improvements** — Cleaner interfaces and better readability across all supported platforms
-- ⚡ **Performance Tweaks** — Reduce lag and improve load times on supported sites
-- 🔗 **Cross-Platform Sync** — Unified experience across all your school tools
-- 🛠️ **Modular Design** — Enable only the integrations you need
-- 🌙 **Dark Mode Support** — Easy on the eyes during late-night study sessions *(coming soon)*
-- 📊 **Enhanced Stats & Analytics** — See richer data from quizzes, assignments, and more
+| | |
+|---|---|
+| 🏠 **Dashboard** | Your day at a glance — greets you by your **real name**, next lesson, assessments due, cards to review, quick actions. |
+| ✨ **AI Assistant** | A streaming study chat powered by **your own Claude subscription**. One click installs Claude Code and signs you in — no wrapper or API key to configure. |
+| 📓 **Notebooks** | A private **NotebookLM**. Drop in PDFs, Word docs or notes and chat with them — answers are grounded in *your* sources with inline citations. One-click summaries and study guides. |
+| 🃏 **Flashcards** | A **Gizmo**-style flashcard engine. Generate cards from any topic or your notes with AI, then review them with proven **SM-2 spaced repetition**. |
+| 📅 **SEQTA** | Your live timetable, assessments, homework and notices — plus your name and **student photo** in the corner. Signs in through Microsoft SSO and reads the SEQTA JSON API directly. |
+| 🔷 **Microsoft 365** | One-click launch for OneNote, Word, Excel, PowerPoint, Teams, Outlook, OneDrive & To Do, plus your recent OneDrive files via Microsoft Graph. |
+| 🧮 **Mathspace** | Launch Mathspace and get step-by-step worked solutions from your AI tutor, with a practice streak tracker. |
+| 🎓 **Education Perfect** | Launch EP and get an AI study coach that builds a revision sheet with practice questions for any topic. |
+| 🔔 **Bell times** | Live current-period tracker with a countdown to the next bell — ported from the original SchoolMod repo, including Trinity's Tuesday and Friday variants. |
+| ⌘ **Command palette** | `Ctrl`/`⌘`+`K` to jump anywhere or fire an action. |
+| ⏱️ **Focus · To-do · Scratchpad** | A Pomodoro timer tracking daily focus minutes, a task list, and an auto-saving notepad. |
+| 🎨 **Polished & yours** | Light/dark themes, 8 accent colours, custom frameless window, keyboard-friendly. |
 
----
+## 🔗 Relationship to SchoolMod 1.x
+This is a **new desktop app**, developed alongside the original browser-extension repo — nothing from `main` has been removed. Enhancements that belong in a study tool (bell times, Education Perfect, Mathspace, SEQTA, school profiles) have been rebuilt natively here.
 
-## 🔌 Integrations
+The predecessor's quiz auto-answer scripts (AutoBOT, Kahoot/Blooket, `hw-bot.html`), the Education Perfect answer-extraction notes, the Mathspace shop/avatar GraphQL overrides, and the FortiGuard filter bypass are **deliberately not carried over** — they do your schoolwork for you, unlock paid cosmetics, or evade school network controls. They remain untouched on the original branch.
 
-SchoolMod currently targets the following platforms:
+## 🚀 Download
 
-| Platform | Status | Features |
-|---|---|---|
-| 📘 **Education Perfect (EP)** | 🟢 V5 |  |
-| ➗ **Mathspace** | 🟢 Beta V3 |  |
-| 🟦 **Blooket** | 🟡 In Progress | TBA |
-| 🎮 **Kahoot** | 🟢 V2 |  |
-| 📚 **Seqta** | 🟡 In Progress | TBA |
+Grab the latest build from the [Releases page](https://github.com/ZDStudios/SchoolMod/releases):
 
-> Want to see a platform added? [Open a feature request →](../../issues/new?template=feature_request.md)
+- **Windows** — `SchoolMod-2.0.0-Setup.exe` **(recommended — launches in well under a second)** or `SchoolMod-2.0.0-Portable.exe` (no install, but self-extracts ~100MB on every launch — expect several seconds each time, even after the first run)
+- **macOS** — `SchoolMod-2.0.0-arm64.dmg` (Apple Silicon) / `-x64.dmg` (Intel)
+- **Linux** — `SchoolMod-2.0.0.AppImage`
 
----
+> Builds are currently **unsigned**, so Windows SmartScreen / macOS Gatekeeper will warn on first launch. On Windows choose *More info → Run anyway*; on macOS right-click the app → *Open*.
 
-## 🚀 Getting Started
+## 🔌 Connecting your accounts
 
-### Prerequisites
+Open **Settings** in the app to connect each integration. All are optional — use what you want.
 
-- A modern browser (Chrome, Firefox, or Edge)
-- Basic knowledge of browser extensions or userscripts *(depending on installation method)*
+### Claude AI (powers the Assistant, Notebooks, Flashcards & study coaches)
+**One click.** In **Settings → Claude AI** (mode *Claude Code · one-click*), hit **Connect Claude**. SchoolMod:
+1. installs [Claude Code](https://claude.com/claude-code) (`npm i -g @anthropic-ai/claude-code`) if it isn't already,
+2. runs the login and opens the authorisation URL in your browser,
+3. then drives Claude directly through the CLI with your subscription — no server, no API key.
 
-### Installation
+> *Advanced:* the **OpenAI wrapper** mode still works if you'd rather point at a running [`claude-code-openai-wrapper`](https://github.com/RichardAtCT/claude-code-openai-wrapper).
 
-> Full installation instructions will be added as the project matures. For now, follow these steps to run from source:
+### SEQTA
+Three ways to connect, chosen in **Settings → SEQTA**:
+
+- **SSO (recommended).** Enter your school portal URL, email and password. SchoolMod signs in through Microsoft SSO using a bundled Python helper (needs Python with `requests` + `beautifulsoup4`), then reads the SEQTA JSON API directly — giving you your **real name, student photo**, timetable, assessments, homework and notices. If the HTTP login can't complete, it automatically falls back to a **headless Puppeteer** browser login.
+- **MCP server.** SchoolMod acts as an [MCP](https://modelcontextprotocol.io) host and launches the [**Seqta-MCP-Server**](https://github.com/ZDStudios/Seqta-MCP-Server). Point it at how to run the server and hit *Connect & test*.
+- **Direct login.** For non-SSO schools: portal URL + username/password. The password goes straight to your school's server; only the session cookie is kept locally.
+
+### Microsoft 365
+1. Register a free **public-client** app in [Azure / Entra ID](https://learn.microsoft.com/entra/identity-platform/quickstart-register-app) with device-code flow enabled.
+2. Paste the application (client) ID into **Settings → Microsoft** and click **Connect** — you'll get a code to enter at microsoft.com/devicelogin.
+
+## 🛠️ Development
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/yourusername/SchoolMod.git
-
-# 2. Navigate into the project
-cd SchoolMod
-
-# 3. Follow the setup instructions in /docs (coming soon)
+npm install        # install dependencies
+npm run dev        # launch the app with hot-reload
+npm run build      # type-check-free production bundle (main + preload + renderer)
+npm run build:win  # package Windows installer + portable exe
+npm run build:mac  # package macOS dmg + zip (must run on macOS)
 ```
 
-> 📦 A packaged browser extension release is planned. Watch this repo to get notified.
+> **Windows build note:** electron-builder unpacks a `winCodeSign` helper that contains macOS symlinks. If you hit *"Cannot create symbolic link"*, either enable **Windows Developer Mode** (Settings → For developers) or run `node scripts/seed-wincodesign.mjs` once. CI runners are unaffected.
 
----
+### Tech stack
+- **Electron** + **electron-vite** — desktop shell & bundling
+- **React 18** + **React Router** + **Zustand** — UI
+- **Tailwind CSS** — styling & theming
+- **Claude Code CLI** (driven via `claude -p --output-format stream-json`) — the AI, using your subscription
+- **OpenAI SDK** — optional wrapper mode
+- **@modelcontextprotocol/sdk** — SchoolMod as an MCP host (SEQTA MCP option)
+- **puppeteer-core** — headless SEQTA login fallback (uses your system Chrome/Edge)
+- **pdfjs-dist** + **mammoth** — document ingestion
+- Pure-TypeScript **BM25** retrieval + **SM-2** scheduling — no cloud, no vector DB
 
-## 🗺️ Roadmap
+### Project structure
+```
+src/
+├── main/            Electron main process
+│   ├── index.ts        app lifecycle, window, CSP
+│   ├── ipc.ts          typed IPC handlers
+│   ├── store.ts        local JSON persistence
+│   └── services/       claude · claudeCli · seqta · seqtaDirect · seqtaPuppeteer · mcpClient · notebooks · rag · flashcards · graph
+├── preload/         secure contextBridge API (window.api)
+├── shared/          types & IPC channel names
+└── renderer/src/    React app
+    ├── pages/          Dashboard, Assistant, Notebooks, Flashcards, Seqta, Microsoft, Mathspace, EducationPerfect, Settings
+    ├── components/     TitleBar, Sidebar, UI kit
+    ├── lib/            markdown, helpers
+    └── store/          app/theme state
+resources/           seqta_session.py (bundled SSO helper)
+```
 
-- [ ] Core injection framework
-- [ ] Education Perfect enhancements
-- [ ] Mathspace enhancements
-- [ ] Blooket enhancements
-- [x] Kahoot enhancements
-- [ ] Seqta enhancements
-- [ ] Settings UI / dashboard
-- [ ] Browser extension packaging
-- [ ] Dark mode for all platforms
-- [ ] Documentation site
 
----
-
-## 🤝 Contributing
-
-Contributions are what make open source amazing. Any help — bug reports, feature ideas, code, docs — is greatly appreciated.
-
-1. **Fork** the repository
-2. **Create** your feature branch (`git checkout -b feature/AmazingFeature`)
-3. **Commit** your changes (`git commit -m 'Add some AmazingFeature'`)
-4. **Push** to the branch (`git push origin feature/AmazingFeature`)
-5. **Open a Pull Request**
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting.
-
----
-
-## ⚠️ Disclaimer
-
-SchoolMod is an independent, community-driven project and is **not affiliated with, endorsed by, or associated with** Education Perfect, Mathspace, Blooket, Kahoot, or Seqta in any way.
-
-Use at your own discretion. Always follow your school's IT policies.
-
----
 
 ## 📄 License
-
-Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information.
-
----
-
-<div align="center">
-
-Made with ❤️ by the SchoolMod community
-
-⭐ If you find this useful, please consider starring the repo!
-
-</div>
+MIT © ZDStudios
